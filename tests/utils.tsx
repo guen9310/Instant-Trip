@@ -29,9 +29,12 @@ export function renderWithClient(ui: React.ReactElement) {
 
 export function createWrapper() {
   const testQueryClient = createTestQueryClient();
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={testQueryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={testQueryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  }
+  return Wrapper;
 }
