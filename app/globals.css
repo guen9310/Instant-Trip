@@ -53,105 +53,105 @@
 }
 
 :root {
-  --background: #F5F2EE;
-  --foreground: #1A1A1A;
-  
-  --card: #FFFFFF;
-  --card-foreground: #1A1A1A;
-  
-  --popover: #FFFFFF;
-  --popover-foreground: #1A1A1A;
-  
-  --primary: #243B55;
-  --primary-foreground: #FFFFFF;
-  
-  --secondary: #2E5F8A;
-  --secondary-foreground: #FFFFFF;
-  
-  --muted: #E2DDD8;
-  --muted-foreground: #6B6560;
-  
-  --accent: #3D7A6B;
-  --accent-foreground: #FFFFFF;
-  
+  --background: #f5f2ee;
+  --foreground: #1a1a1a;
+
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+
+  --primary: #243b55;
+  --primary-foreground: #ffffff;
+
+  --secondary: #2e5f8a;
+  --secondary-foreground: #ffffff;
+
+  --muted: #e2ddd8;
+  --muted-foreground: #6b6560;
+
+  --accent: #3d7a6b;
+  --accent-foreground: #ffffff;
+
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: #FFFFFF;
-  
-  --border: #E2DDD8;
-  --input: #E2DDD8;
-  --ring: #243B55;
-  
-  --chart-1: #243B55;
-  --chart-2: #2E5F8A;
-  --chart-3: #3D7A6B;
-  --chart-4: #E8936A;
-  --chart-5: #6B6560;
-  
-  --sidebar: #F5F2EE;
-  --sidebar-foreground: #1A1A1A;
-  --sidebar-primary: #243B55;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #E2DDD8;
-  --sidebar-accent-foreground: #1A1A1A;
-  --sidebar-border: #E2DDD8;
-  --sidebar-ring: #243B55;
+  --destructive-foreground: #ffffff;
+
+  --border: #e2ddd8;
+  --input: #e2ddd8;
+  --ring: #243b55;
+
+  --chart-1: #243b55;
+  --chart-2: #2e5f8a;
+  --chart-3: #3d7a6b;
+  --chart-4: #e8936a;
+  --chart-5: #6b6560;
+
+  --sidebar: #f5f2ee;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #243b55;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e2ddd8;
+  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-border: #e2ddd8;
+  --sidebar-ring: #243b55;
 
   --radius: 0.75rem; /* 12px from design.md */
-  
-  --point: #E8936A;
-  --surface: #FFFFFF;
-  --text-primary: #1A1A1A;
-  --text-secondary: #6B6560;
+
+  --point: #e8936a;
+  --surface: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #6b6560;
 }
 
 .dark {
-  --background: #0F1923;
-  --foreground: #F0EDE8;
-  
-  --card: #1A2A38;
-  --card-foreground: #F0EDE8;
-  
-  --popover: #1A2A38;
-  --popover-foreground: #F0EDE8;
-  
-  --primary: #5B8DB8;
-  --primary-foreground: #0F1923;
-  
-  --secondary: #4A7AA8;
-  --secondary-foreground: #F0EDE8;
-  
-  --muted: #2A3F52;
-  --muted-foreground: #9AADA8;
-  
-  --accent: #52A88E;
-  --accent-foreground: #F0EDE8;
-  
+  --background: #0f1923;
+  --foreground: #f0ede8;
+
+  --card: #1a2a38;
+  --card-foreground: #f0ede8;
+
+  --popover: #1a2a38;
+  --popover-foreground: #f0ede8;
+
+  --primary: #5b8db8;
+  --primary-foreground: #0f1923;
+
+  --secondary: #4a7aa8;
+  --secondary-foreground: #f0ede8;
+
+  --muted: #2a3f52;
+  --muted-foreground: #9aada8;
+
+  --accent: #52a88e;
+  --accent-foreground: #f0ede8;
+
   --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: #F0EDE8;
-  
-  --border: #2A3F52;
-  --input: #2A3F52;
-  --ring: #5B8DB8;
-  
-  --chart-1: #5B8DB8;
-  --chart-2: #4A7AA8;
-  --chart-3: #52A88E;
-  --chart-4: #F0A882;
-  --chart-5: #9AADA8;
+  --destructive-foreground: #f0ede8;
 
-  --sidebar: #0F1923;
-  --sidebar-foreground: #F0EDE8;
-  --sidebar-primary: #5B8DB8;
-  --sidebar-primary-foreground: #0F1923;
-  --sidebar-accent: #2A3F52;
-  --sidebar-accent-foreground: #F0EDE8;
-  --sidebar-border: #2A3F52;
-  --sidebar-ring: #5B8DB8;
+  --border: #2a3f52;
+  --input: #2a3f52;
+  --ring: #5b8db8;
 
-  --point: #F0A882;
-  --surface: #1A2A38;
-  --text-primary: #F0EDE8;
-  --text-secondary: #9AADA8;
+  --chart-1: #5b8db8;
+  --chart-2: #4a7aa8;
+  --chart-3: #52a88e;
+  --chart-4: #f0a882;
+  --chart-5: #9aada8;
+
+  --sidebar: #0f1923;
+  --sidebar-foreground: #f0ede8;
+  --sidebar-primary: #5b8db8;
+  --sidebar-primary-foreground: #0f1923;
+  --sidebar-accent: #2a3f52;
+  --sidebar-accent-foreground: #f0ede8;
+  --sidebar-border: #2a3f52;
+  --sidebar-ring: #5b8db8;
+
+  --point: #f0a882;
+  --surface: #1a2a38;
+  --text-primary: #f0ede8;
+  --text-secondary: #9aada8;
 }
 
 @layer base {
@@ -182,7 +182,10 @@
     @apply text-[14px] font-normal;
     line-height: 1.6;
   }
-  span, label, input, textarea {
+  span,
+  label,
+  input,
+  textarea {
     @apply text-[14px];
   }
 }
@@ -193,5 +196,11 @@
   }
   .text-caption {
     @apply text-[11px] font-normal;
+  }
+  .scrollbar-hide {
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    scrollbar-width: none;
   }
 }

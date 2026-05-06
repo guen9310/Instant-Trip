@@ -13,16 +13,29 @@ describe("LandingPage", () => {
       expect(container.firstChild).not.toBeNull();
     });
 
-    it("'hello' 텍스트가 화면에 표시되어야 한다.", () => {
+    it("헤드라인 텍스트가 표시되어야 한다.", () => {
       render(<LandingPage />);
-      expect(screen.getByText("hello")).toBeInTheDocument();
+      expect(screen.getByText(/시간이 나는 순간/)).toBeInTheDocument();
     });
 
-    it("텍스트가 div 요소 안에 렌더링되어야 한다.", () => {
+    it("'지금 시작하기' CTA가 표시되어야 한다.", () => {
       render(<LandingPage />);
-      const element = screen.getByText("hello");
-      expect(element.tagName).toBe("DIV");
+      const ctas = screen.getAllByRole("link", { name: "지금 시작하기" });
+      expect(ctas.length).toBeGreaterThan(0);
+    });
+
+    it("'코스 둘러보기' 링크가 표시되어야 한다.", () => {
+      render(<LandingPage />);
+      expect(
+        screen.getByRole("link", { name: "코스 둘러보기" }),
+      ).toBeInTheDocument();
+    });
+
+    it("피처 섹션 3개가 모두 렌더링되어야 한다.", () => {
+      render(<LandingPage />);
+      expect(screen.getByText("결정은 저희가 할게요")).toBeInTheDocument();
+      expect(screen.getByText("지금 갈 수 있는 곳만")).toBeInTheDocument();
+      expect(screen.getByText("마음에 안 들면 거절하세요")).toBeInTheDocument();
     });
   });
-
 });

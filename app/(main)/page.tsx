@@ -1,3 +1,5 @@
+import { LandingHero } from "@/components/domains/landing/LandingHero";
+
 export default function LandingPage() {
-  return <div>hello</div>;
+  return <LandingHero />;
 }
