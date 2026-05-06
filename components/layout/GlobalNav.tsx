@@ -44,13 +44,23 @@ export function GlobalNav() {
           </Link>
         )}
       </div>
-      <Link
-        href="/profile"
-        className="w-[30px] h-[30px] rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold shrink-0"
-        aria-label="내 정보"
-      >
-        U
-      </Link>
+      {false ? (
+        <Link
+          href="/profile"
+          className="w-[30px] h-[30px] rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold shrink-0"
+          aria-label="내 정보"
+        >
+          U
+        </Link>
+      ) : (
+        <Link
+          href="/sign-in"
+          className="px-2 py-1 text-[13px] font-medium text-primary"
+          aria-label="로그인"
+        >
+          로그인
+        </Link>
+      )}
     </nav>
   );
 }

@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, User } from "lucide-react";
+import { Zap, Compass, User } from "lucide-react";
 
 const tabs = [
-  { href: "/home", label: "홈", icon: Home },
+  { href: "/start", label: "시작", icon: Zap },
   { href: "/feed", label: "피드", icon: Compass },
   { href: "/profile", label: "내 정보", icon: User },
 ];
