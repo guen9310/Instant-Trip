@@ -30,7 +30,7 @@ function OnboardCard({
         selected
           ? "scale-[0.98] border-[1.5px] border-accent bg-accent/10"
           : "scale-100 border-[1.5px] border-border bg-card",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       )}
     >
       <div className="mb-1 flex h-[52px] w-[52px] items-center justify-center rounded-xl">
@@ -51,15 +51,13 @@ export function OnboardingForm() {
   const [selected, setSelected] = useState<"yes" | "no" | null>(null);
 
   const handleSkip = () => {
-    router.push("/(main)/landing"); // 임시 라우팅
+    router.push("/feed");
   };
 
   const handleChoose = (value: "yes" | "no") => {
     setSelected(value);
-    // 선택 후 자동 전환 (280ms 딜레이)
     setTimeout(() => {
-      // TODO: 다음 단계로 이동, 임시로 랜딩 페이지로
-      router.push("/(main)/landing");
+      router.push("/feed");
     }, 280);
   };
 
@@ -87,7 +85,7 @@ export function OnboardingForm() {
                 key={i}
                 className={cn(
                   "h-2 rounded-full transition-all duration-250",
-                  i === 0 ? "w-6 bg-accent" : "w-2 bg-border"
+                  i === 0 ? "w-6 bg-accent" : "w-2 bg-border",
                 )}
               />
             ))}
