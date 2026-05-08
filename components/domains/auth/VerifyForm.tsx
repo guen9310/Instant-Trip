@@ -33,7 +33,11 @@ export function VerifyForm() {
 
   const onSubmit = (_data: FormValues) => {
     // TODO: Verify code
-    router.push("/feed");
+    if (false) {
+      router.push("/feed");
+    } else {
+      router.push("/onboarding");
+    }
   };
 
   const handleResend = () => {
