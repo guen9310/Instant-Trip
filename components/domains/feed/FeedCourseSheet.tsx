@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, MapPin } from "lucide-react";
 import {
@@ -41,16 +41,13 @@ export function FeedCourseSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<SheetPhase>("default");
-  const [displayPlaces, setDisplayPlaces] = useState<Place[]>([]);
+  const [phase, setPhase] = useState<SheetPhase>(
+    () => !course || course.availability === "available" ? "default" : "partial",
+  );
+  const [displayPlaces, setDisplayPlaces] = useState<Place[]>(
+    () => course?.places ?? [],
+  );
   const [changedPlace, setChangedPlace] = useState<ChangedPlace | null>(null);
-
-  useEffect(() => {
-    if (!course || !open) return;
-    setDisplayPlaces(course.places);
-    setChangedPlace(null);
-    setPhase(course.availability === "available" ? "default" : "partial");
-  }, [course, open]);
 
   const handleExcludeAndRun = () => {
     setPhase("loading");

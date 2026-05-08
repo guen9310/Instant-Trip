@@ -28,6 +28,7 @@ export function SignInForm() {
 
   const onSubmit = (_data: FormValues) => {
     // TODO: 인증 코드 발송 처리
+    console.log(_data);
     router.push("/sign-in/verify");
   };
 

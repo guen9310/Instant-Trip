@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FeedFeaturedCard } from "./FeedFeaturedCard";
 import { FeedMidCard } from "./FeedMidCard";
 import { FeedSmallCard } from "./FeedSmallCard";
@@ -20,21 +20,21 @@ const PAGE_SIZE = 5;
 export function FeedList() {
   const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetKey, setSheetKey] = useState(0);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver();
+  const { ref: sentinelRef } = useIntersectionObserver(() => {
+    setVisibleCount((prev) =>
+      prev < FEED_LIST_COURSES.length
+        ? Math.min(prev + PAGE_SIZE, FEED_LIST_COURSES.length)
+        : prev,
+    );
+  });
 
   const handleSelect = (course: CourseData) => {
     setSelectedCourse(course);
     setSheetOpen(true);
+    setSheetKey((k) => k + 1);
   };
-
-  useEffect(() => {
-    if (isIntersecting && visibleCount < FEED_LIST_COURSES.length) {
-      setVisibleCount((prev) =>
-        Math.min(prev + PAGE_SIZE, FEED_LIST_COURSES.length),
-      );
-    }
-  }, [isIntersecting, visibleCount]);
 
   const visibleCourses = FEED_LIST_COURSES.slice(0, visibleCount);
   const hasMore = visibleCount < FEED_LIST_COURSES.length;
@@ -87,6 +87,7 @@ export function FeedList() {
       )}
 
       <FeedCourseSheet
+        key={sheetKey}
         course={selectedCourse}
         open={sheetOpen}
         onOpenChange={setSheetOpen}

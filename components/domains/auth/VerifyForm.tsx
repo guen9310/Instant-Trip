@@ -32,6 +32,7 @@ export function VerifyForm() {
   });
 
   const onSubmit = (_data: FormValues) => {
+    console.log(_data);
     // TODO: Verify code
     if (false) {
       router.push("/feed");
