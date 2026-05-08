@@ -1,0 +1,438 @@
+export const FEED_FEATURED = {
+  id: "hangang",
+  name: "한강 노을 코스",
+  region: "서울 마포구",
+  rating: 4.9,
+  count: 45,
+  availability: "available" as const,
+  todayCompletions: { count: 5, timeframe: "오늘" as const },
+  festival: true,
+  imageSeed: "hangang-sunset",
+  places: [
+    {
+      name: "한강공원 망원지구",
+      category: "관광지",
+      status: "open" as const,
+      description: "한강 북쪽 망원동에 위치한 공원. 잔디광장과 수변 산책로가 넓게 펼쳐져 있어 피크닉과 노을 감상 명소로 유명합니다.",
+    },
+    {
+      name: "망원시장",
+      category: "문화시설",
+      status: "open" as const,
+      description: "1980년대부터 이어진 마포구 전통 재래시장. 저렴하고 신선한 먹거리가 가득하며, 특히 떡볶이와 순대 골목이 유명합니다.",
+    },
+    {
+      name: "경의선 숲길",
+      category: "관광지",
+      status: "open" as const,
+      description: "폐선된 경의선 철길을 따라 조성된 6.3km 선형 공원. 연남동부터 용산까지 이어지며 카페와 벤치가 곳곳에 배치되어 있습니다.",
+    },
+  ],
+};
+
+export const FEED_MID_COURSES = [
+  {
+    id: "seongsu",
+    name: "성수 골목 산책",
+    region: "서울 성동구",
+    rating: 4.8,
+    count: 23,
+    availability: "partial" as const,
+    todayCompletions: { count: 2, timeframe: "방금" as const },
+    imageSeed: "seongsu-alley",
+    places: [
+      {
+        name: "성수연방",
+        category: "문화시설",
+        status: "open" as const,
+        description: "성수동 옛 공장을 개조한 복합문화공간. 로컬 브랜드 팝업스토어와 카페가 상시 운영되며, 독특한 인더스트리얼 감성이 특징입니다.",
+      },
+      {
+        name: "대림창고",
+        category: "문화시설",
+        status: "closed" as const,
+        description: "1970년대 곡물 창고를 리모델링한 복합문화공간. 전시와 행사 기간에만 개방되며, 성수동 힙스터 문화의 상징적인 공간입니다.",
+      },
+      {
+        name: "성수카페거리",
+        category: "관광지",
+        status: "open" as const,
+        description: "공장 지대와 카페가 어우러진 성수동 특유의 골목. 개성 있는 인테리어의 독립 카페들이 밀집해 있어 SNS 명소로 알려져 있습니다.",
+      },
+    ],
+  },
+  {
+    id: "bukchon",
+    name: "북촌 한옥 한 바퀴",
+    region: "서울 종로구",
+    rating: 4.6,
+    count: 31,
+    availability: "unavailable" as const,
+    imageSeed: "bukchon-hanok",
+    places: [
+      {
+        name: "북촌한옥마을",
+        category: "관광지",
+        status: "closed" as const,
+        description: "600년 역사의 전통 한옥이 보존된 주거 지역. 경복궁과 창덕궁 사이 언덕에 위치하며, 좁은 골목과 기와지붕이 어우러진 풍경이 이색적입니다.",
+      },
+      {
+        name: "창덕궁",
+        category: "문화시설",
+        status: "closed" as const,
+        description: "1405년 건립된 조선 왕조의 이궁. 유네스코 세계문화유산으로, 자연 지형을 살린 후원(비원)이 특히 아름다워 계절별로 제한 관람이 운영됩니다.",
+      },
+      {
+        name: "인사동",
+        category: "관광지",
+        status: "closed" as const,
+        description: "전통 공예품, 고미술, 찻집이 밀집한 문화 거리. 인사동 쌈지길을 중심으로 갤러리와 전통 먹거리 골목이 이어집니다.",
+      },
+    ],
+  },
+];
+
+export const FEED_SMALL_COURSES = [
+  {
+    id: "yeonnam",
+    name: "연남동 카페 투어",
+    region: "서울 마포구",
+    count: 18,
+    rating: 4.7,
+    availability: "available" as const,
+    places: [
+      {
+        name: "연남동 카페 A",
+        category: "음식점",
+        status: "open" as const,
+        description: "경의선 숲길 인근의 아늑한 인테리어 카페. 직접 로스팅한 원두로 만든 스페셜티 커피와 계절 디저트를 즐길 수 있습니다.",
+      },
+      {
+        name: "연남동 카페 B",
+        category: "음식점",
+        status: "open" as const,
+        description: "연남동 골목 안쪽에 위치한 소규모 베이커리 카페. 매일 아침 구운 크루아상과 천연발효빵이 인기 메뉴입니다.",
+      },
+    ],
+  },
+  {
+    id: "gyeongbok",
+    name: "경복궁 야경",
+    region: "서울 종로구",
+    count: 32,
+    rating: 4.9,
+    availability: "partial" as const,
+    places: [
+      {
+        name: "경복궁",
+        category: "문화시설",
+        status: "open" as const,
+        description: "1395년 창건된 조선 왕조의 법궁. 서울 도심 한복판에 자리하며, 광화문·근정전·경회루 등 주요 건물과 야간 특별관람이 운영됩니다.",
+      },
+      {
+        name: "국립민속박물관",
+        category: "문화시설",
+        status: "closed" as const,
+        description: "경복궁 내 위치한 한국 민속·생활문화 전문 박물관. 전통 가옥과 생활용품을 통해 한국인의 일상을 시대별로 전시합니다.",
+      },
+    ],
+  },
+  {
+    id: "haebangchon",
+    name: "해방촌 골목",
+    region: "서울 용산구",
+    count: 9,
+    rating: 4.5,
+    availability: "unavailable" as const,
+    places: [
+      {
+        name: "해방촌 오거리",
+        category: "관광지",
+        status: "closed" as const,
+        description: "남산 서쪽 사면에 형성된 해방촌의 중심 교차로. 해방 이후 피란민이 정착하며 만들어진 동네로, 이국적인 식당과 소규모 독립가게가 모여 있습니다.",
+      },
+    ],
+  },
+];
+
+export const FEED_LIST_COURSES = [
+  {
+    id: "namsan",
+    name: "남산 둘레길",
+    region: "서울 용산구",
+    rating: 4.8,
+    count: 67,
+    availability: "available" as const,
+    places: [
+      {
+        name: "남산서울타워",
+        category: "관광지",
+        status: "open" as const,
+        description: "해발 479m 남산 정상에 세워진 236m 높이의 방송·전망 타워. 서울 전경을 360도로 조망할 수 있으며, 연인들의 자물쇠 명소로도 유명합니다.",
+      },
+      {
+        name: "남산공원",
+        category: "관광지",
+        status: "open" as const,
+        description: "서울 도심 속 약 109만㎡ 규모의 도시 자연공원. 팔각정 전망대, 안중근의사기념관, 봉수대 등을 품고 있으며 사계절 시민 휴식 공간으로 운영됩니다.",
+      },
+    ],
+  },
+  {
+    id: "insadong",
+    name: "인사동 전통 골목",
+    region: "서울 종로구",
+    rating: 4.6,
+    count: 54,
+    availability: "available" as const,
+    places: [
+      {
+        name: "인사동 거리",
+        category: "관광지",
+        status: "open" as const,
+        description: "화랑, 공예품점, 전통 찻집이 밀집한 약 700m의 문화 거리. 주말에는 차 없는 거리로 운영되어 거리 공연과 플리마켓을 즐길 수 있습니다.",
+      },
+      {
+        name: "쌈지길",
+        category: "문화시설",
+        status: "open" as const,
+        description: "나선형 경사로를 따라 4층 규모로 이어지는 인사동 복합쇼핑몰. 독립 디자이너 숍, 공예 체험, 소극장이 모여 있어 구경하는 재미가 있습니다.",
+      },
+    ],
+  },
+  {
+    id: "itaewon",
+    name: "이태원 다문화 코스",
+    region: "서울 용산구",
+    rating: 4.4,
+    count: 38,
+    availability: "partial" as const,
+    places: [
+      {
+        name: "이태원 거리",
+        category: "관광지",
+        status: "open" as const,
+        description: "70여 개국의 다양한 음식점과 바가 밀집한 서울의 대표 다문화 거리. 독특한 분위기의 편집숍과 빈티지 의류 매장도 즐길 수 있습니다.",
+      },
+      {
+        name: "경리단길",
+        category: "관광지",
+        status: "open" as const,
+        description: "이태원에서 남산 방향으로 이어지는 경사진 골목길. 개성 있는 레스토랑과 카페가 숨어 있어 '핫플레이스'로 꾸준한 인기를 얻고 있습니다.",
+      },
+      {
+        name: "앤틱가구거리",
+        category: "문화시설",
+        status: "closed" as const,
+        description: "이태원 보광동 일대에 조성된 앤틱·빈티지 가구 전문 거리. 유럽과 미국에서 수입된 중고 가구와 소품을 구경하고 구매할 수 있습니다.",
+      },
+    ],
+  },
+  {
+    id: "mullae",
+    name: "문래 예술촌 탐방",
+    region: "서울 영등포구",
+    rating: 4.5,
+    count: 22,
+    availability: "available" as const,
+    places: [
+      {
+        name: "문래창작촌",
+        category: "문화시설",
+        status: "open" as const,
+        description: "철공소 밀집 지역에 예술가들이 자연스럽게 정착하며 형성된 도시형 예술 클러스터. 공방, 갤러리, 스튜디오가 쇳소리와 공존하는 독특한 공간입니다.",
+      },
+      {
+        name: "문래동 철공소",
+        category: "관광지",
+        status: "open" as const,
+        description: "1960~70년대부터 이어진 소규모 철강·기계 가공 업체 밀집 지역. 용접 불꽃과 금속 가공 소리가 예술촌과 어우러져 이색적인 도시 풍경을 만듭니다.",
+      },
+    ],
+  },
+  {
+    id: "dongjak",
+    name: "동작 한강 자전거길",
+    region: "서울 동작구",
+    rating: 4.7,
+    count: 41,
+    availability: "available" as const,
+    places: [
+      {
+        name: "동작대교",
+        category: "관광지",
+        status: "open" as const,
+        description: "한강의 12번째 다리로, 지하철 4호선이 통과하는 철도·도로 복합 교량. 교각 사이로 바라보는 한강 풍경이 일몰 시간대에 특히 아름답습니다.",
+      },
+      {
+        name: "반포한강공원",
+        category: "관광지",
+        status: "open" as const,
+        description: "반포대교 달빛무지개분수로 유명한 한강 공원. 수상택시 선착장, 세빛섬, 야외 수영장 등 다양한 시설을 갖춰 연중 많은 시민이 찾습니다.",
+      },
+    ],
+  },
+  {
+    id: "changdeok",
+    name: "창덕궁 후원 산책",
+    region: "서울 종로구",
+    rating: 4.9,
+    count: 89,
+    availability: "partial" as const,
+    todayCompletions: { count: 3, timeframe: "오늘" as const },
+    places: [
+      {
+        name: "창덕궁",
+        category: "문화시설",
+        status: "open" as const,
+        description: "1405년 건립된 조선의 이궁. 유네스코 세계문화유산으로 등재되어 있으며, 자연 지형을 살린 배치와 아름다운 전각이 조화를 이룹니다.",
+      },
+      {
+        name: "창덕궁 후원",
+        category: "관광지",
+        status: "open" as const,
+        description: "창덕궁 북쪽 약 30만㎡의 왕실 정원. 부용지·애련지 등 연못과 정자가 숲속에 자리하며, 사전 예약 후 해설사와 함께 관람할 수 있습니다.",
+      },
+    ],
+  },
+  {
+    id: "hongdae",
+    name: "홍대 예술 거리",
+    region: "서울 마포구",
+    rating: 4.5,
+    count: 76,
+    availability: "available" as const,
+    todayCompletions: { count: 7, timeframe: "오늘" as const },
+    places: [
+      {
+        name: "홍대 걷고싶은거리",
+        category: "관광지",
+        status: "open" as const,
+        description: "홍익대학교 정문 앞에서 이어지는 약 300m의 보행자 전용 거리. 주말마다 버스킹 공연과 플리마켓이 열려 항상 활기찬 분위기를 자랑합니다.",
+      },
+      {
+        name: "홍대 앞 공원",
+        category: "관광지",
+        status: "open" as const,
+        description: "홍대입구역 인근의 소규모 문화 광장. 인디 뮤지션과 거리 예술가들의 공연 무대로 활용되며, 주변에 독립 서점과 아트숍이 위치합니다.",
+      },
+    ],
+  },
+  {
+    id: "nodeul",
+    name: "노들섬 선셋 코스",
+    region: "서울 동작구",
+    rating: 4.6,
+    count: 29,
+    availability: "available" as const,
+    places: [
+      {
+        name: "노들섬",
+        category: "관광지",
+        status: "open" as const,
+        description: "한강 위에 떠 있는 약 12만㎡의 복합문화공간 섬. 음악 공연장, 식물 온실, 야외 잔디밭을 갖추고 있으며 노을이 질 때 한강 전망이 특히 아름답습니다.",
+      },
+      {
+        name: "한강대교",
+        category: "관광지",
+        status: "open" as const,
+        description: "서울에서 가장 오래된 한강 다리 중 하나. 노들섬을 지나는 구조 덕분에 다리 위에서 섬과 강 양쪽을 동시에 조망할 수 있습니다.",
+      },
+    ],
+  },
+  {
+    id: "bukhansan",
+    name: "북한산 둘레길 입구",
+    region: "서울 은평구",
+    rating: 4.8,
+    count: 112,
+    availability: "available" as const,
+    places: [
+      {
+        name: "북한산국립공원",
+        category: "관광지",
+        status: "open" as const,
+        description: "서울과 경기도에 걸친 도심형 국립공원. 인수봉·백운대·만경대 등 화강암 암봉이 장관을 이루며, 연간 500만 명 이상이 찾는 세계적 도시 산악 공원입니다.",
+      },
+      {
+        name: "진관사",
+        category: "문화시설",
+        status: "open" as const,
+        description: "1011년 창건된 은평구 북한산 자락의 천년 고찰. 조용한 산사 분위기 속에서 템플스테이와 산사 체험 프로그램이 운영됩니다.",
+      },
+    ],
+  },
+  {
+    id: "seochon",
+    name: "서촌 골목 투어",
+    region: "서울 종로구",
+    rating: 4.7,
+    count: 47,
+    availability: "unavailable" as const,
+    places: [
+      {
+        name: "통인시장",
+        category: "문화시설",
+        status: "closed" as const,
+        description: "1941년 개설된 경복궁 서쪽 골목 시장. 엽전 도시락 카페로 유명하며, 직접 엽전을 구매해 원하는 반찬을 골라 도시락을 꾸릴 수 있습니다.",
+      },
+      {
+        name: "수성동계곡",
+        category: "관광지",
+        status: "closed" as const,
+        description: "인왕산 아래 서촌에 복원된 도심 속 자연 계곡. 겸재 정선의 진경산수화 배경지로, 기린교 돌다리와 맑은 물길이 도심 피서지로 인기입니다.",
+      },
+    ],
+  },
+  {
+    id: "gwanghwamun",
+    name: "광화문 역사 코스",
+    region: "서울 종로구",
+    rating: 4.7,
+    count: 93,
+    availability: "available" as const,
+    places: [
+      {
+        name: "광화문광장",
+        category: "관광지",
+        status: "open" as const,
+        description: "2022년 재개장한 서울의 중심 광장. 세종대왕·이순신 장군 동상과 역사 물길이 조성되어 있으며, 경복궁과 북악산을 배경으로 한 도시 풍경이 인상적입니다.",
+      },
+      {
+        name: "경복궁",
+        category: "문화시설",
+        status: "open" as const,
+        description: "1395년 창건된 조선 왕조의 법궁. 서울 도심 한복판에 자리하며, 광화문·근정전·경회루 등 주요 건물과 야간 특별관람이 운영됩니다.",
+      },
+      {
+        name: "청계천",
+        category: "관광지",
+        status: "open" as const,
+        description: "도심 복개 구간을 철거해 2005년 복원된 도시 하천. 광화문 동아일보 사옥 앞 광통교부터 성동구까지 약 5.8km가 이어지며 사계절 시민 산책 명소입니다.",
+      },
+    ],
+  },
+  {
+    id: "cheonggyecheon",
+    name: "청계천 야간 산책",
+    region: "서울 중구",
+    rating: 4.5,
+    count: 61,
+    availability: "available" as const,
+    todayCompletions: { count: 4, timeframe: "오늘" as const },
+    places: [
+      {
+        name: "청계광장",
+        category: "관광지",
+        status: "open" as const,
+        description: "청계천 복원의 시작점이자 서울 도심 상징 광장. 스프링 조형물과 분수가 설치되어 있으며, 야간 조명이 켜지는 저녁 시간에 특히 많은 시민이 모입니다.",
+      },
+      {
+        name: "청계천 물길",
+        category: "관광지",
+        status: "open" as const,
+        description: "청계광장에서 신답철교까지 이어지는 5.8km의 도심 하천 산책로. 하천 양쪽 징검다리와 벽화, 역사 유물 전시가 걷는 내내 볼거리를 제공합니다.",
+      },
+    ],
+  },
+];
