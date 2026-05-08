@@ -1,1 +1,5 @@
-export default function ProfilePage() { return <div />; }
+import { ProfileView } from "@/components/domains/profile/ProfileView";
+
+export default function ProfilePage() {
+  return <ProfileView />;
+}
