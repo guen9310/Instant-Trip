@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Monitor, Moon, Sun } from "lucide-react";
+import { useDarkModeStore } from "@/client/stores/useDarkModeStore";
 
 const TAB_PATHS = ["/", "/feed", "/profile"];
 
@@ -16,6 +17,11 @@ const PAGE_TITLES: Record<string, string> = {
 export function GlobalNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, cycleTheme } = useDarkModeStore();
+
+  const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
+  const nextLabel =
+    theme === "light" ? "다크 모드로 전환" : theme === "dark" ? "시스템 설정으로 전환" : "라이트 모드로 전환";
 
   const isTabPage = TAB_PATHS.includes(pathname);
   const title = PAGE_TITLES[pathname];
@@ -46,23 +52,32 @@ export function GlobalNav() {
           </Link>
         )}
       </div>
-      {false ? (
-        <Link
-          href="/profile"
-          className="w-[30px] h-[30px] rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold shrink-0"
-          aria-label="내 정보"
+      <div className="flex items-center gap-2">
+        <button
+          onClick={cycleTheme}
+          className="p-1.5 text-text-primary"
+          aria-label={nextLabel}
         >
-          U
-        </Link>
-      ) : (
-        <Link
-          href="/sign-in"
-          className="px-2 py-1 text-[13px] font-medium text-primary"
-          aria-label="로그인"
-        >
-          로그인
-        </Link>
-      )}
+          <ThemeIcon size={18} />
+        </button>
+        {false ? (
+          <Link
+            href="/profile"
+            className="w-[30px] h-[30px] rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold shrink-0"
+            aria-label="내 정보"
+          >
+            U
+          </Link>
+        ) : (
+          <Link
+            href="/sign-in"
+            className="px-2 py-1 text-[13px] font-medium text-primary"
+            aria-label="로그인"
+          >
+            로그인
+          </Link>
+        )}
+      </div>
     </nav>
   );
 }

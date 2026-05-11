@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/client/providers/QueryProvider";
+import { DarkModeSync } from "@/components/layout/DarkModeSync";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,8 +29,18 @@ export default function RootLayout({
       lang="ko"
       translate="no"
       className={`notranslate ${geistSans.variable} ${geistMono.variable} h-dvh antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* FOUC 방지: 첫 paint 전 localStorage/시스템 설정으로 dark 클래스 적용 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var raw=localStorage.getItem('theme');var t=raw?JSON.parse(raw).state?.theme:'system';var dark=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(dark)document.documentElement.classList.add('dark');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="h-full flex justify-center bg-background text-text-primary md:bg-muted">
+        <DarkModeSync />
         <div className="flex flex-col h-full w-full max-w-[430px] bg-background overflow-hidden md:shadow-[0_0_40px_rgba(0,0,0,0.08)]">
           <QueryProvider>{children}</QueryProvider>
         </div>

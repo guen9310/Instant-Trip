@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { FeedFeaturedCard } from "./FeedFeaturedCard";
 import { FeedMidCard } from "./FeedMidCard";
 import { FeedSmallCard } from "./FeedSmallCard";
@@ -29,17 +29,10 @@ export function FeedList() {
     ? FEED_LIST_COURSES.filter((c) => c.availability === "available")
     : FEED_LIST_COURSES;
 
-  const sourceLengthRef = useRef(filteredCourses.length);
-  sourceLengthRef.current = filteredCourses.length;
-
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [onlyAvailable]);
-
   const { ref: sentinelRef } = useIntersectionObserver(() => {
     setVisibleCount((prev) =>
-      prev < sourceLengthRef.current
-        ? Math.min(prev + PAGE_SIZE, sourceLengthRef.current)
+      prev < filteredCourses.length
+        ? Math.min(prev + PAGE_SIZE, filteredCourses.length)
         : prev,
     );
   });
@@ -48,6 +41,11 @@ export function FeedList() {
     setSelectedCourse(course);
     setSheetOpen(true);
     setSheetKey((k) => k + 1);
+  };
+
+  const handleToggleAvailable = (checked: boolean) => {
+    setOnlyAvailable(checked);
+    setVisibleCount(PAGE_SIZE);
   };
 
   const visibleCourses = filteredCourses.slice(0, visibleCount);
@@ -82,10 +80,12 @@ export function FeedList() {
           더 많은 코스
         </p>
         <label className="flex items-center gap-2 cursor-pointer">
-          <span className="text-[12px] text-text-secondary">지금 가능한 코스만 보기</span>
+          <span className="text-[12px] text-text-secondary">
+            지금 가능한 코스만 보기
+          </span>
           <Switch
             checked={onlyAvailable}
-            onCheckedChange={setOnlyAvailable}
+            onCheckedChange={handleToggleAvailable}
           />
         </label>
       </div>
