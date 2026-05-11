@@ -51,13 +51,13 @@ export function OnboardingForm() {
   const [selected, setSelected] = useState<"yes" | "no" | null>(null);
 
   const handleSkip = () => {
-    router.push("/feed");
+    router.push("/");
   };
 
   const handleChoose = (value: "yes" | "no") => {
     setSelected(value);
     setTimeout(() => {
-      router.push("/feed");
+      router.push("/onboarding/done");
     }, 280);
   };
 

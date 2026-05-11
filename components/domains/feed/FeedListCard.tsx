@@ -28,7 +28,12 @@ export function FeedListCard({
       onTouchEnd={() => setPressed(false)}
       onClick={() => onSelect(course)}
     >
-      <div className="w-[68px] h-[68px] rounded-xl bg-surface-secondary shrink-0" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={`https://picsum.photos/seed/${course.id}/68/68`}
+        alt={course.name}
+        className="w-[68px] h-[68px] rounded-xl object-cover bg-surface-secondary shrink-0"
+      />
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-bold text-text-primary tracking-[-0.01em] truncate mb-0.5">
           {course.name}
