@@ -1,1 +1,5 @@
-export default function SettingsPage() { return <div />; }
+import { SettingsView } from "@/components/domains/settings/SettingsView";
+
+export default function SettingsPage() {
+  return <SettingsView />;
+}
