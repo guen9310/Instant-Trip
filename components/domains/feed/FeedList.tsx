@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FeedFeaturedCard } from "./FeedFeaturedCard";
 import { FeedMidCard } from "./FeedMidCard";
 import { FeedSmallCard } from "./FeedSmallCard";
 import { FeedListCard } from "./FeedListCard";
 import { FeedCourseSheet } from "./FeedCourseSheet";
+import { Switch } from "@/components/commons/switch";
 import { useIntersectionObserver } from "@/client/hooks/useIntersectionObserver";
 import {
   FEED_FEATURED,
@@ -22,10 +23,23 @@ export function FeedList() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+
+  const filteredCourses = onlyAvailable
+    ? FEED_LIST_COURSES.filter((c) => c.availability === "available")
+    : FEED_LIST_COURSES;
+
+  const sourceLengthRef = useRef(filteredCourses.length);
+  sourceLengthRef.current = filteredCourses.length;
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [onlyAvailable]);
+
   const { ref: sentinelRef } = useIntersectionObserver(() => {
     setVisibleCount((prev) =>
-      prev < FEED_LIST_COURSES.length
-        ? Math.min(prev + PAGE_SIZE, FEED_LIST_COURSES.length)
+      prev < sourceLengthRef.current
+        ? Math.min(prev + PAGE_SIZE, sourceLengthRef.current)
         : prev,
     );
   });
@@ -36,8 +50,8 @@ export function FeedList() {
     setSheetKey((k) => k + 1);
   };
 
-  const visibleCourses = FEED_LIST_COURSES.slice(0, visibleCount);
-  const hasMore = visibleCount < FEED_LIST_COURSES.length;
+  const visibleCourses = filteredCourses.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredCourses.length;
 
   return (
     <>
@@ -67,6 +81,13 @@ export function FeedList() {
         <p className="text-[15px] font-bold text-text-primary tracking-[-0.02em]">
           더 많은 코스
         </p>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <span className="text-[12px] text-text-secondary">지금 가능한 코스만 보기</span>
+          <Switch
+            checked={onlyAvailable}
+            onCheckedChange={setOnlyAvailable}
+          />
+        </label>
       </div>
       <div>
         {visibleCourses.map((course) => (
