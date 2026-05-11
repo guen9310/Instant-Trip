@@ -1,1 +1,5 @@
-export default function ActiveCoursePage() { return <div />; }
+import { CourseActiveView } from "@/components/domains/course/CourseActiveView";
+
+export default function ActiveCoursePage() {
+  return <CourseActiveView />;
+}

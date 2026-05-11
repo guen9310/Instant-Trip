@@ -1,0 +1,175 @@
+"use client";
+
+import { useState } from "react";
+import { MapPin, Clock, Calendar, ThumbsDown, ChevronLeft, X } from "lucide-react";
+import type { ElementType } from "react";
+import { cn } from "@/shared/utils";
+import { Sheet, SheetContent } from "@/components/commons/Sheet";
+import { Badge } from "@/components/commons/Badge";
+import { Button } from "@/components/commons/Button";
+import type { Place } from "@/shared/types/course.types";
+
+const REJECT_REASONS = [
+  { id: "far", icon: MapPin, label: "너무 멀어요" },
+  { id: "taste", icon: ThumbsDown, label: "취향이 아니에요" },
+  { id: "visited", icon: Calendar, label: "이미 가봤어요" },
+  { id: "time", icon: Clock, label: "시간이 안 맞아요" },
+] as const;
+
+type Props = {
+  place: Place | null;
+  onClose: () => void;
+};
+
+export function PlaceDetailSheet({ place, onClose }: Props) {
+  return (
+    <Sheet
+      open={!!place}
+      onOpenChange={(open: boolean) => {
+        if (!open) onClose();
+      }}
+    >
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        className="p-0 rounded-t-[20px] max-h-[90dvh] gap-0 overflow-hidden"
+      >
+        {/* 드래그 핸들 */}
+        <div className="flex justify-center pt-2">
+          <div className="w-9 h-1 rounded-full bg-border" />
+        </div>
+        {/* key를 place.id로 두어 장소 변경 시 내부 상태 자동 리셋 */}
+        {place && (
+          <PlaceDetailContent key={place.id} place={place} onClose={onClose} />
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function PlaceDetailContent({
+  place,
+  onClose,
+}: {
+  place: Place;
+  onClose: () => void;
+}) {
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [reason, setReason] = useState<string | null>(null);
+
+  return (
+    <div className="overflow-hidden relative">
+      <div
+        className="flex transition-transform duration-250 ease-in-out"
+        style={{
+          transform: isRejecting ? "translateX(-50%)" : "translateX(0)",
+          width: "200%",
+        }}
+      >
+        {/* 기본 패널 */}
+        <div className="w-1/2 px-5 pt-3 pb-5 box-border">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <Badge variant={place.badge.variant}>{place.cat}</Badge>
+              <h2 className="text-[22px] font-bold text-text-primary tracking-tight mt-2">
+                {place.name}
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-text-primary shrink-0 mt-0.5"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2.5 mt-4">
+            <DetailRow icon={MapPin} label={place.addr} />
+            <DetailRow icon={Clock} label={`영업시간 ${place.hours}`} />
+            <DetailRow
+              icon={Calendar}
+              label={`${place.time} 도착 · ${place.dur} 머무름`}
+            />
+          </div>
+
+          <div className="h-px bg-border my-4" />
+          <p className="text-[14px] text-text-primary leading-[1.55]">{place.desc}</p>
+
+          <div className="flex flex-col gap-2 mt-5">
+            <button
+              onClick={() => setIsRejecting(true)}
+              className="w-full h-12 rounded-lg border border-border text-point text-[14px] font-medium flex items-center justify-center gap-1.5"
+            >
+              <ThumbsDown size={15} /> 이런 곳은 싫어요
+            </button>
+            <Button size="cta" onClick={onClose}>
+              확인
+            </Button>
+          </div>
+        </div>
+
+        {/* 거절 패널 */}
+        <div className="w-1/2 px-5 pt-3 pb-5 box-border">
+          <button
+            onClick={() => setIsRejecting(false)}
+            className="flex items-center gap-1 text-text-secondary text-[14px] font-medium mb-3.5"
+          >
+            <ChevronLeft size={18} /> 돌아가기
+          </button>
+          <h2 className="text-[20px] font-bold text-text-primary tracking-tight mb-1">
+            어떤 점이 마음에 안 드셨나요?
+          </h2>
+          <p className="text-[13px] text-text-secondary mb-5">{place.name}</p>
+
+          <div className="grid grid-cols-2 gap-2">
+            {REJECT_REASONS.map((r) => {
+              const sel = reason === r.id;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => setReason(r.id)}
+                  className={cn(
+                    "p-3.5 rounded-[10px] border flex flex-col items-center gap-2 transition-colors",
+                    sel
+                      ? "bg-primary/5 border-primary text-primary"
+                      : "bg-background border-border text-text-secondary"
+                  )}
+                >
+                  <r.icon size={20} />
+                  <span className="text-[13px] font-medium">{r.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col gap-2 mt-5">
+            <button
+              onClick={onClose}
+              className="w-full h-12 rounded-lg border border-border text-text-primary text-[14px] font-medium"
+            >
+              이 장소만 교체하기
+            </button>
+            <Button size="cta" onClick={onClose}>
+              코스 전체 다시 뽑기
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({
+  icon: Ico,
+  label,
+}: {
+  icon: ElementType;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <Ico size={16} className="text-text-secondary shrink-0" />
+      <span className="text-[14px] text-text-primary">{label}</span>
+    </div>
+  );
+}
