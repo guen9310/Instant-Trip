@@ -26,7 +26,7 @@ const OPTIONS = [
     icon: MapPin,
     title: "다른 지역 선택하기",
     sub: "지역을 직접 입력",
-    href: "/location-denied",
+    href: "/start/location-denied",
   },
 ] as const;
 

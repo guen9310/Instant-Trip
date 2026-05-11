@@ -9,6 +9,8 @@ const TAB_PATHS = ["/", "/feed", "/profile"];
 const PAGE_TITLES: Record<string, string> = {
   "/profile": "내 정보",
   "/settings": "취향 설정",
+  "/start/location-denied": "위치 설정",
+  "/start/no-nearby": "코스 찾기",
 };
 
 export function GlobalNav() {
