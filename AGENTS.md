@@ -85,6 +85,12 @@ components/
 - MUST NOT contain business logic or domain state.
 - MUST NOT import from `domains/`.
 
+### UI Component Installation Rule
+
+- Basic UI components in `commons/` (Button, Toggle, Switch, Input, etc.) MUST be installed from **shadcn/ui**.
+- Before writing a component from scratch, always check if it's available via `npx shadcn@latest add <component>`.
+- Only implement custom components when shadcn/ui does not provide one.
+
 ### `domains/`
 
 - Feature-specific components, organized by domain folder.
