@@ -143,3 +143,19 @@ Strictly separate **server state** and **client state**.
 - **Imports**: Use the `@/*` path alias. No deep relative paths (`../../../`).
 - **No barrel files (`index.ts`)** for re-exports unless they materially improve DX.
 - **Read `node_modules/next/dist/docs/`** for any Next.js API before using it. Training data may be outdated.
+
+---
+
+## 8. Hooks & Side Effects
+
+### Render must be pure
+The render function body is read-only. Never write to refs, mutate external variables, or call APIs directly inside render. All side effects belong in event handlers or effects.
+
+### Effects are for synchronizing with external systems
+Do not use effects to cascade React state updates. If you find yourself writing `setState` inside an effect to react to another state change, that is a design smell. Resolve it with derived state, `useReducer`, or by updating both states together in the same event handler.
+
+❌ `useEffect(() => { setB(init); }, [a]);`
+✅ `handler = () => { setA(val); setB(init); }`
+
+### Read custom hook implementations before solving a problem they already solve
+Before introducing a workaround (e.g. a "latest ref" to avoid stale closures), check whether the hook you are calling already handles it internally. Duplicating a solution the hook owns makes the code harder to follow and introduces subtle bugs.
