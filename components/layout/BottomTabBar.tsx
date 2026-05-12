@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Zap, Compass, User } from "lucide-react";
 
-const TAB_PATHS = ["/start", "/feed", "/profile"];
+const TAB_PATHS = ["/feed", "/profile"];
 
 export function BottomTabBar() {
   const pathname = usePathname();

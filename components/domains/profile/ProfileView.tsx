@@ -1,10 +1,13 @@
 "use client";
 
-import { Settings, Star } from "lucide-react";
+import { useState } from "react";
+import { Settings } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/commons/Badge";
 import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
+import { StarRating } from "@/components/domains/profile/StarRating";
+import { CompletedCourseDetailModal, type CompletedCourse } from "@/components/domains/profile/CompletedCourseDetailModal";
 
 const STATS = [
   { label: "완료한 코스", value: 3 },
@@ -19,30 +22,38 @@ const IN_PROGRESS = {
 };
 
 const COMPLETED = [
-  { date: "2026.04.28", places: ["성수동 카페거리", "서울숲", "뚝섬한강공원"], rating: 5 },
-  { date: "2026.04.21", places: ["망원시장", "한강공원"], rating: 4 },
+  {
+    name: "성수 골목 산책",
+    date: "2026.04.28",
+    region: "서울 성동구",
+    duration: "2시간",
+    places: [
+      { name: "성수동 카페거리", category: "문화시설" },
+      { name: "서울숲", category: "관광지" },
+      { name: "뚝섬한강공원", category: "관광지" },
+    ],
+    xp: 45,
+    rating: 5,
+    review: "날씨도 좋고 코스가 딱 적당했다",
+  },
+  {
+    name: "망원 한강 산책",
+    date: "2026.04.21",
+    region: "서울 마포구",
+    duration: "1시간 30분",
+    places: [
+      { name: "망원시장", category: "전통시장" },
+      { name: "한강공원", category: "관광지" },
+    ],
+    xp: 30,
+    rating: 4,
+    review: "",
+  },
 ];
 
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star
-          key={s}
-          size={13}
-          strokeWidth={1.5}
-          className={cn(
-            s <= rating
-              ? "fill-amber-400 text-amber-400"
-              : "fill-transparent text-border",
-          )}
-        />
-      ))}
-    </div>
-  );
-}
-
 export function ProfileView() {
+  const [selected, setSelected] = useState<CompletedCourse | null>(null);
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-5">
       {/* 아바타 */}
@@ -113,9 +124,10 @@ export function ProfileView() {
       </h3>
       <div className="mb-6 flex flex-col gap-2.5">
         {COMPLETED.map((c) => (
-          <div
+          <button
             key={c.date}
-            className="rounded-xl border border-border bg-card px-3.5 py-3.5"
+            onClick={() => setSelected(c)}
+            className="rounded-xl border border-border bg-card px-3.5 py-3.5 text-left"
           >
             <div className="mb-1.5 flex items-center justify-between">
               <span className="text-[12px] tabular-nums text-text-secondary">
@@ -124,12 +136,17 @@ export function ProfileView() {
               <Badge variant="outline">완료</Badge>
             </div>
             <p className="mb-1.5 text-[14px] font-medium text-text-primary">
-              {c.places.join(" · ")}
+              {c.places.map((p) => p.name).join(" · ")}
             </p>
             <StarRating rating={c.rating} />
-          </div>
+          </button>
         ))}
       </div>
+
+      <CompletedCourseDetailModal
+        course={selected}
+        onClose={() => setSelected(null)}
+      />
 
       {/* 하단 버튼 */}
       <div className="flex flex-col gap-2.5">
