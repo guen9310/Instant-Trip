@@ -6,6 +6,7 @@ import { CheckCircle, Star } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { Textarea } from "@/components/commons/Textarea";
+import { MOCK_PLACES } from "@/shared/constants/courseMock";
 
 export function CourseDoneView() {
   const [stars, setStars] = useState(4);
@@ -30,32 +31,34 @@ export function CourseDoneView() {
           <p className="text-[14px] text-text-secondary">어떠셨나요?</p>
         </div>
 
-        {/* XP 카드 */}
-        <div className="p-4 rounded-xl border border-border bg-gradient-to-br from-primary/5 to-accent/9 mb-5">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-[14px] text-text-primary font-medium">
-              코스 완료
-            </span>
-            <span className="text-[14px] font-bold text-point">+30 XP</span>
+        {/* 방문 장소 요약 */}
+        <div className="rounded-xl border border-border bg-card mb-5 overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-[12px] font-semibold text-text-secondary">
+              오늘 다녀온 곳
+            </p>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-[14px] text-text-primary font-medium">
-              첫 서울 종로 방문
-            </span>
-            <span className="text-[14px] font-bold text-point">+10 XP</span>
-          </div>
-          <div className="h-px bg-border my-3.5" />
-          <div className="flex justify-between items-baseline mb-2">
-            <span className="text-[13px] font-semibold text-text-primary">
-              탐험가 Lv.3
-            </span>
-            <span className="text-[12px] text-text-secondary tabular-nums">
-              340 / 500 XP
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-border overflow-hidden">
-            <div className="w-[68%] h-full rounded-full bg-primary" />
-          </div>
+          {MOCK_PLACES.map((place, i) => (
+            <div
+              key={place.id}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3",
+                i < MOCK_PLACES.length - 1 ? "border-b border-border" : "",
+              )}
+            >
+              <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[11px] font-bold shrink-0">
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-semibold text-text-primary truncate">
+                  {place.name}
+                </p>
+                <p className="text-[11px] text-text-secondary">
+                  {place.cat} · {place.dur}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* 별점 */}
@@ -84,7 +87,7 @@ export function CourseDoneView() {
         <Textarea
           value={review}
           onChange={(e) => setReview(e.target.value)}
-          placeholder="한줄 후기 (선택) — 남기면 +5 XP"
+          placeholder="한줄 후기 (선택)"
           className="min-h-[88px] resize-none"
         />
       </div>
@@ -92,7 +95,7 @@ export function CourseDoneView() {
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
         <Button size="cta" onClick={handleDone}>
-          후기 남기고 +5 XP
+          후기 남기기
         </Button>
         <button
           onClick={handleDone}

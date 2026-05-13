@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { RefreshCcw, Globe, Clock } from "lucide-react";
+import { RefreshCcw, Sparkles, Clock, ChevronRight } from "lucide-react";
+import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
@@ -10,12 +11,27 @@ import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
 import { MOCK_PLACES } from "@/shared/constants/courseMock";
 import type { Place } from "@/shared/types/course.types";
 
+// TODO: 실제 저장된 취향값으로 교체
+const TRAVEL_REASON: Record<string, string> = {
+  walk: "걷는 게 좋아요",
+  min: "이동 최소화",
+};
+
 export function CourseResultView() {
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [loading, setLoading] = useState(false);
   const places = MOCK_PLACES;
+  const travelPref = "walk"; // TODO: 실제 취향 값으로 교체
+
+  const handleReroll = async () => {
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 2500));
+    setLoading(false);
+  };
 
   return (
     <>
+      {loading && <CourseLoadingOverlay />}
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">
         {/* 헤더 */}
         <h1 className="text-[22px] font-bold text-text-primary tracking-tight mb-1">
@@ -31,9 +47,9 @@ export function CourseResultView() {
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground mb-5">
-          <Globe size={12} />
+          <Sparkles size={12} />
           <span className="text-[11px] tracking-tight">
-            당신이 '걷는 거 좋아요'를 선택했기 때문에 추천
+            {`당신이 '${TRAVEL_REASON[travelPref]}'를 선택했기 때문에 추천`}
           </span>
         </div>
 
@@ -77,7 +93,10 @@ export function CourseResultView() {
             이 코스로 갈게요
           </Button>
         </Link>
-        <button className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5">
+        <button
+          onClick={handleReroll}
+          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5"
+        >
           <RefreshCcw size={15} /> 다시 뽑기
         </button>
       </div>
@@ -106,7 +125,10 @@ function PlaceCardTimeline({
         <span className="text-[11px] font-semibold text-text-secondary">
           {place.cat}
         </span>
-        <Badge variant={place.badge.variant}>{place.badge.text}</Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant={place.badge.variant}>{place.badge.text}</Badge>
+          <ChevronRight size={14} className="text-text-secondary" />
+        </div>
       </div>
       <p className="text-[16px] font-bold text-text-primary tracking-tight">
         {place.name}
