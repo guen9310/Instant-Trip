@@ -6,34 +6,15 @@ import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/commons/Button";
 import { LocationPermissionSheet } from "@/components/domains/location/LocationPermissionSheet";
-import { DEFAULT_PREFS, type Prefs } from "@/shared/constants/preferences";
-
-function buildProfileSummary(prefs: Prefs) {
-  const vibe =
-    prefs.vibe === "quiet"
-      ? "조용한 분위기의 장소를 좋아하고,"
-      : "활기찬 분위기의 장소를 좋아하고,";
-
-  const party = prefs.party === "solo" ? "혼자" : "함께";
-  const travel =
-    prefs.travel === "walk" ? "천천히 걸으며" : "이동을 최소화해서";
-  const preference = `${party} ${travel} 둘러보는 코스를 선호하시네요.`;
-
-  const radius =
-    prefs.radius === "near" ? "가까운 거리 안에서" : "근교까지 넓게";
-  const food = prefs.food === "matjip" ? "맛집이 포함된 " : "";
-  const course = prefs.travel === "walk" ? "도보 코스" : "코스";
-  const recommend = `${radius} ${food}${course}를 추천해드릴게요.`;
-
-  return { vibe, preference, recommend };
-}
+import { usePrefsStore } from "@/client/stores/usePrefsStore";
+import { buildProfileSummary } from "@/shared/utils/prefsText";
 
 export function OnboardingDoneView() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const router = useRouter();
 
-  // TODO: 실제 저장된 취향값으로 교체
-  const profile = buildProfileSummary(DEFAULT_PREFS);
+  const prefs = usePrefsStore((s) => s.prefs);
+  const profile = buildProfileSummary(prefs);
 
   const handleAllow = () => {
     setSheetOpen(false);

@@ -11,6 +11,8 @@ import {
   CompletedCourseDetailModal,
   type CompletedCourse,
 } from "@/components/domains/profile/CompletedCourseDetailModal";
+import { usePrefsStore } from "@/client/stores/usePrefsStore";
+import { buildReexplorationText } from "@/shared/utils/prefsText";
 
 const STATS = [
   { label: "완료한 코스", value: 3 },
@@ -55,6 +57,8 @@ const COMPLETED = [
 
 export function ProfileView() {
   const [selected, setSelected] = useState<CompletedCourse | null>(null);
+  const prefs = usePrefsStore((s) => s.prefs);
+  const reexploration = buildReexplorationText(prefs);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-5">
@@ -160,12 +164,11 @@ export function ProfileView() {
       </div>
 
       {/* 재탐색 제안 */}
-      {/* TODO: 실제 취향 및 완료 코스 패턴 기반으로 문구 생성 */}
       <div className="mb-6 rounded-xl border border-border bg-card px-4 py-4">
         <p className="text-[13px] text-text-primary leading-[1.65] mb-3">
-          최근엔 조용한 산책 코스를 자주 다녀오셨네요.
+          {reexploration.line1}
           <br />
-          비슷한 분위기의 새로운 코스를 추천해드릴까요?
+          {reexploration.line2}
         </p>
         <Link
           href="/start"

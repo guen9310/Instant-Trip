@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/utils";
-import { PREF_META, type PrefKey } from "@/shared/constants/preferences";
+import { DEFAULT_PREFS, PREF_META, type Prefs, type PrefKey } from "@/shared/constants/preferences";
+import { usePrefsStore } from "@/client/stores/usePrefsStore";
 
 const STEPS: {
   id: PrefKey;
@@ -94,16 +95,21 @@ function OnboardCard({ icon, title, desc, selected, onClick }: OnboardCardProps)
 
 export function OnboardingForm() {
   const router = useRouter();
+  const setPrefs = usePrefsStore((s) => s.setPrefs);
   const [stepIdx, setStepIdx] = useState(0);
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
+  const [answers, setAnswers] = useState<Partial<Prefs>>({});
 
   const step = STEPS[stepIdx];
   const isLast = stepIdx === STEPS.length - 1;
 
   const handleChoose = (value: string) => {
     setSelectedValue(value);
+    const newAnswers = { ...answers, [step.id]: value };
+    setAnswers(newAnswers);
     setTimeout(() => {
       if (isLast) {
+        setPrefs({ ...DEFAULT_PREFS, ...newAnswers } as Prefs);
         router.push("/onboarding/done");
       } else {
         setStepIdx((prev) => prev + 1);

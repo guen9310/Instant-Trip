@@ -1,15 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
-import {
-  PREF_KEYS,
-  PREF_META,
-  DEFAULT_PREFS,
-  type Prefs,
-} from "@/shared/constants/preferences";
+import { PREF_KEYS, PREF_META } from "@/shared/constants/preferences";
+import { usePrefsStore } from "@/client/stores/usePrefsStore";
 
 const OPTION_TITLES: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -25,12 +20,9 @@ const OPTION_TITLES: Record<string, string> = {
 };
 
 export function SettingsView() {
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
   const router = useRouter();
-
-  const setPref = (key: keyof Prefs, value: string) => {
-    setPrefs((prev) => ({ ...prev, [key]: value }));
-  };
+  const prefs = usePrefsStore((s) => s.prefs);
+  const setPref = usePrefsStore((s) => s.setPref);
 
   return (
     <>
