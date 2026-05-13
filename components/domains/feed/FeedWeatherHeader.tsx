@@ -8,7 +8,7 @@ const MOCK_WEATHER: {
   label: string;
   icon: string;
 } = {
-  location: "마포구",
+  location: "종로구",
   condition: "clear",
   temp: 22,
   label: "맑음",
