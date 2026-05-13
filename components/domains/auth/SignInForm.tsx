@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Mail, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -34,6 +34,15 @@ export function SignInForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col">
+      <header className="px-3 pb-2 pt-[calc(env(safe-area-inset-top)+12px)]">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-text-secondary"
+        >
+          <ArrowLeft size={22} />
+        </button>
+      </header>
       <div className="flex flex-1 flex-col justify-center px-5 py-10">
         <div
           className={cn(

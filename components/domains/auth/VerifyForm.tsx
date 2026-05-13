@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Clock, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Clock, RefreshCcw } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/commons/Button";
@@ -47,6 +47,15 @@ export function VerifyForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col">
+      <header className="px-3 pb-2 pt-[calc(env(safe-area-inset-top)+12px)]">
+        <button
+          type="button"
+          onClick={() => router.push("/sign-in")}
+          className="-ml-1 flex h-9 w-9 items-center justify-center rounded-full text-text-secondary"
+        >
+          <ArrowLeft size={22} />
+        </button>
+      </header>
       <div className="flex flex-1 flex-col justify-center px-5 py-10">
         <h1 className="mb-2 text-[24px] font-bold tracking-tight text-text-primary">
           코드를 입력해주세요
