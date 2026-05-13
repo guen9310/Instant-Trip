@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
-import { PREF_KEYS, PREF_META, DEFAULT_PREFS, type Prefs } from "@/shared/constants/preferences";
+import {
+  PREF_KEYS,
+  PREF_META,
+  DEFAULT_PREFS,
+  type Prefs,
+} from "@/shared/constants/preferences";
 
 const OPTION_TITLES: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -29,48 +34,54 @@ export function SettingsView() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
-        <p className="text-[13px] text-text-secondary leading-normal mb-6">
+      <div className="flex flex-1 flex-col px-4 pt-4 pb-4">
+        <p className="text-[13px] text-text-secondary leading-normal mb-4">
           설정한 취향을 바탕으로 코스를 추천해드려요. 언제든지 변경할 수 있어요.
         </p>
 
-        {PREF_KEYS.map((key, si) => {
-          const section = PREF_META[key];
-          const isLast = si === PREF_KEYS.length - 1;
-          return (
-            <div key={key} className={isLast ? "mb-2" : "mb-6"}>
-              <p className="text-[12px] font-semibold text-text-secondary uppercase tracking-[0.04em] mb-2.5">
-                {section.label}
-              </p>
+        <div className="flex flex-1 flex-col">
+          {PREF_KEYS.map((key, si) => {
+            const section = PREF_META[key];
+            const isLast = si === PREF_KEYS.length - 1;
+            return (
+              <div
+                key={key}
+                className={cn(
+                  "flex flex-1 flex-col py-3",
+                  !isLast && "border-b border-border",
+                )}
+              >
+                <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-[0.04em] mb-2">
+                  {section.label}
+                </p>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                {section.options.map((opt) => {
-                  const sel = prefs[key] === opt.id;
-                  const Ico = opt.icon;
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => setPref(key, opt.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-2.5 py-[18px] px-3.5 rounded-xl border-[1.5px] min-h-[110px] justify-center transition-all",
-                        sel
-                          ? "bg-primary/5 border-primary text-primary scale-[0.98]"
-                          : "bg-surface border-border text-text-primary"
-                      )}
-                    >
-                      <Ico size={26} strokeWidth={1.8} />
-                      <span className="text-[14px] font-semibold tracking-tight text-center leading-snug">
-                        {OPTION_TITLES[opt.id]}
-                      </span>
-                    </button>
-                  );
-                })}
+                <div className="flex flex-1 gap-2">
+                  {section.options.map((opt) => {
+                    const sel = prefs[key] === opt.id;
+                    const Ico = opt.icon;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => setPref(key, opt.id)}
+                        className={cn(
+                          "flex flex-1 items-center justify-center gap-2.5 px-3.5 rounded-xl border-[1.5px] transition-all",
+                          sel
+                            ? "bg-primary/5 border-primary text-primary scale-[0.98]"
+                            : "bg-surface border-border text-text-primary",
+                        )}
+                      >
+                        <Ico size={18} strokeWidth={1.8} className="shrink-0" />
+                        <span className="text-[13px] font-semibold tracking-tight leading-snug">
+                          {OPTION_TITLES[opt.id]}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-
-              {!isLast && <div className="h-px bg-border mt-6" />}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* CTA 바 */}
@@ -78,11 +89,8 @@ export function SettingsView() {
         <Button size="cta" onClick={() => router.push("/profile")}>
           저장하기
         </Button>
-        <button
-          onClick={() => router.push("/onboarding")}
-          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center"
-        >
-          취향 처음부터 다시 설정하기
+        <button className="w-full py-3 text-[13px] text-text-secondary flex items-center justify-center">
+          로그아웃
         </button>
       </div>
     </>

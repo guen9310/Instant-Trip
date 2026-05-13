@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Settings } from "lucide-react";
+import { Settings, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/commons/Badge";
 import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
 import { StarRating } from "@/components/domains/profile/StarRating";
-import { CompletedCourseDetailModal, type CompletedCourse } from "@/components/domains/profile/CompletedCourseDetailModal";
+import {
+  CompletedCourseDetailModal,
+  type CompletedCourse,
+} from "@/components/domains/profile/CompletedCourseDetailModal";
 
 const STATS = [
   { label: "완료한 코스", value: 3 },
@@ -16,7 +19,8 @@ const STATS = [
 
 const IN_PROGRESS = {
   name: "적당히 즐기는 코스",
-  progress: "1 / 3",
+  current: 1,
+  total: 3,
   region: "종로구",
   courseId: "1",
 };
@@ -54,6 +58,13 @@ export function ProfileView() {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-5">
+      {/* 헤더 */}
+      <div className="mb-4 flex items-center justify-end">
+        <Link href="/settings" className="-mr-1 p-1 text-text-secondary">
+          <Settings size={20} />
+        </Link>
+      </div>
+
       {/* 아바타 */}
       <div className="mb-6 flex flex-col items-center">
         <div
@@ -67,15 +78,15 @@ export function ProfileView() {
         <p className="text-[14px] font-medium text-text-primary">
           example@email.com
         </p>
-        <p className="mt-0.5 text-[12px] text-text-secondary">
-          완료한 코스 3개
-        </p>
       </div>
 
       {/* 통계 */}
       <div className="mb-6 grid grid-cols-2 gap-2.5">
         {STATS.map(({ label, value }) => (
-          <div key={label} className="rounded-xl border border-border bg-card px-4 py-3">
+          <div
+            key={label}
+            className="rounded-xl border border-border bg-card px-4 py-3"
+          >
             <p className="text-[12px] text-text-secondary">{label}</p>
             <p className="mt-1 text-[22px] font-bold text-text-primary tabular-nums">
               {value}
@@ -101,9 +112,15 @@ export function ProfileView() {
             </span>
             <Badge variant="secondary">진행 중</Badge>
           </div>
-          <p className="text-[12px] text-text-secondary">
-            {IN_PROGRESS.progress} · {IN_PROGRESS.region}
+          <p className="text-[12px] text-text-secondary mb-2">
+            장소 {IN_PROGRESS.current} / {IN_PROGRESS.total} · {IN_PROGRESS.region}
           </p>
+          <div className="h-1.5 rounded-full bg-border">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${(IN_PROGRESS.current / IN_PROGRESS.total) * 100}%` }}
+            />
+          </div>
         </div>
         <Link
           href={`/course/${IN_PROGRESS.courseId}/active`}
@@ -120,53 +137,49 @@ export function ProfileView() {
       <h3 className="mb-2.5 text-[13px] font-semibold text-text-secondary">
         완료한 코스
       </h3>
-      <div className="mb-6 flex flex-col gap-2.5">
+      <div className="mb-4 flex flex-col gap-2.5">
         {COMPLETED.map((c) => (
           <button
             key={c.date}
             onClick={() => setSelected(c)}
             className="rounded-xl border border-border bg-card px-3.5 py-3.5 text-left"
           >
-            <div className="mb-1.5 flex items-center justify-between">
+            <div className="mb-1.5">
               <span className="text-[12px] tabular-nums text-text-secondary">
                 {c.date}
               </span>
-              <Badge variant="outline">완료</Badge>
             </div>
-            <p className="mb-1.5 text-[14px] font-medium text-text-primary">
-              {c.name}
-            </p>
-            <StarRating rating={c.rating} />
+            <div className="flex items-center justify-between gap-2">
+              <p className="min-w-0 truncate text-[14px] font-medium text-text-primary">
+                {c.name}
+              </p>
+              <StarRating rating={c.rating} />
+            </div>
           </button>
         ))}
+      </div>
+
+      {/* 재탐색 제안 */}
+      {/* TODO: 실제 취향 및 완료 코스 패턴 기반으로 문구 생성 */}
+      <div className="mb-6 rounded-xl border border-border bg-card px-4 py-4">
+        <p className="text-[13px] text-text-primary leading-[1.65] mb-3">
+          최근엔 조용한 산책 코스를 자주 다녀오셨네요.
+          <br />
+          비슷한 분위기의 새로운 코스를 추천해드릴까요?
+        </p>
+        <Link
+          href="/start"
+          className="flex items-center gap-0.5 text-[13px] font-semibold text-primary"
+        >
+          근처 코스 둘러보기
+          <ChevronRight size={14} />
+        </Link>
       </div>
 
       <CompletedCourseDetailModal
         course={selected}
         onClose={() => setSelected(null)}
       />
-
-      {/* 하단 버튼 */}
-      <div className="flex flex-col gap-2.5">
-        <Link
-          href="/settings"
-          className={cn(
-            "flex h-11 w-full items-center justify-center gap-1.5 rounded-lg",
-            "border border-border text-[14px] font-medium text-text-primary",
-          )}
-        >
-          <Settings size={15} />
-          취향 설정 변경하기
-        </Link>
-        <button
-          className={cn(
-            "flex h-11 w-full items-center justify-center rounded-lg",
-            "border border-border text-[14px] font-medium text-destructive",
-          )}
-        >
-          로그아웃
-        </button>
-      </div>
     </div>
   );
 }
