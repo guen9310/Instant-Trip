@@ -1,26 +1,72 @@
 "use client";
 
 import { useState } from "react";
-import { Footprints, Navigation } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/utils";
-import { Button } from "@/components/commons/Button";
+import { PREF_META, type PrefKey } from "@/shared/constants/preferences";
+
+const STEPS: {
+  id: PrefKey;
+  question: string;
+  subtitle: string;
+  options: { id: string; title: string; desc: string; iconClass: string; icon: (typeof PREF_META)[PrefKey]["options"][number]["icon"] }[];
+}[] = [
+  {
+    id: "travel",
+    question: "걷는 거 좋아하세요?",
+    subtitle: "이동 방식에 맞게 코스를 짜드릴게요",
+    options: [
+      { ...PREF_META.travel.options[0], title: "네", desc: "도보 코스 위주로", iconClass: "text-accent" },
+      { ...PREF_META.travel.options[1], title: "아니요", desc: "이동 최소화로", iconClass: "text-primary" },
+    ],
+  },
+  {
+    id: "party",
+    question: "혼자 여행하시나요?",
+    subtitle: "인원에 맞게 장소를 골라드릴게요",
+    options: [
+      { ...PREF_META.party.options[0], title: "혼자요", desc: "나만의 코스로", iconClass: "text-primary" },
+      { ...PREF_META.party.options[1], title: "같이요", desc: "함께하는 코스로", iconClass: "text-accent" },
+    ],
+  },
+  {
+    id: "vibe",
+    question: "어떤 분위기 좋아하세요?",
+    subtitle: "장소 분위기를 취향에 맞게 반영해드려요",
+    options: [
+      { ...PREF_META.vibe.options[0], title: "조용한 곳", desc: "여유롭고 한적한 공간", iconClass: "text-primary" },
+      { ...PREF_META.vibe.options[1], title: "활기찬 곳", desc: "생동감 있는 공간", iconClass: "text-accent" },
+    ],
+  },
+  {
+    id: "food",
+    question: "맛집이 중요하신가요?",
+    subtitle: "식사 장소 추천에 반영해드릴게요",
+    options: [
+      { ...PREF_META.food.options[0], title: "중요해요", desc: "맛집 위주로", iconClass: "text-accent" },
+      { ...PREF_META.food.options[1], title: "상관없어요", desc: "어디든 괜찮아요", iconClass: "text-primary" },
+    ],
+  },
+  {
+    id: "radius",
+    question: "어디까지 이동할까요?",
+    subtitle: "이동 범위에 맞춰 코스를 짜드릴게요",
+    options: [
+      { ...PREF_META.radius.options[0], title: "가까운 곳", desc: "반경 5km 이내", iconClass: "text-primary" },
+      { ...PREF_META.radius.options[1], title: "멀리도 OK", desc: "근교까지 괜찮아요", iconClass: "text-accent" },
+    ],
+  },
+];
 
 interface OnboardCardProps {
   icon: React.ReactNode;
   title: string;
-  subtitle: string;
+  desc: string;
   selected: boolean;
   onClick: () => void;
 }
 
-function OnboardCard({
-  icon,
-  title,
-  subtitle,
-  selected,
-  onClick,
-}: OnboardCardProps) {
+function OnboardCard({ icon, title, desc, selected, onClick }: OnboardCardProps) {
   return (
     <button
       type="button"
@@ -40,7 +86,7 @@ function OnboardCard({
         {title}
       </div>
       <div className="text-[12px] leading-relaxed text-text-secondary">
-        {subtitle}
+        {desc}
       </div>
     </button>
   );
@@ -48,90 +94,84 @@ function OnboardCard({
 
 export function OnboardingForm() {
   const router = useRouter();
-  const [selected, setSelected] = useState<"yes" | "no" | null>(null);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [selectedValue, setSelectedValue] = useState<string | null>(null);
 
-  const handleSkip = () => {
-    router.push("/");
-  };
+  const step = STEPS[stepIdx];
+  const isLast = stepIdx === STEPS.length - 1;
 
-  const handleChoose = (value: "yes" | "no") => {
-    setSelected(value);
+  const handleChoose = (value: string) => {
+    setSelectedValue(value);
     setTimeout(() => {
-      router.push("/onboarding/done");
+      if (isLast) {
+        router.push("/onboarding/done");
+      } else {
+        setStepIdx((prev) => prev + 1);
+        setSelectedValue(null);
+      }
     }, 280);
   };
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* 상단 건너뛰기 */}
-      <div className="flex justify-end px-4 py-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSkip}
-          className="text-[14px] font-medium text-text-secondary"
-        >
-          건너뛰기
-        </Button>
-      </div>
-
-      {/* 본문 영역 */}
-      <div className="flex flex-1 flex-col px-5 pb-5 pt-3">
+      <div className="flex flex-1 flex-col px-5 pb-5 pt-8">
         {/* 진행률 바 */}
         <div className="mb-8 flex items-center gap-2.5">
           <div className="flex gap-1.5">
-            {[0, 1, 2, 3, 4].map((i) => (
+            {STEPS.map((_, i) => (
               <div
                 key={i}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-250",
-                  i === 0 ? "w-6 bg-accent" : "w-2 bg-border",
+                  "h-2 rounded-full transition-all duration-300",
+                  i === stepIdx
+                    ? "w-6 bg-accent"
+                    : i < stepIdx
+                      ? "w-2 bg-accent/40"
+                      : "w-2 bg-border",
                 )}
               />
             ))}
           </div>
           <span className="ml-auto text-[12px] font-medium text-text-secondary">
-            1 / 5
+            {stepIdx + 1} / {STEPS.length}
           </span>
         </div>
 
-        <div className="flex flex-1 flex-col justify-center">
+        <div className="flex flex-1 flex-col justify-start pt-[18%]">
           <h1 className="mb-2 text-balance text-center text-[28px] font-bold tracking-tight text-text-primary">
-            걷는 거 좋아하세요?
+            {step.question}
           </h1>
           <p className="mb-9 text-center text-[14px] text-text-secondary">
-            취향에 맞는 코스를 추천해드릴게요
+            {step.subtitle}
           </p>
 
           <div className="grid grid-cols-2 gap-3">
-            <OnboardCard
-              selected={selected === "yes"}
-              onClick={() => handleChoose("yes")}
-              icon={
-                <Footprints
-                  size={32}
-                  className="text-accent"
-                  strokeWidth={1.8}
+            {step.options.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <OnboardCard
+                  key={opt.id}
+                  selected={selectedValue === opt.id}
+                  onClick={() => handleChoose(opt.id)}
+                  icon={<Icon size={32} className={opt.iconClass} strokeWidth={1.8} />}
+                  title={opt.title}
+                  desc={opt.desc}
                 />
-              }
-              title="네"
-              subtitle="도보 코스 위주로"
-            />
-            <OnboardCard
-              selected={selected === "no"}
-              onClick={() => handleChoose("no")}
-              icon={
-                <Navigation
-                  size={32}
-                  className="text-primary"
-                  strokeWidth={1.8}
-                />
-              }
-              title="아니요"
-              subtitle="이동 최소화로"
-            />
+              );
+            })}
           </div>
         </div>
+      </div>
+
+      {/* 하단 건너뛰기 */}
+      <div className="pb-[calc(16px+env(safe-area-inset-bottom,8px))] flex justify-center">
+        <button
+          type="button"
+          onClick={() => router.push("/feed")}
+          className="py-2 px-4 text-[13px] text-text-secondary"
+        >
+          건너뛰기
+        </button>
       </div>
     </div>
   );
