@@ -32,7 +32,6 @@ const COMPLETED = [
       { name: "서울숲", category: "관광지" },
       { name: "뚝섬한강공원", category: "관광지" },
     ],
-    xp: 45,
     rating: 5,
     review: "날씨도 좋고 코스가 딱 적당했다",
   },
@@ -45,7 +44,6 @@ const COMPLETED = [
       { name: "망원시장", category: "전통시장" },
       { name: "한강공원", category: "관광지" },
     ],
-    xp: 30,
     rating: 4,
     review: "",
   },
@@ -70,7 +68,7 @@ export function ProfileView() {
           example@email.com
         </p>
         <p className="mt-0.5 text-[12px] text-text-secondary">
-          탐험가 Lv.3 · 340 XP
+          완료한 코스 3개
         </p>
       </div>
 
@@ -136,7 +134,7 @@ export function ProfileView() {
               <Badge variant="outline">완료</Badge>
             </div>
             <p className="mb-1.5 text-[14px] font-medium text-text-primary">
-              {c.places.map((p) => p.name).join(" · ")}
+              {c.name}
             </p>
             <StarRating rating={c.rating} />
           </button>

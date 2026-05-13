@@ -18,7 +18,6 @@ export type CompletedCourse = {
   region: string;
   duration: string;
   places: Place[];
-  xp: number;
   rating: number;
   review: string;
 };
@@ -64,18 +63,10 @@ export function CompletedCourseDetailModal({ course, onClose }: Props) {
               </div>
             </div>
 
-            {/* 획득 XP / 평점 */}
-            <div className="flex flex-col gap-2 border-t border-border pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-text-secondary">획득 XP</span>
-                <span className="text-[13px] font-semibold text-primary">
-                  +{course.xp} XP
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] text-text-secondary">평점</span>
-                <StarRating rating={course.rating} />
-              </div>
+            {/* 평점 */}
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-[13px] text-text-secondary">평점</span>
+              <StarRating rating={course.rating} />
             </div>
 
             {/* 후기 */}
