@@ -7,19 +7,19 @@ import {
   Zap,
   UtensilsCrossed,
   Minus,
-  MapPin,
-  Map,
+  Building2,
+  TreePine,
   type LucideIcon,
 } from "lucide-react";
 
-export type PrefKey = "travel" | "party" | "vibe" | "food" | "radius";
+export type PrefKey = "travel" | "party" | "vibe" | "food" | "indoor";
 
 export type Prefs = {
   travel: "walk" | "min";
   party: "solo" | "group";
   vibe: "quiet" | "lively";
   food: "matjip" | "any";
-  radius: "near" | "far";
+  indoor: "indoor" | "outdoor";
 };
 
 export type PrefOption = { id: string; icon: LucideIcon };
@@ -53,21 +53,21 @@ export const PREF_META: Record<PrefKey, { label: string; options: PrefOption[] }
       { id: "any", icon: Minus },
     ],
   },
-  radius: {
-    label: "이동 반경",
+  indoor: {
+    label: "장소 유형",
     options: [
-      { id: "near", icon: MapPin },
-      { id: "far", icon: Map },
+      { id: "indoor", icon: Building2 },
+      { id: "outdoor", icon: TreePine },
     ],
   },
 };
 
-export const PREF_KEYS: PrefKey[] = ["travel", "party", "vibe", "food", "radius"];
+export const PREF_KEYS: PrefKey[] = ["travel", "party", "vibe", "food", "indoor"];
 
 export const DEFAULT_PREFS: Prefs = {
   travel: "walk",
   party: "solo",
   vibe: "quiet",
   food: "matjip",
-  radius: "near",
+  indoor: "indoor",
 };

@@ -49,12 +49,12 @@ const STEPS: {
     ],
   },
   {
-    id: "radius",
-    question: "어디까지 이동할까요?",
-    subtitle: "이동 범위에 맞춰 코스를 짜드릴게요",
+    id: "indoor",
+    question: "실내가 편한가요, 야외가 좋은가요?",
+    subtitle: "장소 유형 선정에 반영해드릴게요",
     options: [
-      { ...PREF_META.radius.options[0], title: "가까운 곳", desc: "반경 5km 이내", iconClass: "text-primary" },
-      { ...PREF_META.radius.options[1], title: "멀리도 OK", desc: "근교까지 괜찮아요", iconClass: "text-accent" },
+      { ...PREF_META.indoor.options[0], title: "실내가 좋아요", desc: "카페, 박물관, 쇼핑몰 위주", iconClass: "text-primary" },
+      { ...PREF_META.indoor.options[1], title: "야외가 좋아요", desc: "공원, 거리, 야외 명소 위주", iconClass: "text-accent" },
     ],
   },
 ];

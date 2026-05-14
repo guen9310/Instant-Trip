@@ -15,8 +15,8 @@ const OPTION_TITLES: Record<string, string> = {
   lively: "활기찬 곳",
   matjip: "맛집이 중요해요",
   any: "상관없어요",
-  near: "가까운 곳만",
-  far: "멀리도 괜찮아요",
+  indoor: "실내가 좋아요",
+  outdoor: "야외가 좋아요",
 };
 
 export function SettingsView() {
