@@ -1,31 +1,7 @@
 import Link from "next/link";
-import { Shuffle, Zap, MapPin, Navigation } from "lucide-react";
+import { Shuffle, MapPin, Navigation, CalendarDays, Route } from "lucide-react";
 import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
-
-const features = [
-  {
-    num: "01",
-    icon: Zap,
-    title: "결정은 저희가 할게요",
-    desc: "시간·날씨·취향에 맞춰 즉석에서 코스를 짜드려요.",
-    accent: true,
-  },
-  {
-    num: "02",
-    icon: MapPin,
-    title: "지금 갈 수 있는 곳만",
-    desc: "영업 중인 곳, 지금 가도 늦지 않은 곳만 골라서 추천해드려요.",
-    accent: true,
-  },
-  {
-    num: "03",
-    icon: Navigation,
-    title: "마음에 안 들면 거절하세요",
-    desc: "한 곳만 빼거나 코스 전체를 다시 뽑을 수 있어요.",
-    accent: false,
-  },
-];
 
 export function LandingHero() {
   return (
@@ -63,42 +39,67 @@ export function LandingHero() {
         </div>
       </div>
 
-      {/* Feature 카드 목록 */}
-      {features.map((feature) => (
-        <div
-          key={feature.num}
-          className="rounded-2xl border border-border bg-surface px-5 pt-6 pb-5 flex flex-col"
-        >
-          <div className="flex items-start gap-3 mb-4">
-            <span className="text-[36px] font-extrabold text-border leading-none tracking-tighter select-none mt-0.5">
-              {feature.num}
-            </span>
-            <div>
-              <div
-                className={cn(
-                  "w-9 h-9 rounded-[10px] flex items-center justify-center mb-2",
-                  feature.accent ? "bg-accent/9 text-accent" : "bg-primary/8 text-primary"
-                )}
-              >
-                <feature.icon size={18} strokeWidth={2.2} />
+      {/* 프로세스 카드 */}
+      <div className="rounded-2xl border border-border bg-surface px-5 pt-6 pb-5 flex flex-col gap-4">
+        <h2 className="text-[16px] font-bold text-text-primary tracking-tight">
+          이렇게 코스를 만들어요
+        </h2>
+        <div className="flex flex-col gap-4">
+          {[
+            {
+              icon: MapPin,
+              title: "지금 영업 중인 곳 확인",
+              desc: "닫힌 곳, 오늘 쉬는 곳은 처음부터 제외해요",
+            },
+            {
+              icon: CalendarDays,
+              title: "오늘 열리는 행사 우선 반영",
+              desc: "근처 축제나 이벤트가 있으면 코스에 포함해드려요",
+            },
+            {
+              icon: Route,
+              title: "최적 동선으로 코스 완성",
+              desc: "이동 시간을 고려해 자연스러운 순서로 정리해드려요",
+            },
+          ].map((step, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                <step.icon size={15} strokeWidth={2} />
               </div>
-              <h2 className="text-[18px] font-bold text-text-primary tracking-[-0.02em] leading-tight">
-                {feature.title}
-              </h2>
-              <p className="text-[13px] text-text-secondary leading-[1.55] mt-1">
-                {feature.desc}
-              </p>
+              <div>
+                <p className="text-[14px] font-semibold text-text-primary leading-snug">
+                  {step.title}
+                </p>
+                <p className="text-[12px] text-text-secondary leading-relaxed mt-0.5">
+                  {step.desc}
+                </p>
+              </div>
             </div>
-          </div>
-
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`https://picsum.photos/seed/feature${feature.num}/800/500`}
-            alt=""
-            className="w-full rounded-xl object-cover aspect-video"
-          />
+          ))}
         </div>
-      ))}
+      </div>
+
+      {/* 거절 기능 카드 */}
+      <div className="rounded-2xl border border-border bg-surface px-5 pt-6 pb-5 flex flex-col">
+        <div className="mb-4">
+          <div className="w-9 h-9 rounded-[10px] flex items-center justify-center mb-2 bg-primary/8 text-primary">
+            <Navigation size={18} strokeWidth={2.2} />
+          </div>
+          <h2 className="text-[18px] font-bold text-text-primary tracking-[-0.02em] leading-tight">
+            마음에 안 들면 거절하세요
+          </h2>
+          <p className="text-[13px] text-text-secondary leading-[1.55] mt-1">
+            한 곳만 빼거나 코스 전체를 다시 뽑을 수 있어요.
+          </p>
+        </div>
+
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="https://picsum.photos/seed/feature03/800/500"
+          alt=""
+          className="w-full rounded-xl object-cover aspect-video"
+        />
+      </div>
 
       <div className="h-2" />
     </div>
