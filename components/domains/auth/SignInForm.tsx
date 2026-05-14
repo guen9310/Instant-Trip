@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Mail, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, Compass } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -50,7 +50,7 @@ export function SignInForm() {
             "bg-primary/10 text-primary",
           )}
         >
-          <Sparkles size={26} strokeWidth={2.2} />
+          <Compass size={26} strokeWidth={2.2} />
         </div>
 
         <h1 className="mb-2 text-[26px] font-bold tracking-tight text-text-primary">

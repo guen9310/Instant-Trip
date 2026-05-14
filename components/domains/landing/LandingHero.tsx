@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, Zap, MapPin, Navigation } from "lucide-react";
+import { Shuffle, Zap, MapPin, Navigation } from "lucide-react";
 import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
 
@@ -33,7 +33,7 @@ export function LandingHero() {
       {/* Hero 카드 */}
       <div className="rounded-2xl border border-border bg-surface px-5 pt-7 pb-6 flex flex-col">
         <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-[5px] rounded-full bg-primary/8 text-primary text-[11px] font-semibold mb-4">
-          <Sparkles size={12} />
+          <Shuffle size={12} />
           즉흥 여행 코스
         </div>
         <h1 className="text-[30px] font-extrabold text-text-primary tracking-[-0.03em] leading-[1.15] mb-3 text-balance">

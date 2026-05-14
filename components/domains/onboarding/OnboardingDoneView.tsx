@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Map } from "lucide-react";
 import { Button } from "@/components/commons/Button";
 import { LocationPermissionSheet } from "@/components/domains/location/LocationPermissionSheet";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
@@ -28,7 +28,7 @@ export function OnboardingDoneView() {
         {/* 아이콘 */}
         <div className="relative mb-6">
           <div className="w-20 h-20 rounded-full bg-primary/8 flex items-center justify-center">
-            <Sparkles size={36} className="text-primary" strokeWidth={2} />
+            <Map size={36} className="text-primary" strokeWidth={2} />
           </div>
           <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-accent flex items-center justify-center text-white text-[14px]">
             ✓

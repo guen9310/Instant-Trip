@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Footprints, Map, Compass, Check, Sparkles } from "lucide-react";
+import { MapPin, Footprints, Map, Compass, Check, Shuffle } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
@@ -119,7 +119,7 @@ export function StartView() {
           disabled={loading}
           className="gap-2"
         >
-          코스 뽑기 <Sparkles size={16} />
+          코스 뽑기 <Shuffle size={16} />
         </Button>
       </div>
     </>

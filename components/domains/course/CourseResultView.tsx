@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { RefreshCcw, Sparkles, Clock, ChevronRight } from "lucide-react";
+import { RefreshCcw, SlidersHorizontal, Clock, ChevronRight } from "lucide-react";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -47,7 +47,7 @@ export function CourseResultView() {
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-muted-foreground mb-5">
-          <Sparkles size={12} />
+          <SlidersHorizontal size={12} />
           <span className="text-[11px] tracking-tight">
             {`당신이 '${TRAVEL_REASON[travelPref]}'를 선택했기 때문에 추천`}
           </span>

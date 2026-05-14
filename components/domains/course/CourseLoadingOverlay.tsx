@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles } from "lucide-react";
+import { Route } from "lucide-react";
 
 const MESSAGES = [
   "지금 영업 중인 곳을 확인하는 중...",
@@ -39,7 +39,7 @@ export function CourseLoadingOverlay() {
           />
         ))}
         <div className="absolute inset-6 rounded-full bg-primary flex items-center justify-center">
-          <Sparkles size={32} className="text-white" strokeWidth={2} />
+          <Route size={32} className="text-white" strokeWidth={2} />
         </div>
       </div>
       <div className="text-center">
