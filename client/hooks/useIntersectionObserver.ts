@@ -1,27 +1,30 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export function useIntersectionObserver(
   onIntersect: () => void,
   threshold = 0.1,
 ) {
-  const ref = useRef<HTMLDivElement>(null);
   const callbackRef = useRef(onIntersect);
   useLayoutEffect(() => {
     callbackRef.current = onIntersect;
   });
 
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const ref = useCallback((el: HTMLDivElement | null) => {
+    setElement(el);
+  }, []);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
+    if (!element) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) callbackRef.current();
       },
       { threshold },
     );
-    observer.observe(el);
+    observer.observe(element);
     return () => observer.disconnect();
-  }, [threshold]);
+  }, [element, threshold]);
 
   return { ref };
 }
