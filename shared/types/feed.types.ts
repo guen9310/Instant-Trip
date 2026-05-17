@@ -23,4 +23,5 @@ export type CourseData = {
   festival?: boolean;
   imageSeed?: string;
   places: Place[];
+  contextLabel?: string;
 };

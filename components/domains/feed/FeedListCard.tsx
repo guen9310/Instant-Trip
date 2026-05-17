@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
 import type { CourseData } from "@/shared/types/feed.types";
+import { generateContextLabel } from "@/shared/utils/feedContext";
 
 export function FeedListCard({
   course,
@@ -12,10 +12,11 @@ export function FeedListCard({
   onSelect: (course: CourseData) => void;
 }) {
   const [pressed, setPressed] = useState(false);
+  const contextLabel = generateContextLabel(course, new Date().getHours());
 
   return (
     <div
-      className="flex items-center gap-3 py-3 border-b border-border cursor-pointer select-none"
+      className="flex items-center gap-3 p-3 rounded-xl border border-border cursor-pointer select-none"
       style={{
         transform: pressed ? "scale(0.99)" : "scale(1)",
         transition: "transform .12s ease",
@@ -38,35 +39,19 @@ export function FeedListCard({
         <p className="text-[14px] font-bold text-text-primary tracking-[-0.01em] truncate mb-0.5">
           {course.name}
         </p>
-        <p className="text-[12px] text-text-secondary mb-1.5">
-          {course.region}
-        </p>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5">
-            <Star
-              size={11}
-              strokeWidth={1.5}
-              className="fill-point text-point"
-            />
-            <span className="text-[12px] font-semibold text-text-primary tabular-nums">
-              {course.rating}
-            </span>
-          </div>
-          <span className="text-[11px] text-muted-foreground">
-            완료 {course.count}명
-          </span>
-          {course.availability === "available" && (
-            <span className="text-[11px] text-accent font-medium">
-              지금 가능
-            </span>
-          )}
-          {course.availability === "partial" && (
-            <span className="text-[11px] text-muted-foreground">
-              일부 확인 필요
-            </span>
-          )}
-        </div>
+        {contextLabel ? (
+          <p className="text-[12px] text-text-secondary truncate">{contextLabel}</p>
+        ) : course.todayCompletions && course.todayCompletions.count > 0 ? (
+          <p className="text-[12px] text-text-secondary">
+            오늘 {course.todayCompletions.count}명이 완료했어요
+          </p>
+        ) : (
+          <p className="text-[12px] text-text-secondary">{course.region}</p>
+        )}
       </div>
+      {course.availability === "available" && (
+        <div className="w-2 h-2 rounded-full bg-accent shrink-0" />
+      )}
     </div>
   );
 }

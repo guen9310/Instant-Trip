@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { DEFAULT_PREFS, PREF_META, type Prefs, type PrefKey } from "@/shared/constants/preferences";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
@@ -103,6 +104,12 @@ export function OnboardingForm() {
   const step = STEPS[stepIdx];
   const isLast = stepIdx === STEPS.length - 1;
 
+  const handleBack = () => {
+    const prevIdx = stepIdx - 1;
+    setStepIdx(prevIdx);
+    setSelectedValue(answers[STEPS[prevIdx].id] ?? null);
+  };
+
   const handleChoose = (value: string) => {
     setSelectedValue(value);
     const newAnswers = { ...answers, [step.id]: value };
@@ -123,6 +130,15 @@ export function OnboardingForm() {
       <div className="flex flex-1 flex-col px-5 pb-5 pt-8">
         {/* 진행률 바 */}
         <div className="mb-8 flex items-center gap-2.5">
+          <button
+            onClick={handleBack}
+            className={cn(
+              "w-7 h-7 flex items-center justify-center rounded-full text-text-secondary transition-opacity shrink-0",
+              stepIdx === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}
+          >
+            <ArrowLeft size={18} />
+          </button>
           <div className="flex gap-1.5">
             {STEPS.map((_, i) => (
               <div
@@ -143,7 +159,14 @@ export function OnboardingForm() {
           </span>
         </div>
 
-        <div className="flex flex-1 flex-col justify-start pt-[18%]">
+        {stepIdx === 0 && (
+          <p className="text-center text-[15px] text-text-secondary leading-relaxed mb-6">
+            한 번만 알려주세요.<br />
+            그 다음부턴 그냥 떠나기만 하면 돼요.
+          </p>
+        )}
+
+        <div className={cn("flex flex-1 flex-col justify-start", stepIdx > 0 && "pt-[18%]")}>
           <h1 className="mb-2 text-balance text-center text-[28px] font-bold tracking-tight text-text-primary">
             {step.question}
           </h1>

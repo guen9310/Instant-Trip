@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
 import { Badge } from "@/components/commons/Badge";
 import type { CourseData } from "@/shared/types/feed.types";
+import { generateContextLabel } from "@/shared/utils/feedContext";
 
 export function FeedMidCard({
   course,
@@ -13,6 +13,7 @@ export function FeedMidCard({
   onSelect: (course: CourseData) => void;
 }) {
   const [pressed, setPressed] = useState(false);
+  const contextLabel = generateContextLabel(course, new Date().getHours());
 
   return (
     <div
@@ -51,11 +52,6 @@ export function FeedMidCard({
                 지금 갈 수 있어요
               </Badge>
             )}
-            {course.availability === "partial" && (
-              <Badge className="bg-black/40 text-white border-0 text-[10px] px-1.5 py-0 backdrop-blur-sm">
-                일부 확인 필요
-              </Badge>
-            )}
           </div>
           {course.festival && (
             <Badge variant="point" className="text-[10px] px-1.5 py-0">
@@ -68,27 +64,16 @@ export function FeedMidCard({
           <div className="text-[14px] font-bold mb-0.5 tracking-[-0.01em] leading-tight">
             {course.name}
           </div>
-          {course.todayCompletions && (
-            <div className="text-[10px] opacity-60 mb-1">
-              {course.todayCompletions.timeframe}{" "}
-              {course.todayCompletions.count}명이 완료
-            </div>
-          )}
           <div className="flex justify-between items-center gap-1">
             <span className="text-[12px] opacity-90 truncate min-w-0">
               {course.region}
             </span>
-            <div className="flex items-center gap-0.5 shrink-0">
-              <Star
-                size={11}
-                strokeWidth={1.5}
-                className="fill-point text-point"
-              />
-              <span className="text-[11px] font-semibold tabular-nums">
-                {course.rating}
-              </span>
-            </div>
           </div>
+          {contextLabel ? (
+            <div className="text-[10px] opacity-75 mt-0.5">{contextLabel}</div>
+          ) : course.todayCompletions && course.todayCompletions.count > 0 ? (
+            <div className="text-[10px] opacity-75 mt-0.5">오늘 {course.todayCompletions.count}명이 완료했어요</div>
+          ) : null}
         </div>
       </div>
     </div>

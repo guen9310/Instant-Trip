@@ -1,4 +1,4 @@
-type WeatherCondition = "clear" | "cloudy" | "rainy" | "snowy";
+import type { WeatherCondition } from "@/shared/utils/feedContext";
 
 // TODO: 날씨 api로 변경해야 함.
 const MOCK_WEATHER: {
@@ -18,8 +18,8 @@ const MOCK_WEATHER: {
 const WEATHER_MESSAGE: Record<WeatherCondition, string> = {
   clear: "걷기 딱 좋은 날씨예요",
   cloudy: "산책하기 나쁘지 않아요",
-  rainy: "실내 코스를 추천해요",
-  snowy: "따뜻한 실내 코스 어때요",
+  rain: "실내 코스를 추천해요",
+  snow: "따뜻한 실내 코스 어때요",
 };
 
 export function FeedWeatherHeader() {
@@ -32,6 +32,7 @@ export function FeedWeatherHeader() {
         현재 {location}는 {label}({temp}°C) {icon}
       </p>
       <p className="text-description">{message}</p>
+      <p className="text-sm text-text-secondary mt-1">오늘의 코스 ↓</p>
     </div>
   );
 }

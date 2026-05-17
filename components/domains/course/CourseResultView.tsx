@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { RefreshCcw, SlidersHorizontal, Clock, ChevronRight } from "lucide-react";
+import { RefreshCcw, Clock, ChevronRight } from "lucide-react";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -46,11 +46,8 @@ export function CourseResultView() {
             총 약 3시간 · 이동 포함
           </span>
         </div>
-        <div className="flex items-center gap-1.5 text-muted-foreground mb-5">
-          <SlidersHorizontal size={12} />
-          <span className="text-[11px] tracking-tight">
-            {`당신이 '${TRAVEL_REASON[travelPref]}'를 선택했기 때문에 추천`}
-          </span>
+        <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
+          {`'${TRAVEL_REASON[travelPref]}' 취향에 맞게 골랐어요`}
         </div>
 
         {/* 타임라인 레이아웃 */}

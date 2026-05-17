@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Clock, Calendar, ThumbsDown, ChevronLeft, X } from "lucide-react";
+import {
+  MapPin,
+  Clock,
+  Calendar,
+  ThumbsDown,
+  ChevronLeft,
+  X,
+} from "lucide-react";
 import type { ElementType } from "react";
 import { cn } from "@/shared/utils";
 import { Sheet, SheetContent } from "@/components/commons/Sheet";
@@ -93,7 +100,9 @@ function PlaceDetailContent({
           </div>
 
           <div className="h-px bg-border my-4" />
-          <p className="text-[14px] text-text-primary leading-[1.55]">{place.desc}</p>
+          <p className="text-[14px] text-text-primary leading-[1.55]">
+            {place.desc}
+          </p>
 
           <div className="flex flex-col gap-2 mt-5">
             <button
@@ -132,7 +141,7 @@ function PlaceDetailContent({
                     "p-3.5 rounded-[10px] border flex flex-col items-center gap-2 transition-colors",
                     sel
                       ? "bg-primary/5 border-primary text-primary"
-                      : "bg-background border-border text-text-secondary"
+                      : "bg-background border-border text-text-secondary",
                   )}
                 >
                   <r.icon size={20} />
@@ -143,14 +152,11 @@ function PlaceDetailContent({
           </div>
 
           <div className="flex flex-col gap-2 mt-5">
-            <button
-              onClick={onClose}
-              className="w-full h-12 rounded-lg border border-border text-text-primary text-[14px] font-medium"
-            >
-              이 장소만 교체하기
-            </button>
+            <p className="text-[11px] text-muted-foreground text-center">
+              거절한 장소는 다음 코스에서 제외됩니다
+            </p>
             <Button size="cta" onClick={onClose}>
-              코스 전체 다시 뽑기
+              여기 말고 다른 곳으로
             </Button>
           </div>
         </div>
@@ -159,13 +165,7 @@ function PlaceDetailContent({
   );
 }
 
-function DetailRow({
-  icon: Ico,
-  label,
-}: {
-  icon: ElementType;
-  label: string;
-}) {
+function DetailRow({ icon: Ico, label }: { icon: ElementType; label: string }) {
   return (
     <div className="flex items-center gap-2.5">
       <Ico size={16} className="text-text-secondary shrink-0" />

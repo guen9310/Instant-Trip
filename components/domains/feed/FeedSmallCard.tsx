@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
 import type { CourseData } from "@/shared/types/feed.types";
+import { generateContextLabel } from "@/shared/utils/feedContext";
 
 export function FeedSmallCard({
   course,
@@ -12,6 +12,7 @@ export function FeedSmallCard({
   onSelect: (course: CourseData) => void;
 }) {
   const [pressed, setPressed] = useState(false);
+  const contextLabel = generateContextLabel(course, new Date().getHours());
 
   return (
     <div
@@ -34,25 +35,17 @@ export function FeedSmallCard({
       <div>
         <div className="text-[11px] text-muted-foreground mb-1 leading-[1.3]">
           {course.region}
-          <br />
-          완료 {course.count}명
         </div>
         <div className="font-medium mb-1 h-[13px]">
           {course.availability === "available" && (
             <span className="text-accent text-[10px] ">지금 갈 수 있어요</span>
           )}
-          {course.availability === "partial" && (
-            <span className="text-muted-foreground text-[10px] ">
-              일부 확인 필요
-            </span>
-          )}
         </div>
-        <div className="flex items-center gap-0.5">
-          <Star size={10} strokeWidth={1.5} className="fill-point text-point" />
-          <span className="text-[11px] font-semibold text-text-primary tabular-nums">
-            {course.rating}
-          </span>
-        </div>
+        {contextLabel ? (
+          <div className="text-[10px] text-muted-foreground">{contextLabel}</div>
+        ) : course.todayCompletions && course.todayCompletions.count > 0 ? (
+          <div className="text-[10px] text-muted-foreground">오늘 {course.todayCompletions.count}명이 완료했어요</div>
+        ) : null}
       </div>
     </div>
   );
