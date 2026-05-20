@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, Monitor, Moon, Sun } from "lucide-react";
 import { useDarkModeStore } from "@/client/stores/useDarkModeStore";
+import type { User } from "@/shared/types/auth.types";
 
 const TAB_PATHS = ["/", "/feed", "/profile"];
 
@@ -14,14 +16,18 @@ const PAGE_TITLES: Record<string, string> = {
   "/start/no-nearby": "코스 찾기",
 };
 
-export function GlobalNav() {
+export function GlobalNav({ user }: { user: User | null }) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, cycleTheme } = useDarkModeStore();
 
   const ThemeIcon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
   const nextLabel =
-    theme === "light" ? "다크 모드로 전환" : theme === "dark" ? "시스템 설정으로 전환" : "라이트 모드로 전환";
+    theme === "light"
+      ? "다크 모드로 전환"
+      : theme === "dark"
+        ? "시스템 설정으로 전환"
+        : "라이트 모드로 전환";
 
   const isTabPage = TAB_PATHS.includes(pathname);
   const title = PAGE_TITLES[pathname];
@@ -60,13 +66,19 @@ export function GlobalNav() {
         >
           <ThemeIcon size={18} />
         </button>
-        {false ? (
+        {user ? (
           <Link
             href="/profile"
-            className="w-[30px] h-[30px] rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold shrink-0"
+            className="relative w-[30px] h-[30px] rounded-full overflow-hidden shrink-0"
             aria-label="내 정보"
           >
-            U
+            <Image
+              src={user.image ?? "/images/profile.svg"}
+              alt={user.name}
+              fill
+              sizes="30px"
+              className="object-cover"
+            />
           </Link>
         ) : (
           <Link

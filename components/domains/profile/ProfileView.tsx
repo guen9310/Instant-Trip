@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Settings, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/commons/Badge";
@@ -13,6 +14,7 @@ import {
 } from "@/components/domains/profile/CompletedCourseDetailModal";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { buildReexplorationText } from "@/shared/utils/prefsText";
+import type { User } from "@/shared/types/auth.types";
 
 const STATS = [
   { label: "완료한 코스", value: 3 },
@@ -55,7 +57,8 @@ const COMPLETED = [
   },
 ];
 
-export function ProfileView() {
+
+export function ProfileView({ user }: { user: User }) {
   const [selected, setSelected] = useState<CompletedCourse | null>(null);
   const prefs = usePrefsStore((s) => s.prefs);
   const reexploration = buildReexplorationText(prefs);
@@ -71,16 +74,17 @@ export function ProfileView() {
 
       {/* 아바타 */}
       <div className="mb-6 flex flex-col items-center">
-        <div
-          className={cn(
-            "mb-2.5 flex h-20 w-20 items-center justify-center rounded-full",
-            "bg-primary text-[30px] font-bold text-white",
-          )}
-        >
-          U
+        <div className="relative mb-2.5 h-20 w-20 rounded-full overflow-hidden">
+          <Image
+            src={user.image ?? "/images/profile.svg"}
+            alt={user.name}
+            fill
+            sizes="80px"
+            className="object-cover"
+          />
         </div>
         <p className="text-[14px] font-medium text-text-primary">
-          example@email.com
+          {user.email}
         </p>
       </div>
 
@@ -117,12 +121,15 @@ export function ProfileView() {
             <Badge variant="secondary">진행 중</Badge>
           </div>
           <p className="text-[12px] text-text-secondary mb-2">
-            장소 {IN_PROGRESS.current} / {IN_PROGRESS.total} · {IN_PROGRESS.region}
+            장소 {IN_PROGRESS.current} / {IN_PROGRESS.total} ·{" "}
+            {IN_PROGRESS.region}
           </p>
           <div className="h-1.5 rounded-full bg-border">
             <div
               className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${(IN_PROGRESS.current / IN_PROGRESS.total) * 100}%` }}
+              style={{
+                width: `${(IN_PROGRESS.current / IN_PROGRESS.total) * 100}%`,
+              }}
             />
           </div>
         </div>

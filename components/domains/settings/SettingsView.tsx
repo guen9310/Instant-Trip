@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
-import { PREF_KEYS, PREF_META } from "@/shared/constants/preferences";
+import { PREF_KEYS, PREF_META, type Prefs } from "@/shared/constants/preferences";
+import { authClient } from "@/client/auth-client";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 
 const OPTION_TITLES: Record<string, string> = {
@@ -19,10 +21,34 @@ const OPTION_TITLES: Record<string, string> = {
   outdoor: "야외가 좋아요",
 };
 
-export function SettingsView() {
+export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
   const router = useRouter();
-  const prefs = usePrefsStore((s) => s.prefs);
-  const setPref = usePrefsStore((s) => s.setPref);
+  const [prefs, setLocalPrefs] = useState(initialPrefs);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const setPrefs = usePrefsStore((s) => s.setPrefs);
+
+  const handleSave = async () => {
+    setSaveError(null);
+    try {
+      const { error } = await authClient.updateUser({
+        prefTravel: prefs.travel,
+        prefParty:  prefs.party,
+        prefVibe:   prefs.vibe,
+        prefFood:   prefs.food,
+        prefIndoor: prefs.indoor,
+      });
+      if (error) throw error;
+      setPrefs(prefs);
+      router.push("/profile");
+    } catch {
+      setSaveError("저장에 실패했어요. 다시 시도해 주세요.");
+    }
+  };
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    router.push("/sign-in");
+  };
 
   return (
     <>
@@ -54,7 +80,7 @@ export function SettingsView() {
                     return (
                       <button
                         key={opt.id}
-                        onClick={() => setPref(key, opt.id)}
+                        onClick={() => setLocalPrefs((p) => ({ ...p, [key]: opt.id }))}
                         className={cn(
                           "flex flex-1 items-center justify-center gap-2.5 px-3.5 rounded-xl border-[1.5px] transition-all",
                           sel
@@ -78,10 +104,16 @@ export function SettingsView() {
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
-        <Button size="cta" onClick={() => router.push("/profile")}>
+        {saveError && (
+          <p className="text-center text-[12px] text-red-500">{saveError}</p>
+        )}
+        <Button size="cta" onClick={handleSave}>
           저장하기
         </Button>
-        <button className="w-full py-3 text-[13px] text-text-secondary flex items-center justify-center">
+        <button
+          onClick={handleSignOut}
+          className="w-full py-3 text-[13px] text-text-secondary flex items-center justify-center"
+        >
           로그아웃
         </button>
       </div>
