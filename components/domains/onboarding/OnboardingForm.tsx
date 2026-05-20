@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { DEFAULT_PREFS, PREF_META, type Prefs, type PrefKey } from "@/shared/constants/preferences";
+import { authClient } from "@/client/auth-client";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 
 const STEPS: {
@@ -100,6 +101,7 @@ export function OnboardingForm() {
   const [stepIdx, setStepIdx] = useState(0);
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Partial<Prefs>>({});
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const step = STEPS[stepIdx];
   const isLast = stepIdx === STEPS.length - 1;
@@ -112,12 +114,27 @@ export function OnboardingForm() {
 
   const handleChoose = (value: string) => {
     setSelectedValue(value);
+    setSaveError(null);
     const newAnswers = { ...answers, [step.id]: value };
     setAnswers(newAnswers);
-    setTimeout(() => {
+    setTimeout(async () => {
       if (isLast) {
-        setPrefs({ ...DEFAULT_PREFS, ...newAnswers } as Prefs);
-        router.push("/onboarding/done");
+        const finalPrefs = { ...DEFAULT_PREFS, ...newAnswers } as Prefs;
+        setPrefs(finalPrefs);
+        try {
+          const { error } = await authClient.updateUser({
+            prefTravel: finalPrefs.travel,
+            prefParty: finalPrefs.party,
+            prefVibe: finalPrefs.vibe,
+            prefFood: finalPrefs.food,
+            prefIndoor: finalPrefs.indoor,
+            onboardingDone: true,
+          });
+          if (error) throw error;
+          router.push("/onboarding/done");
+        } catch {
+          setSaveError("저장에 실패했어요. 다시 시도해 주세요.");
+        }
       } else {
         setStepIdx((prev) => prev + 1);
         setSelectedValue(null);
@@ -193,7 +210,10 @@ export function OnboardingForm() {
       </div>
 
       {/* 하단 건너뛰기 */}
-      <div className="pb-[calc(16px+env(safe-area-inset-bottom,8px))] flex justify-center">
+      <div className="pb-[calc(16px+env(safe-area-inset-bottom,8px))] flex flex-col items-center gap-1">
+        {saveError && (
+          <p className="text-[12px] text-red-500">{saveError}</p>
+        )}
         <button
           type="button"
           onClick={() => router.push("/feed")}
