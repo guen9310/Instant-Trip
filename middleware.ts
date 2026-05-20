@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const SESSION_COOKIE = "better-auth.session_token"
+// HTTPS 배포 환경에서 better-auth는 __Secure- 접두사를 자동으로 붙임
+const SESSION_COOKIES = ["better-auth.session_token", "__Secure-better-auth.session_token"]
 
 // 로그인 필요
 const PROTECTED = ["/feed", "/profile", "/settings", "/start", "/course", "/onboarding"]
@@ -9,7 +10,7 @@ const AUTH_ONLY = ["/sign-in"]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const isLoggedIn = request.cookies.has(SESSION_COOKIE)
+  const isLoggedIn = SESSION_COOKIES.some((name) => request.cookies.has(name))
 
   if (!isLoggedIn && PROTECTED.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
