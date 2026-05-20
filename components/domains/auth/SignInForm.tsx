@@ -3,8 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Mail, Compass } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { authClient } from "@/client/auth-client";
 import { Button } from "@/components/commons/Button";
 import { Input } from "@/components/commons/Input";
 import { cn } from "@/shared/utils";
@@ -20,16 +21,25 @@ export function SignInForm() {
   const {
     register,
     handleSubmit,
-    formState: { isValid },
+    setError,
+    control,
+    formState: { isSubmitting, errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    mode: "onChange",
   });
 
-  const onSubmit = (_data: FormValues) => {
-    // TODO: 인증 코드 발송 처리
-    console.log(_data);
-    router.push("/sign-in/verify");
+  const emailValue = useWatch({ control, name: "email" });
+
+  const onSubmit = async (data: FormValues) => {
+    const { error } = await authClient.emailOtp.sendVerificationOtp({
+      email: data.email,
+      type: "sign-in",
+    });
+    if (error) {
+      setError("email", { message: "코드 발송에 실패했어요. 다시 시도해 주세요." });
+      return;
+    }
+    router.push(`/sign-in/verify?email=${encodeURIComponent(data.email)}`);
   };
 
   return (
@@ -89,9 +99,13 @@ export function SignInForm() {
           />
         </div>
 
-        <p className="mt-3 text-[12px] leading-relaxed text-text-secondary">
-          처음이어도 괜찮아요. 계정이 없으면 자동으로 만들어드려요.
-        </p>
+        {errors.email ? (
+          <p className="mt-3 text-[12px] text-red-500">{errors.email.message}</p>
+        ) : (
+          <p className="mt-3 text-[12px] leading-relaxed text-text-secondary">
+            처음이어도 괜찮아요. 계정이 없으면 자동으로 만들어드려요.
+          </p>
+        )}
       </div>
 
       <div
@@ -100,8 +114,8 @@ export function SignInForm() {
           "px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-4",
         )}
       >
-        <Button type="submit" size="cta" disabled={!isValid}>
-          인증 코드 받기
+        <Button type="submit" size="cta" disabled={!emailValue || isSubmitting}>
+          {isSubmitting ? "발송 중..." : "인증 코드 받기"}
         </Button>
       </div>
     </form>
