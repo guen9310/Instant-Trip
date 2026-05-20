@@ -6,8 +6,6 @@ import { Resend } from "resend"
 import { db } from "./db"
 import * as schema from "./schema"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
 
@@ -31,6 +29,7 @@ export const auth = betterAuth({
   plugins: [
     emailOTP({
       async sendVerificationOTP({ email, otp }) {
+        const resend = new Resend(process.env.RESEND_API_KEY)
         await resend.emails.send({
           from: process.env.RESEND_FROM_EMAIL ?? "noreply@example.com",
           to: email,
