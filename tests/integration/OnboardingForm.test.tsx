@@ -11,10 +11,37 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
 }));
 
+const { mockUpdateUser } = vi.hoisted(() => ({ mockUpdateUser: vi.fn() }));
+vi.mock("@/client/auth-client", () => ({
+  authClient: { updateUser: mockUpdateUser },
+}));
+
+async function completeAllSteps(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByText("네"));
+  await waitFor(() =>
+    expect(screen.getByText("혼자 여행하시나요?")).toBeInTheDocument(),
+  );
+  await user.click(screen.getByText("혼자요"));
+  await waitFor(() =>
+    expect(screen.getByText("어떤 분위기 좋아하세요?")).toBeInTheDocument(),
+  );
+  await user.click(screen.getByText("조용한 곳"));
+  await waitFor(() =>
+    expect(screen.getByText("맛집이 중요하신가요?")).toBeInTheDocument(),
+  );
+  await user.click(screen.getByText("중요해요"));
+  await waitFor(() =>
+    expect(screen.getByText(/실내가 편한가요/)).toBeInTheDocument(),
+  );
+  await user.click(screen.getByText("실내가 좋아요"));
+}
+
 describe("OnboardingForm", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockBack.mockClear();
+    mockUpdateUser.mockClear();
+    mockUpdateUser.mockResolvedValue({ data: {}, error: null });
     usePrefsStore.setState({ prefs: DEFAULT_PREFS });
   });
 
@@ -51,32 +78,7 @@ describe("OnboardingForm", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<OnboardingForm />);
 
-    // Step 1: 걷는 거 좋아하세요?
-    await user.click(screen.getByText("네"));
-    await waitFor(() => {
-      expect(screen.getByText("혼자 여행하시나요?")).toBeInTheDocument();
-    });
-
-    // Step 2: 혼자 여행하시나요?
-    await user.click(screen.getByText("혼자요"));
-    await waitFor(() => {
-      expect(screen.getByText("어떤 분위기 좋아하세요?")).toBeInTheDocument();
-    });
-
-    // Step 3: 어떤 분위기 좋아하세요?
-    await user.click(screen.getByText("조용한 곳"));
-    await waitFor(() => {
-      expect(screen.getByText("맛집이 중요하신가요?")).toBeInTheDocument();
-    });
-
-    // Step 4: 맛집이 중요하신가요?
-    await user.click(screen.getByText("중요해요"));
-    await waitFor(() => {
-      expect(screen.getByText(/실내가 편한가요/)).toBeInTheDocument();
-    });
-
-    // Step 5 (last): 실내가 편한가요?
-    await user.click(screen.getByText("실내가 좋아요"));
+    await completeAllSteps(user);
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/onboarding/done");
@@ -88,6 +90,39 @@ describe("OnboardingForm", () => {
     expect(prefs.vibe).toBe("quiet");
     expect(prefs.food).toBe("matjip");
     expect(prefs.indoor).toBe("indoor");
+
+    vi.useRealTimers();
+  });
+
+  it("5단계 완료 시 onboardingDone: true로 updateUser를 호출한다", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<OnboardingForm />);
+
+    await completeAllSteps(user);
+
+    await waitFor(() => {
+      expect(mockUpdateUser).toHaveBeenCalledWith(
+        expect.objectContaining({ onboardingDone: true }),
+      );
+    });
+
+    vi.useRealTimers();
+  });
+
+  it("updateUser 실패 시 /onboarding/done으로 이동하지 않아야 한다", async () => {
+    mockUpdateUser.mockResolvedValue({
+      data: null,
+      error: { message: "서버 오류" },
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<OnboardingForm />);
+
+    await completeAllSteps(user);
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalled());
+    expect(mockPush).not.toHaveBeenCalledWith("/onboarding/done");
 
     vi.useRealTimers();
   });
