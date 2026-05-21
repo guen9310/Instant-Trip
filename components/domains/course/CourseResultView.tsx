@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { RefreshCcw, Clock, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { RefreshCcw, Clock, ChevronRight, AlertCircle } from "lucide-react";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
-import { MOCK_PLACES } from "@/shared/constants/courseMock";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
+import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import type { JourneyPlace } from "@/shared/types/course.types";
 
 const TRAVEL_REASON: Record<string, string> = {
@@ -17,25 +17,69 @@ const TRAVEL_REASON: Record<string, string> = {
   min: "이동 최소화",
 };
 
-export function CourseResultView() {
-  const [selectedJourneyPlace, setSelectedJourneyPlace] = useState<JourneyPlace | null>(null);
-  const [loading, setLoading] = useState(false);
-  const places = MOCK_PLACES;
+type Props = {
+  courseId: string;
+  courseName: string;
+  places: JourneyPlace[];
+  isLoading?: boolean;
+};
+
+export function CourseResultView({
+  courseId,
+  courseName,
+  places,
+  isLoading = false,
+}: Props) {
+  const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
+  const [rerolling, setRerolling] = useState(false);
+  const router = useRouter();
   const travelPref = usePrefsStore((s) => s.prefs.travel);
+  const startCourse = useCourseProgressStore((s) => s.start);
 
   const handleReroll = async () => {
-    setLoading(true);
+    setRerolling(true);
+    // TODO: 코스 재생성 API 호출로 교체
     await new Promise((r) => setTimeout(r, 2500));
-    setLoading(false);
+    setRerolling(false);
   };
+
+  const handleStart = () => {
+    startCourse(courseId, places.length);
+    router.push(`/course/${courseId}/active`);
+  };
+
+  if (isLoading) {
+    return <CourseResultSkeleton />;
+  }
+
+  if (places.length === 0) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12">
+        <div className="w-14 h-14 rounded-full bg-point/10 flex items-center justify-center">
+          <AlertCircle size={28} className="text-point" strokeWidth={2} />
+        </div>
+        <div className="text-center">
+          <p className="text-[16px] font-bold text-text-primary mb-1">
+            코스 생성에 실패했어요
+          </p>
+          <p className="text-[13px] text-text-secondary leading-relaxed">
+            조건에 맞는 코스를 찾지 못했어요
+          </p>
+        </div>
+        <Button onClick={handleReroll} disabled={rerolling} className="gap-2">
+          <RefreshCcw size={15} /> 다시 시도
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
-      {loading && <CourseLoadingOverlay />}
+      {rerolling && <CourseLoadingOverlay />}
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">
         {/* 헤더 */}
         <h1 className="text-[22px] font-bold text-text-primary tracking-tight mb-1">
-          적당히 즐기는 코스
+          {courseName}
         </h1>
         <div className="flex items-center gap-2 mb-2.5">
           <Badge variant="accent">
@@ -47,10 +91,10 @@ export function CourseResultView() {
           </span>
         </div>
         <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
-          {`'${TRAVEL_REASON[travelPref]}' 취향에 맞게 골랐어요`}
+          {`'${TRAVEL_REASON[travelPref] ?? travelPref}' 취향에 맞게 골랐어요`}
         </div>
 
-        {/* 타임라인 레이아웃 */}
+        {/* 타임라인 */}
         <div className="relative pl-8">
           <div className="absolute left-[13px] top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
           {places.map((p, i) => (
@@ -61,10 +105,7 @@ export function CourseResultView() {
               <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold border-[3px] border-background z-10">
                 {i + 1}
               </div>
-              <JourneyPlaceCardTimeline
-                place={p}
-                onClick={() => setSelectedJourneyPlace(p)}
-              />
+              <PlaceCardTimeline place={p} onClick={() => setSelectedPlace(p)} />
             </div>
           ))}
         </div>
@@ -85,28 +126,27 @@ export function CourseResultView() {
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
-        <Link href="/course/1/active" className="block">
-          <Button size="cta" className="w-full">
-            이 코스로 갈게요
-          </Button>
-        </Link>
+        <Button size="cta" className="w-full" onClick={handleStart}>
+          이 코스로 갈게요
+        </Button>
         <button
           onClick={handleReroll}
-          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5"
+          disabled={rerolling}
+          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5 disabled:opacity-40"
         >
           <RefreshCcw size={15} /> 다시 뽑기
         </button>
       </div>
 
       <PlaceDetailSheet
-        place={selectedJourneyPlace}
-        onClose={() => setSelectedJourneyPlace(null)}
+        place={selectedPlace}
+        onClose={() => setSelectedPlace(null)}
       />
     </>
   );
 }
 
-function JourneyPlaceCardTimeline({
+function PlaceCardTimeline({
   place,
   onClick,
 }: {
@@ -135,5 +175,24 @@ function JourneyPlaceCardTimeline({
         {place.dur} · {place.travel}
       </p>
     </button>
+  );
+}
+
+function CourseResultSkeleton() {
+  return (
+    <div className="flex-1 px-4 pt-5 pb-4 animate-pulse">
+      <div className="h-7 w-48 rounded-lg bg-muted mb-2" />
+      <div className="h-4 w-32 rounded bg-muted mb-5" />
+      <div className="relative pl-8">
+        <div className="absolute left-[13px] top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={cn("relative", i < 2 ? "mb-3.5" : "")}>
+            <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-muted border-[3px] border-background z-10" />
+            <div className="h-20 rounded-xl bg-muted" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 h-16 rounded-xl bg-muted" />
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   MapPin,
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   ShoppingBag,
   Plus,
   Droplets,
+  FilterX,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -21,6 +22,7 @@ import {
   AccordionContent,
 } from "@/components/commons/Accordion";
 import { MOCK_PLACES, MOCK_NEARBY } from "@/shared/constants/courseMock";
+import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import type { NearbyCategory } from "@/shared/types/course.types";
 
 type PoiMeta = {
@@ -35,30 +37,10 @@ type PoiMeta = {
 };
 
 const CATEGORY_META: Record<Exclude<NearbyCategory, "all">, PoiMeta> = {
-  cafe: {
-    label: "카페",
-    icon: Coffee,
-    color: "text-accent",
-    bg: "bg-accent/10",
-  },
-  restroom: {
-    label: "화장실",
-    icon: Droplets,
-    color: "text-secondary",
-    bg: "bg-secondary/10",
-  },
-  convenience: {
-    label: "편의점",
-    icon: ShoppingBag,
-    color: "text-point",
-    bg: "bg-point/10",
-  },
-  pharmacy: {
-    label: "약국",
-    icon: Plus,
-    color: "text-primary",
-    bg: "bg-primary/10",
-  },
+  cafe: { label: "카페", icon: Coffee, color: "text-accent", bg: "bg-accent/10" },
+  restroom: { label: "화장실", icon: Droplets, color: "text-secondary", bg: "bg-secondary/10" },
+  convenience: { label: "편의점", icon: ShoppingBag, color: "text-point", bg: "bg-point/10" },
+  pharmacy: { label: "약국", icon: Plus, color: "text-primary", bg: "bg-primary/10" },
 };
 
 const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
@@ -71,9 +53,23 @@ const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
 
 export function CourseActiveView() {
   const places = MOCK_PLACES;
-  const currentIdx = 0;
-  const current = places[currentIdx];
-  const next = places[currentIdx + 1];
+  const router = useRouter();
+  const { courseId, currentIdx, advance } = useCourseProgressStore();
+
+  // store에 진행 상태가 없으면 첫 번째 장소로 fallback
+  const idx = courseId ? currentIdx : 0;
+  const current = places[idx];
+  const next = places[idx + 1];
+
+  const handleAdvance = () => {
+    if (idx >= places.length - 1) {
+      router.push(`/course/${courseId ?? "1"}/done`);
+    } else {
+      advance();
+    }
+  };
+
+  if (!current) return null;
 
   return (
     <>
@@ -83,17 +79,12 @@ export function CourseActiveView() {
           <h1 className="text-[18px] font-bold text-text-primary tracking-tight">
             진행 중인 코스
           </h1>
-          <StepDots total={places.length} current={currentIdx} />
+          <StepDots total={places.length} current={idx} />
         </div>
 
         {/* 지도 플레이스홀더 */}
         <div className="h-40 rounded-xl border border-border bg-accent/9 relative overflow-hidden mb-4">
-          <svg
-            width="100%"
-            height="100%"
-            viewBox="0 0 343 160"
-            className="absolute inset-0"
-          >
+          <svg width="100%" height="100%" viewBox="0 0 343 160" className="absolute inset-0">
             <path
               d="M40 130 Q 110 60, 180 90 T 310 60"
               fill="none"
@@ -101,13 +92,7 @@ export function CourseActiveView() {
               strokeDasharray="6 4"
               className="stroke-accent"
             />
-            <circle
-              cx="40"
-              cy="130"
-              r="22"
-              fillOpacity="0.18"
-              className="fill-accent"
-            />
+            <circle cx="40" cy="130" r="22" fillOpacity="0.18" className="fill-accent" />
           </svg>
           <div className="relative flex flex-col items-center justify-center h-full gap-1.5 text-accent">
             <MapPin size={28} strokeWidth={2.2} />
@@ -115,7 +100,7 @@ export function CourseActiveView() {
           </div>
         </div>
 
-        {/* 현재 장소 카드 — 아코디언으로 주변 정보 노출 */}
+        {/* 현재 장소 카드 */}
         <Accordion multiple={false} className="mb-3">
           <AccordionItem
             value="nearby"
@@ -134,9 +119,7 @@ export function CourseActiveView() {
                     {current.cat}
                   </span>
                   <span className="text-text-secondary">·</span>
-                  <span className="text-xs text-text-secondary">
-                    {current.dur}
-                  </span>
+                  <span className="text-xs text-text-secondary">{current.dur}</span>
                 </div>
                 <p className="text-[11px] text-accent font-medium mt-2">
                   주변 정보 보기
@@ -165,9 +148,7 @@ export function CourseActiveView() {
                 </p>
                 <div className="flex items-center gap-2">
                   <Badge variant={next.badge.variant}>{next.cat}</Badge>
-                  <span className="text-xs text-text-secondary">
-                    {next.travel}
-                  </span>
+                  <span className="text-xs text-text-secondary">{next.travel}</span>
                 </div>
               </div>
             </div>
@@ -177,11 +158,10 @@ export function CourseActiveView() {
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
-        <Link href="/course/1/done" className="block">
-          <Button size="cta" className="w-full gap-2">
-            여기 완료, 다음으로 <ArrowRight size={16} />
-          </Button>
-        </Link>
+        <Button size="cta" className="w-full gap-2" onClick={handleAdvance}>
+          {idx >= places.length - 1 ? "코스 완료" : "여기 완료, 다음으로"}
+          <ArrowRight size={16} />
+        </Button>
       </div>
     </>
   );
@@ -214,40 +194,50 @@ function NearbyPanel({ placeId }: { placeId: string }) {
       </div>
 
       {/* 주변 장소 목록 */}
-      <div className="flex flex-col gap-2.5 mt-1">
-        {filtered.map((poi) => {
-          const meta = CATEGORY_META[poi.category];
-          const Icon = meta.icon;
-          return (
-            <div key={poi.id} className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                  meta.bg,
-                )}
-              >
-                <Icon size={14} strokeWidth={2.2} className={meta.color} />
+      {filtered.length > 0 ? (
+        <div className="flex flex-col gap-2.5 mt-1">
+          {filtered.map((poi) => {
+            const meta = CATEGORY_META[poi.category];
+            const Icon = meta.icon;
+            return (
+              <div key={poi.id} className="flex items-center gap-3">
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", meta.bg)}>
+                  <Icon size={14} strokeWidth={2.2} className={meta.color} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-text-primary truncate">
+                    {poi.name}
+                  </p>
+                  <p className="text-[11px] text-text-secondary">{poi.dist}</p>
+                </div>
+                <span
+                  className={cn(
+                    "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
+                    poi.isOpen ? "bg-accent/10 text-accent" : "bg-border text-text-secondary",
+                  )}
+                >
+                  {poi.isOpen ? "영업중" : "영업종료"}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-text-primary truncate">
-                  {poi.name}
-                </p>
-                <p className="text-[11px] text-text-secondary">{poi.dist}</p>
-              </div>
-              <span
-                className={cn(
-                  "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
-                  poi.isOpen
-                    ? "bg-accent/10 text-accent"
-                    : "bg-border text-text-secondary",
-                )}
-              >
-                {poi.isOpen ? "영업중" : "영업종료"}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-2 py-4 mt-1">
+          <FilterX size={20} className="text-text-secondary" strokeWidth={1.5} />
+          <p className="text-[12px] text-text-secondary">
+            {cat === "all" ? "주변에 표시할 장소가 없어요" : `근처에 ${FILTER_CHIPS.find((c) => c.id === cat)?.label}가 없어요`}
+          </p>
+          {cat !== "all" && (
+            <button
+              onClick={() => setCat("all")}
+              className="text-[12px] font-semibold text-primary"
+            >
+              전체 보기
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
