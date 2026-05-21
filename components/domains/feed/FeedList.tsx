@@ -13,6 +13,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from "@/components/commons/Carousel";
+import { useLocationStore } from "@/client/stores/useLocationStore";
 import type { FeedCourse } from "@/shared/types/feed.types";
 
 const MAX_LIST = 10;
@@ -40,6 +41,7 @@ export function FeedList({
   listCourses,
   isLoading = false,
 }: Props) {
+  const city = useLocationStore((s) => s.city);
   const [selectedCourse, setSelectedCourse] = useState<FeedCourse | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
@@ -96,8 +98,8 @@ export function FeedList({
         </div>
       ) : null}
 
-      {/* 데이터가 전혀 없는 경우 */}
-      {!featured && midCourses.length === 0 && smallCourses.length === 0 && (
+      {/* 추천 섹션이 전부 비었고 리스트도 없는 경우 */}
+      {!featured && midCourses.length === 0 && smallCourses.length === 0 && listCourses.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card px-6 py-12 mb-2">
           <p className="text-[14px] font-medium text-text-primary">
             지금 근처에 추천 코스가 없어요
@@ -111,13 +113,16 @@ export function FeedList({
       {/* 리스트 섹션 */}
       <div className="mt-6 mb-3 flex items-center justify-between">
         <p className="text-[15px] font-bold text-text-primary tracking-[-0.02em]">
-          마음에 드는 게 없다면
+          {!featured && midCourses.length === 0 && smallCourses.length === 0
+            ? (city ? `${city} 주변 코스예요` : "이런 코스 어때요?")
+            : "마음에 드는 게 없다면"}
         </p>
         <label className="flex items-center gap-2 cursor-pointer">
           <span className="text-[12px] text-text-secondary">지금 가능한 코스만</span>
           <Switch
             checked={onlyAvailable}
             onCheckedChange={setOnlyAvailable}
+            disabled={listCourses.length === 0}
           />
         </label>
       </div>

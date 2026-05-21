@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 type LocationStore = {
   city: string | null;
-  setCity: (city: string) => void;
+  setCity: (city: string | null) => void;
 };
 
 export const useLocationStore = create<LocationStore>((set) => ({
