@@ -1,10 +1,10 @@
-import type { CourseData } from "@/shared/types/feed.types";
+import type { FeedCourse } from "@/shared/types/feed.types";
 
 export type WeatherCondition = "clear" | "cloudy" | "rain" | "snow";
 export type TimeSlot = "morning" | "afternoon" | "evening" | "night";
 
 export function generateContextLabel(
-  course: CourseData,
+  course: FeedCourse,
   hour: number,
 ): string | undefined {
   // 서버/수동 오버라이드 우선
@@ -43,7 +43,7 @@ export type ShowCondition = {
   hasFestival?: boolean;
 };
 
-export type CourseWithCondition = CourseData & {
+export type CourseWithCondition = FeedCourse & {
   showConditions?: ShowCondition[];
   priority?: number;
 };

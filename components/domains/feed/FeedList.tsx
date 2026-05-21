@@ -19,7 +19,7 @@ import {
   FEED_SMALL_COURSES,
   FEED_LIST_COURSES,
 } from "@/shared/constants/feedMock";
-import type { CourseData } from "@/shared/types/feed.types";
+import type { FeedCourse } from "@/shared/types/feed.types";
 
 const MAX_LIST = 10;
 const MAX_PER_PAGE = 3;
@@ -32,7 +32,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 export function FeedList() {
-  const [selectedCourse, setSelectedCourse] = useState<CourseData | null>(null);
+  const [selectedCourse, setSelectedCourse] = useState<FeedCourse | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);
   const [onlyAvailable, setOnlyAvailable] = useState(false);
@@ -51,7 +51,7 @@ export function FeedList() {
     api.scrollTo(0);
   }, [api, onlyAvailable]);
 
-  const handleSelect = (course: CourseData) => {
+  const handleSelect = (course: FeedCourse) => {
     setSelectedCourse(course);
     setSheetOpen(true);
     setSheetKey((k) => k + 1);

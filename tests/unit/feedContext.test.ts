@@ -5,7 +5,7 @@ import {
   filterByCondition,
   type CourseWithCondition,
 } from "@/shared/utils/feedContext";
-import type { CourseData } from "@/shared/types/feed.types";
+import type { FeedCourse } from "@/shared/types/feed.types";
 
 /* ──────────────────────────────────────────────
  *  getTimeSlot — 시간대 경계값 테스트
@@ -30,7 +30,7 @@ describe("getTimeSlot", () => {
  *  generateContextLabel — 맥락 라벨 생성
  * ────────────────────────────────────────────── */
 describe("generateContextLabel", () => {
-  const baseCourse: CourseData = {
+  const baseCourse: FeedCourse = {
     id: "test",
     name: "테스트 코스",
     region: "서울",
@@ -46,7 +46,7 @@ describe("generateContextLabel", () => {
   });
 
   it("방금 다녀간 사람이 있으면 소셜 증거 라벨을 반환한다", () => {
-    const course: CourseData = {
+    const course: FeedCourse = {
       ...baseCourse,
       todayCompletions: { count: 1, timeframe: "방금" },
     };
@@ -54,7 +54,7 @@ describe("generateContextLabel", () => {
   });
 
   it("오늘 다녀간 사람만 있으면 소셜 증거를 반환하지 않는다", () => {
-    const course: CourseData = {
+    const course: FeedCourse = {
       ...baseCourse,
       todayCompletions: { count: 5, timeframe: "오늘" },
     };

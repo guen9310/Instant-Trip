@@ -1,6 +1,6 @@
-import type { Place, NearbyPoi } from '@/shared/types/course.types';
+import type { JourneyPlace, NearbyPoi } from '@/shared/types/course.types';
 
-export const MOCK_PLACES: Place[] = [
+export const MOCK_PLACES: JourneyPlace[] = [
   {
     id: 'p1',
     cat: '문화',

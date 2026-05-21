@@ -1,6 +1,7 @@
 export type AvailabilityStatus = "available" | "partial" | "unavailable";
 
-export type Place = {
+// 피드 바텀시트에서 장소 목록 미리보기용 경량 타입
+export type FeedPlace = {
   name: string;
   category: string;
   status: "open" | "closed";
@@ -12,7 +13,8 @@ export type TodayCompletions = {
   timeframe: "방금" | "오늘";
 };
 
-export type CourseData = {
+// 피드 카드 및 바텀시트에서 사용하는 코스 데이터
+export type FeedCourse = {
   id: string;
   name: string;
   region: string;
@@ -22,6 +24,6 @@ export type CourseData = {
   todayCompletions?: TodayCompletions;
   festival?: boolean;
   imageSeed?: string;
-  places: Place[];
+  places: FeedPlace[];
   contextLabel?: string;
 };

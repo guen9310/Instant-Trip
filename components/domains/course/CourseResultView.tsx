@@ -9,19 +9,19 @@ import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
 import { MOCK_PLACES } from "@/shared/constants/courseMock";
-import type { Place } from "@/shared/types/course.types";
+import { usePrefsStore } from "@/client/stores/usePrefsStore";
+import type { JourneyPlace } from "@/shared/types/course.types";
 
-// TODO: 실제 저장된 취향값으로 교체
 const TRAVEL_REASON: Record<string, string> = {
   walk: "걷는 게 좋아요",
   min: "이동 최소화",
 };
 
 export function CourseResultView() {
-  const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [selectedJourneyPlace, setSelectedJourneyPlace] = useState<JourneyPlace | null>(null);
   const [loading, setLoading] = useState(false);
   const places = MOCK_PLACES;
-  const travelPref = "walk"; // TODO: 실제 취향 값으로 교체
+  const travelPref = usePrefsStore((s) => s.prefs.travel);
 
   const handleReroll = async () => {
     setLoading(true);
@@ -61,9 +61,9 @@ export function CourseResultView() {
               <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold border-[3px] border-background z-10">
                 {i + 1}
               </div>
-              <PlaceCardTimeline
+              <JourneyPlaceCardTimeline
                 place={p}
-                onClick={() => setSelectedPlace(p)}
+                onClick={() => setSelectedJourneyPlace(p)}
               />
             </div>
           ))}
@@ -99,18 +99,18 @@ export function CourseResultView() {
       </div>
 
       <PlaceDetailSheet
-        place={selectedPlace}
-        onClose={() => setSelectedPlace(null)}
+        place={selectedJourneyPlace}
+        onClose={() => setSelectedJourneyPlace(null)}
       />
     </>
   );
 }
 
-function PlaceCardTimeline({
+function JourneyPlaceCardTimeline({
   place,
   onClick,
 }: {
-  place: Place;
+  place: JourneyPlace;
   onClick: () => void;
 }) {
   return (

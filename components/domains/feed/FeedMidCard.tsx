@@ -2,15 +2,15 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/commons/Badge";
-import type { CourseData } from "@/shared/types/feed.types";
+import type { FeedCourse } from "@/shared/types/feed.types";
 import { generateContextLabel } from "@/shared/utils/feedContext";
 
 export function FeedMidCard({
   course,
   onSelect,
 }: {
-  course: CourseData;
-  onSelect: (course: CourseData) => void;
+  course: FeedCourse;
+  onSelect: (course: FeedCourse) => void;
 }) {
   const [pressed, setPressed] = useState(false);
   const contextLabel = generateContextLabel(course, new Date().getHours());

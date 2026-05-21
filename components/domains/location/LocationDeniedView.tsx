@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronLeft } from "lucide-react";
 import { cn } from "@/shared/utils";
+import { useLocationStore } from "@/client/stores/useLocationStore";
 
 const REGION_CITIES: Record<string, { name: string; prov: string }[]> = {
   수도권: [
@@ -69,6 +70,7 @@ export function LocationDeniedView() {
   const [panelKey, setPanelKey] = useState(0);
   const [enterAnim, setEnterAnim] = useState<"none" | "from-right" | "from-left">("none");
   const router = useRouter();
+  const setLocationCity = useLocationStore((s) => s.setCity);
 
   const goToStep2 = (r: Region) => {
     setRegion(r);
@@ -118,7 +120,10 @@ export function LocationDeniedView() {
         <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
           {city ? (
             <button
-              onClick={() => router.push("/start")}
+              onClick={() => {
+                setLocationCity(city);
+                router.push("/start");
+              }}
               className="w-full h-[50px] rounded-[10px] bg-accent text-white text-[15px] font-bold tracking-tight"
             >
               이 도시로 코스 뽑기

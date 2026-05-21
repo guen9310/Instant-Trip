@@ -8,60 +8,24 @@ import { Badge } from "@/components/commons/Badge";
 import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
 import { StarRating } from "@/components/domains/profile/StarRating";
-import {
-  CompletedCourseDetailModal,
-  type CompletedCourse,
-} from "@/components/domains/profile/CompletedCourseDetailModal";
+import { CompletedCourseDetailModal } from "@/components/domains/profile/CompletedCourseDetailModal";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { buildReexplorationText } from "@/shared/utils/prefsText";
 import type { User } from "@/shared/types/auth.types";
+import type { CourseProgress, CompletedCourse } from "@/shared/types/course.types";
 
-const STATS = [
-  { label: "완료한 코스", value: 3 },
-  { label: "방문한 지역", value: 2 },
-];
-
-const IN_PROGRESS = {
-  name: "적당히 즐기는 코스",
-  current: 1,
-  total: 3,
-  region: "종로구",
-  courseId: "1",
+type Props = {
+  user: User;
+  inProgress: CourseProgress | null;
+  completed: CompletedCourse[];
 };
 
-const COMPLETED = [
-  {
-    name: "성수 골목 산책",
-    date: "2026.04.28",
-    region: "서울 성동구",
-    duration: "2시간",
-    places: [
-      { name: "성수동 카페거리", category: "문화시설" },
-      { name: "서울숲", category: "관광지" },
-      { name: "뚝섬한강공원", category: "관광지" },
-    ],
-    rating: 5,
-    review: "날씨도 좋고 코스가 딱 적당했다",
-  },
-  {
-    name: "망원 한강 산책",
-    date: "2026.04.21",
-    region: "서울 마포구",
-    duration: "1시간 30분",
-    places: [
-      { name: "망원시장", category: "전통시장" },
-      { name: "한강공원", category: "관광지" },
-    ],
-    rating: 4,
-    review: "",
-  },
-];
-
-
-export function ProfileView({ user }: { user: User }) {
+export function ProfileView({ user, inProgress, completed }: Props) {
   const [selected, setSelected] = useState<CompletedCourse | null>(null);
   const prefs = usePrefsStore((s) => s.prefs);
   const reexploration = buildReexplorationText(prefs);
+
+  const totalRegions = new Set(completed.map((c) => c.region)).size;
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-5">
@@ -90,7 +54,10 @@ export function ProfileView({ user }: { user: User }) {
 
       {/* 통계 */}
       <div className="mb-6 grid grid-cols-2 gap-2.5">
-        {STATS.map(({ label, value }) => (
+        {[
+          { label: "완료한 코스", value: completed.length },
+          { label: "방문한 지역", value: totalRegions },
+        ].map(({ label, value }) => (
           <div
             key={label}
             className="rounded-xl border border-border bg-card px-4 py-3"
@@ -107,68 +74,94 @@ export function ProfileView({ user }: { user: User }) {
       <h3 className="mb-2.5 text-[13px] font-semibold text-text-secondary">
         진행 중인 코스
       </h3>
-      <div
-        className={cn(
-          "mb-6 flex items-center gap-3 rounded-xl",
-          "border border-border bg-card px-3.5 py-3.5",
-        )}
-      >
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center gap-2">
-            <span className="text-[14px] font-semibold text-text-primary">
-              {IN_PROGRESS.name}
-            </span>
-            <Badge variant="secondary">진행 중</Badge>
-          </div>
-          <p className="text-[12px] text-text-secondary mb-2">
-            장소 {IN_PROGRESS.current} / {IN_PROGRESS.total} ·{" "}
-            {IN_PROGRESS.region}
-          </p>
-          <div className="h-1.5 rounded-full bg-border">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{
-                width: `${(IN_PROGRESS.current / IN_PROGRESS.total) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
-        <Link
-          href={`/course/${IN_PROGRESS.courseId}/active`}
+      {inProgress ? (
+        <div
           className={cn(
-            buttonVariants({ size: "default" }),
-            "shrink-0 rounded-lg px-3.5 text-[13px] font-semibold",
+            "mb-6 flex items-center gap-3 rounded-xl",
+            "border border-border bg-card px-3.5 py-3.5",
           )}
         >
-          이어서
-        </Link>
-      </div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="text-[14px] font-semibold text-text-primary">
+                {inProgress.name}
+              </span>
+              <Badge variant="secondary">진행 중</Badge>
+            </div>
+            <p className="text-[12px] text-text-secondary mb-2">
+              장소 {inProgress.current} / {inProgress.total} ·{" "}
+              {inProgress.region}
+            </p>
+            <div className="h-1.5 rounded-full bg-border">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{
+                  width: `${(inProgress.current / inProgress.total) * 100}%`,
+                }}
+              />
+            </div>
+          </div>
+          <Link
+            href={`/course/${inProgress.courseId}/active`}
+            className={cn(
+              buttonVariants({ size: "default" }),
+              "shrink-0 rounded-lg px-3.5 text-[13px] font-semibold",
+            )}
+          >
+            이어서
+          </Link>
+        </div>
+      ) : (
+        <div className="mb-6 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 py-6">
+          <p className="text-[13px] text-text-secondary">
+            진행 중인 코스가 없어요
+          </p>
+          <Link
+            href="/start"
+            className="flex items-center gap-0.5 text-[13px] font-semibold text-primary"
+          >
+            코스 뽑으러 가기
+            <ChevronRight size={14} />
+          </Link>
+        </div>
+      )}
 
       {/* 완료한 코스 */}
       <h3 className="mb-2.5 text-[13px] font-semibold text-text-secondary">
         완료한 코스
       </h3>
-      <div className="mb-4 flex flex-col gap-2.5">
-        {COMPLETED.map((c) => (
-          <button
-            key={c.date}
-            onClick={() => setSelected(c)}
-            className="rounded-xl border border-border bg-card px-3.5 py-3.5 text-left"
-          >
-            <div className="mb-1.5">
-              <span className="text-[12px] tabular-nums text-text-secondary">
-                {c.date}
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <p className="min-w-0 truncate text-[14px] font-medium text-text-primary">
-                {c.name}
-              </p>
-              <StarRating rating={c.rating} />
-            </div>
-          </button>
-        ))}
-      </div>
+      {completed.length === 0 ? (
+        <div className="mb-4 flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-card px-4 py-8">
+          <p className="text-[14px] font-medium text-text-primary">
+            아직 완료한 코스가 없어요
+          </p>
+          <p className="text-[12px] text-text-secondary">
+            첫 여행을 떠나볼까요?
+          </p>
+        </div>
+      ) : (
+        <div className="mb-4 flex flex-col gap-2.5">
+          {completed.map((c) => (
+            <button
+              key={c.date}
+              onClick={() => setSelected(c)}
+              className="rounded-xl border border-border bg-card px-3.5 py-3.5 text-left"
+            >
+              <div className="mb-1.5">
+                <span className="text-[12px] tabular-nums text-text-secondary">
+                  {c.date}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-[14px] font-medium text-text-primary">
+                  {c.name}
+                </p>
+                <StarRating rating={c.rating} />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 재탐색 제안 */}
       <div className="mb-6 rounded-xl border border-border bg-card px-4 py-4">

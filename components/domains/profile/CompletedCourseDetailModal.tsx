@@ -9,18 +9,7 @@ import {
 } from "@/components/commons/Dialog";
 import { Badge } from "@/components/commons/Badge";
 import { StarRating } from "@/components/domains/profile/StarRating";
-
-type Place = { name: string; category: string };
-
-export type CompletedCourse = {
-  name: string;
-  date: string;
-  region: string;
-  duration: string;
-  places: Place[];
-  rating: number;
-  review: string;
-};
+import type { CompletedCourse } from "@/shared/types/course.types";
 
 type Props = {
   course: CompletedCourse | null;

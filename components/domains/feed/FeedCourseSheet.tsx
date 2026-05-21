@@ -18,7 +18,7 @@ import {
   AccordionTrigger,
 } from "@/components/commons/Accordion";
 import { Button } from "@/components/commons/Button";
-import type { CourseData, Place } from "@/shared/types/feed.types";
+import type { FeedCourse, FeedPlace } from "@/shared/types/feed.types";
 
 type SheetPhase = "default" | "partial" | "loading" | "updated";
 
@@ -36,7 +36,7 @@ export function FeedCourseSheet({
   open,
   onOpenChange,
 }: {
-  course: CourseData | null;
+  course: FeedCourse | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -44,27 +44,27 @@ export function FeedCourseSheet({
   const [phase, setPhase] = useState<SheetPhase>(
     () => !course || course.availability === "available" ? "default" : "partial",
   );
-  const [displayPlaces, setDisplayPlaces] = useState<Place[]>(
+  const [displayFeedPlaces, setDisplayFeedPlaces] = useState<FeedPlace[]>(
     () => course?.places ?? [],
   );
-  const [changedPlace, setChangedPlace] = useState<ChangedPlace | null>(null);
+  const [changedFeedPlace, setChangedPlace] = useState<ChangedPlace | null>(null);
 
   const handleExcludeAndRun = () => {
     setPhase("loading");
     setTimeout(() => {
       if (!course) return;
-      const closedIdx = displayPlaces.findIndex((p) => p.status === "closed");
+      const closedIdx = displayFeedPlaces.findIndex((p) => p.status === "closed");
       if (closedIdx !== -1) {
-        const closed = displayPlaces[closedIdx];
+        const closed = displayFeedPlaces[closedIdx];
         const toName = categoryFallbacks[closed.category] ?? "주변 인기 장소";
-        const replacement: Place = {
+        const replacement: FeedPlace = {
           name: toName,
           category: closed.category,
           status: "open",
         };
-        const next = [...displayPlaces];
+        const next = [...displayFeedPlaces];
         next[closedIdx] = replacement;
-        setDisplayPlaces(next);
+        setDisplayFeedPlaces(next);
         setChangedPlace({ from: closed.name, to: toName });
       }
       setPhase("updated");
@@ -111,8 +111,8 @@ export function FeedCourseSheet({
             </SheetHeader>
 
             <Accordion className="px-4">
-              {displayPlaces.map((place, i) => {
-                const isChanged = changedPlace?.to === place.name;
+              {displayFeedPlaces.map((place, i) => {
+                const isChanged = changedFeedPlace?.to === place.name;
                 const statusBadge =
                   place.status === "open" ? (
                     <span className="text-[12px] text-accent font-medium flex items-center gap-1 shrink-0">
@@ -175,9 +175,9 @@ export function FeedCourseSheet({
               </p>
             )}
 
-            {phase === "updated" && changedPlace && (
+            {phase === "updated" && changedFeedPlace && (
               <p className="text-[12px] text-accent px-4">
-                {changedPlace.from} 대신 {changedPlace.to}으로 변경됐어요
+                {changedFeedPlace.from} 대신 {changedFeedPlace.to}으로 변경됐어요
               </p>
             )}
 

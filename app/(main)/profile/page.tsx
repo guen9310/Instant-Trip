@@ -6,5 +6,12 @@ export default async function ProfilePage() {
   const session = await getSession();
   if (!session) redirect("/sign-in");
 
-  return <ProfileView user={session.user} />;
+  // TODO: API 연결 후 실제 데이터로 교체
+  return (
+    <ProfileView
+      user={session.user}
+      inProgress={null}
+      completed={[]}
+    />
+  );
 }

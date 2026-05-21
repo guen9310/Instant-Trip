@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Footprints, Map, Compass, Check, Shuffle } from "lucide-react";
+import { MapPin, Footprints, Map, Compass, Check, Shuffle, AlertCircle } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
+import { useLocationStore } from "@/client/stores/useLocationStore";
+import Link from "next/link";
 
 const SCALES = [
   {
@@ -37,9 +39,11 @@ export function StartView() {
   const [selected, setSelected] = useState<ScaleId>("moderate");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const city = useLocationStore((s) => s.city);
 
   const handleStart = async () => {
     setLoading(true);
+    // TODO: 코스 생성 API 호출로 교체
     await new Promise((r) => setTimeout(r, 2500));
     router.push("/course/1");
   };
@@ -50,16 +54,28 @@ export function StartView() {
 
       <div className="flex flex-1 flex-col px-4 pt-5 pb-4">
         {/* 위치 카드 */}
-        <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-accent/9 border border-accent/20 mb-7">
-          <MapPin size={20} className="text-accent shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-semibold text-text-primary">서울특별시 종로구</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-xs text-accent font-medium">현재 위치 확인됨</span>
+        {city ? (
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-accent/9 border border-accent/20 mb-7">
+            <MapPin size={20} className="text-accent shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-semibold text-text-primary">{city}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                <span className="text-xs text-accent font-medium">위치 확인됨</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-point/8 border border-point/20 mb-7">
+            <AlertCircle size={20} className="text-point shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold text-text-primary">위치를 확인할 수 없어요</p>
+              <Link href="/location" className="text-xs text-point font-medium underline-offset-2 underline">
+                지역 직접 선택하기
+              </Link>
+            </div>
+          </div>
+        )}
 
         <h2 className="text-[22px] font-bold text-text-primary tracking-[-0.02em] mb-1.5">
           오늘 얼마나 떠날까요?
@@ -116,7 +132,7 @@ export function StartView() {
         <Button
           size="cta"
           onClick={handleStart}
-          disabled={loading}
+          disabled={loading || !city}
           className="gap-2"
         >
           코스 뽑기 <Shuffle size={16} />

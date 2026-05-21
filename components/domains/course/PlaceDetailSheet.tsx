@@ -14,7 +14,7 @@ import { cn } from "@/shared/utils";
 import { Sheet, SheetContent } from "@/components/commons/Sheet";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
-import type { Place } from "@/shared/types/course.types";
+import type { JourneyPlace } from "@/shared/types/course.types";
 
 const REJECT_REASONS = [
   { id: "far", icon: MapPin, label: "너무 멀어요" },
@@ -24,7 +24,7 @@ const REJECT_REASONS = [
 ] as const;
 
 type Props = {
-  place: Place | null;
+  place: JourneyPlace | null;
   onClose: () => void;
 };
 
@@ -58,7 +58,7 @@ function PlaceDetailContent({
   place,
   onClose,
 }: {
-  place: Place;
+  place: JourneyPlace;
   onClose: () => void;
 }) {
   const [isRejecting, setIsRejecting] = useState(false);

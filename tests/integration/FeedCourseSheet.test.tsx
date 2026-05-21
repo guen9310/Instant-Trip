@@ -2,14 +2,14 @@ import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { FeedCourseSheet } from "@/components/domains/feed/FeedCourseSheet";
-import type { CourseData } from "@/shared/types/feed.types";
+import type { FeedCourse } from "@/shared/types/feed.types";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, back: vi.fn() }),
 }));
 
-const availableCourse: CourseData = {
+const availableCourse: FeedCourse = {
   id: "test-1",
   name: "테스트 코스",
   region: "서울 종로구",
@@ -22,7 +22,7 @@ const availableCourse: CourseData = {
   ],
 };
 
-const partialCourse: CourseData = {
+const partialCourse: FeedCourse = {
   id: "test-2",
   name: "일부 미운영 코스",
   region: "서울 마포구",
