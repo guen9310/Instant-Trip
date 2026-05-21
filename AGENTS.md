@@ -8,6 +8,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Project Conventions
 
+Work correctness-first, not speed-first.
+Assume this environment has sufficient CPU, RAM, and time for normal development work. Do not avoid builds, tests, indexing, broad searches, or deeper diagnosis just to finish quickly.
+Do not cut corners. Inspect the relevant code, follow the evidence, run the appropriate verification, and keep working until the task is genuinely resolved or a concrete blocker is found.
+Let long-running commands continue unless there is clear evidence they are stuck or useless. Only optimize for speed when explicitly requested, when a real timeout exists, or when the current approach is clearly not progressing.
+
 This project uses **Next.js (App Router) + TypeScript + RSC**.
 These are the **core conventions**. Other patterns will be defined as the project grows.
 When in doubt, ask before deviating.
@@ -149,13 +154,16 @@ Strictly separate **server state** and **client state**.
 ## 8. Hooks & Side Effects
 
 ### Render must be pure
+
 The render function body is read-only. Never write to refs, mutate external variables, or call APIs directly inside render. All side effects belong in event handlers or effects.
 
 ### Effects are for synchronizing with external systems
+
 Do not use effects to cascade React state updates. If you find yourself writing `setState` inside an effect to react to another state change, that is a design smell. Resolve it with derived state, `useReducer`, or by updating both states together in the same event handler.
 
 ❌ `useEffect(() => { setB(init); }, [a]);`
 ✅ `handler = () => { setA(val); setB(init); }`
 
 ### Read custom hook implementations before solving a problem they already solve
+
 Before introducing a workaround (e.g. a "latest ref" to avoid stale closures), check whether the hook you are calling already handles it internally. Duplicating a solution the hook owns makes the code harder to follow and introduces subtle bugs.
