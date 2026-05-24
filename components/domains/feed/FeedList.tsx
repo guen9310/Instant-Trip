@@ -41,7 +41,8 @@ export function FeedList({
   listCourses,
   isLoading = false,
 }: Props) {
-  const city = useLocationStore((s) => s.city);
+  const { state } = useLocationStore();
+  const city = state.status === "granted" ? state.city : null;
   const [selectedCourse, setSelectedCourse] = useState<FeedCourse | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetKey, setSheetKey] = useState(0);

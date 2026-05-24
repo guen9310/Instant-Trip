@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { AlertCircle, ChevronLeft } from "lucide-react";
 import { cn } from "@/shared/utils";
-import { useLocationStore } from "@/client/stores/useLocationStore";
 
 const REGION_CITIES: Record<string, { name: string; prov: string }[]> = {
   수도권: [
@@ -63,14 +61,23 @@ const KEYFRAMES = `
   }
 `;
 
-export function LocationDeniedView() {
+interface LocationDeniedViewProps {
+  onCitySelect: (city: string) => void;
+  /** denied: 권한 거부/불가 배너 표시. manual: 배너 없이 단순 선택 UI */
+  variant?: "denied" | "manual";
+}
+
+export function LocationDeniedView({
+  onCitySelect,
+  variant = "denied",
+}: LocationDeniedViewProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [region, setRegion] = useState<Region | null>(null);
   const [city, setCity] = useState<string | null>(null);
   const [panelKey, setPanelKey] = useState(0);
-  const [enterAnim, setEnterAnim] = useState<"none" | "from-right" | "from-left">("none");
-  const router = useRouter();
-  const setLocationCity = useLocationStore((s) => s.setCity);
+  const [enterAnim, setEnterAnim] = useState<
+    "none" | "from-right" | "from-left"
+  >("none");
 
   const goToStep2 = (r: Region) => {
     setRegion(r);
@@ -104,7 +111,7 @@ export function LocationDeniedView() {
           style={panelStyle}
         >
           {step === 1 ? (
-            <Step1 onPickRegion={goToStep2} />
+            <Step1 onPickRegion={goToStep2} showAlert={variant === "denied"} />
           ) : (
             <Step2
               region={region!}
@@ -120,18 +127,15 @@ export function LocationDeniedView() {
         <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
           {city ? (
             <button
-              onClick={() => {
-                setLocationCity(city);
-                router.push("/start");
-              }}
-              className="w-full h-[50px] rounded-[10px] bg-accent text-white text-[15px] font-bold tracking-tight"
+              onClick={() => onCitySelect(city)}
+              className="w-full h-12.5 rounded-[10px] bg-accent text-white text-[15px] font-bold tracking-tight"
             >
               이 도시로 코스 뽑기
             </button>
           ) : (
             <button
               disabled
-              className="w-full h-[50px] rounded-[10px] bg-muted-foreground text-white text-[15px] font-semibold opacity-40 cursor-not-allowed"
+              className="w-full h-12.5 rounded-[10px] bg-muted-foreground text-white text-[15px] font-semibold opacity-40 cursor-not-allowed"
             >
               도시를 선택해주세요
             </button>
@@ -142,21 +146,32 @@ export function LocationDeniedView() {
   );
 }
 
-function Step1({ onPickRegion }: { onPickRegion: (r: Region) => void }) {
+function Step1({
+  onPickRegion,
+  showAlert,
+}: {
+  onPickRegion: (r: Region) => void;
+  showAlert: boolean;
+}) {
   return (
     <div className="px-4 pt-5 pb-6">
-      {/* 경고 배너 */}
-      <div className="flex gap-2.5 items-start px-3.5 py-3 rounded-[10px] bg-point/12 border border-point/20 mb-6">
-        <AlertCircle size={18} className="text-point shrink-0 mt-0.5" strokeWidth={2} />
-        <div>
-          <p className="text-[13px] font-bold text-text-primary mb-0.5">
-            위치 권한이 거부되었어요
-          </p>
-          <p className="text-[12px] text-text-secondary leading-[1.4]">
-            지역을 직접 선택해주세요
-          </p>
+      {showAlert && (
+        <div className="flex gap-2.5 items-start px-3.5 py-3 rounded-[10px] bg-point/12 border border-point/20 mb-6">
+          <AlertCircle
+            size={18}
+            className="text-point shrink-0 mt-0.5"
+            strokeWidth={2}
+          />
+          <div>
+            <p className="text-[13px] font-bold text-text-primary mb-0.5">
+              위치 권한이 거부되었어요
+            </p>
+            <p className="text-[12px] text-text-secondary leading-[1.4]">
+              지역을 직접 선택해주세요
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <p className="text-[14px] font-bold text-text-primary tracking-tight mb-3">
         어느 지역에 계세요?
@@ -168,7 +183,7 @@ function Step1({ onPickRegion }: { onPickRegion: (r: Region) => void }) {
             onClick={() => onPickRegion(r)}
             className={cn(
               "py-4 px-3 rounded-xl border border-border bg-surface text-[14px] font-medium text-text-primary text-center tracking-tight transition-colors active:scale-[0.98]",
-              i === 4 ? "col-span-2" : ""
+              i === 4 ? "col-span-2" : "",
             )}
           >
             {r}
@@ -216,13 +231,13 @@ function Step2({
               onClick={() => setCity(c.name)}
               className={cn(
                 "py-3.5 px-3 rounded-xl border text-center transition-colors active:scale-[0.98]",
-                sel ? "bg-accent/9 border-accent" : "bg-surface border-border"
+                sel ? "bg-accent/9 border-accent" : "bg-surface border-border",
               )}
             >
               <p
                 className={cn(
                   "text-[13px] font-bold tracking-tight mb-0.5",
-                  sel ? "text-accent" : "text-text-primary"
+                  sel ? "text-accent" : "text-text-primary",
                 )}
               >
                 {c.name}
@@ -230,7 +245,7 @@ function Step2({
               <p
                 className={cn(
                   "text-[11px]",
-                  sel ? "text-accent opacity-80" : "text-text-secondary"
+                  sel ? "text-accent opacity-80" : "text-text-secondary",
                 )}
               >
                 {c.prov}

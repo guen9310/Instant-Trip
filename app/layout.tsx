@@ -41,7 +41,7 @@ export default function RootLayout({
       </head>
       <body className="h-full flex justify-center bg-background text-text-primary md:bg-muted">
         <DarkModeSync />
-        <div className="flex flex-col h-full w-full max-w-[430px] bg-background overflow-hidden md:shadow-[0_0_40px_rgba(0,0,0,0.08)]">
+        <div className="flex flex-col h-full w-full max-w-107.5 bg-background overflow-hidden md:shadow-[0_0_40px_rgba(0,0,0,0.08)]">
           <QueryProvider>{children}</QueryProvider>
         </div>
       </body>

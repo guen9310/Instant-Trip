@@ -6,8 +6,9 @@ import { MapPin, Footprints, Map, Compass, Check, Shuffle, AlertCircle } from "l
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
+import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
+import { NoNearbyView } from "@/components/domains/course/NoNearbyView";
 import { useLocationStore } from "@/client/stores/useLocationStore";
-import Link from "next/link";
 
 const SCALES = [
   {
@@ -38,12 +39,46 @@ type ScaleId = (typeof SCALES)[number]["id"];
 export function StartView() {
   const [selected, setSelected] = useState<ScaleId>("moderate");
   const [loading, setLoading] = useState(false);
+  const [noNearby, setNoNearby] = useState(false);
+  const [showManualPicker, setShowManualPicker] = useState(false);
   const router = useRouter();
-  const city = useLocationStore((s) => s.city);
+  const { state, setCity } = useLocationStore();
+
+  const isDenied =
+    state.status === "denied" ||
+    state.status === "timeout" ||
+    state.status === "unavailable";
+  const city = state.status === "granted" ? state.city : null;
+
+  // 위치 권한 거부/불가 → 지역 직접 선택 UI
+  if (isDenied || showManualPicker) {
+    return (
+      <LocationDeniedView
+        variant={isDenied ? "denied" : "manual"}
+        onCitySelect={(selectedCity) => {
+          setCity(selectedCity);
+          setShowManualPicker(false);
+          setNoNearby(false);
+        }}
+      />
+    );
+  }
+
+  // 주변 코스 없음 → 대안 선택 UI
+  if (noNearby && city) {
+    return (
+      <NoNearbyView
+        city={city}
+        onExpandRadius={() => router.push("/course/1")}
+        onChangeScale={() => setNoNearby(false)}
+        onChangeRegion={() => setShowManualPicker(true)}
+      />
+    );
+  }
 
   const handleStart = async () => {
     setLoading(true);
-    // TODO: 코스 생성 API 호출로 교체
+    // TODO: 코스 생성 API 호출로 교체. 결과 없으면 setNoNearby(true)
     await new Promise((r) => setTimeout(r, 2500));
     router.push("/course/1");
   };
@@ -70,9 +105,12 @@ export function StartView() {
             <AlertCircle size={20} className="text-point shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-semibold text-text-primary">위치를 확인할 수 없어요</p>
-              <Link href="/location" className="text-xs text-point font-medium underline-offset-2 underline">
+              <button
+                onClick={() => setShowManualPicker(true)}
+                className="text-xs text-point font-medium underline-offset-2 underline"
+              >
                 지역 직접 선택하기
-              </Link>
+              </button>
             </div>
           </div>
         )}

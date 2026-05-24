@@ -6,31 +6,19 @@ import type { ElementType } from "react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 
-const OPTIONS = [
-  {
-    id: "expand",
-    icon: Search,
-    title: "반경 넓혀서 다시 찾기",
-    sub: "10km로 확장",
-    href: "/course/1",
-  },
-  {
-    id: "scale",
-    icon: Clock,
-    title: "여행 규모 변경하기",
-    sub: "더 넓은 범위로 조정",
-    href: "/start",
-  },
-  {
-    id: "region",
-    icon: MapPin,
-    title: "다른 지역 선택하기",
-    sub: "지역을 직접 입력",
-    href: "/start/location-denied",
-  },
-] as const;
+interface NoNearbyViewProps {
+  city: string;
+  onExpandRadius: () => void;
+  onChangeScale: () => void;
+  onChangeRegion: () => void;
+}
 
-export function NoNearbyView() {
+export function NoNearbyView({
+  city,
+  onExpandRadius,
+  onChangeScale,
+  onChangeRegion,
+}: NoNearbyViewProps) {
   return (
     <>
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">
@@ -38,7 +26,7 @@ export function NoNearbyView() {
         <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-accent/9 border border-accent/20 mb-5">
           <MapPin size={20} className="text-accent shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-semibold text-text-primary">울산광역시 남구</p>
+            <p className="text-[15px] font-semibold text-text-primary">{city}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
               <span className="text-xs text-accent font-medium">현재 위치 확인됨</span>
@@ -64,9 +52,24 @@ export function NoNearbyView() {
           이렇게 해볼까요?
         </p>
         <div className="flex flex-col gap-2.5">
-          {OPTIONS.map((o) => (
-            <OptionCard key={o.id} icon={o.icon} title={o.title} sub={o.sub} href={o.href} />
-          ))}
+          <OptionCard
+            icon={Search}
+            title="반경 넓혀서 다시 찾기"
+            sub="10km로 확장"
+            onClick={onExpandRadius}
+          />
+          <OptionCard
+            icon={Clock}
+            title="여행 규모 변경하기"
+            sub="더 넓은 범위로 조정"
+            onClick={onChangeScale}
+          />
+          <OptionCard
+            icon={MapPin}
+            title="다른 지역 선택하기"
+            sub="지역을 직접 입력"
+            onClick={onChangeRegion}
+          />
         </div>
       </div>
 
@@ -90,17 +93,17 @@ function OptionCard({
   icon: Ico,
   title,
   sub,
-  href,
+  onClick,
 }: {
   icon: ElementType;
   title: string;
   sub: string;
-  href: string;
+  onClick: () => void;
 }) {
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-3.5 px-3.5 py-3.5 rounded-xl bg-surface border border-border active:bg-primary/5 active:border-primary/30 transition-colors"
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3.5 px-3.5 py-3.5 rounded-xl bg-surface border border-border active:bg-primary/5 active:border-primary/30 transition-colors text-left w-full"
     >
       <div className="w-10 h-10 rounded-[10px] bg-primary/8 text-primary flex items-center justify-center shrink-0">
         <Ico size={20} />
@@ -110,6 +113,6 @@ function OptionCard({
         <p className="text-xs text-text-secondary">{sub}</p>
       </div>
       <ChevronRight size={18} className="text-text-secondary shrink-0" />
-    </Link>
+    </button>
   );
 }
