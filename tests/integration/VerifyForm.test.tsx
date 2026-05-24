@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { VerifyForm } from "@/components/domains/auth/VerifyForm";
 
 const mockPush = vi.fn();
@@ -26,9 +26,15 @@ function getOtpInput() {
 
 describe("VerifyForm", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockPush.mockClear();
     mockSignInEmailOtp.mockClear();
     mockSendVerificationOtp.mockClear();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it("초기 상태에서 확인 버튼이 비활성이다", () => {
