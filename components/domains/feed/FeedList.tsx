@@ -74,6 +74,10 @@ export function FeedList({
 
   return (
     <>
+      <p className="text-[15px] font-bold text-text-primary tracking-[-0.02em] mb-2">
+        오늘의 코스 ↓
+      </p>
+
       {/* Featured */}
       {featured ? (
         <div className="mb-2">
