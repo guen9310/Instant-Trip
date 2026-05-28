@@ -204,25 +204,31 @@ async function weatherFetch<T>(
   }
 }
 
-// ─── 날짜·시각 헬퍼 ──────────────────────────────────────────────────────────
+// ─── 날짜·시각 헬퍼 (KST 기준) ───────────────────────────────────────────────
+// 기상청 API는 KST(UTC+9) 기준 날짜·시각을 요구함.
+// toKST()로 +9h 시프트한 뒤 getUTC*/setUTC* 메서드를 사용해 서버 로컬 타임존 영향을 차단.
 
-function toDateStr(d: Date): string {
-  return d.toISOString().slice(0, 10).replace(/-/g, "");
+function toKST(d: Date): Date {
+  return new Date(d.getTime() + 9 * 60 * 60 * 1000);
 }
 
-function toTimeStr(d: Date): string {
+function toDateStr(kst: Date): string {
+  return kst.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+function toTimeStr(kst: Date): string {
   return (
-    d.getHours().toString().padStart(2, "0") +
-    d.getMinutes().toString().padStart(2, "0")
+    kst.getUTCHours().toString().padStart(2, "0") +
+    kst.getUTCMinutes().toString().padStart(2, "0")
   );
 }
 
 // 매시 정각 발표, 40분 이후부터 유효
 function getNcstBaseTime(now: Date): { base_date: string; base_time: string } {
-  const d = new Date(now);
-  if (d.getMinutes() < 40) d.setHours(d.getHours() - 1);
-  d.setMinutes(0, 0, 0);
-  return { base_date: toDateStr(d), base_time: toTimeStr(d) };
+  const kst = toKST(now);
+  if (kst.getUTCMinutes() < 40) kst.setTime(kst.getTime() - 60 * 60 * 1000);
+  kst.setUTCMinutes(0, 0, 0);
+  return { base_date: toDateStr(kst), base_time: toTimeStr(kst) };
 }
 
 // 매시 30분 발표, 45분 이후부터 유효
@@ -230,10 +236,10 @@ function getSrtFcstBaseTime(now: Date): {
   base_date: string;
   base_time: string;
 } {
-  const d = new Date(now);
-  if (d.getMinutes() < 45) d.setHours(d.getHours() - 1);
-  d.setMinutes(30, 0, 0);
-  return { base_date: toDateStr(d), base_time: toTimeStr(d) };
+  const kst = toKST(now);
+  if (kst.getUTCMinutes() < 45) kst.setTime(kst.getTime() - 60 * 60 * 1000);
+  kst.setUTCMinutes(30, 0, 0);
+  return { base_date: toDateStr(kst), base_time: toTimeStr(kst) };
 }
 
 // 0200·0500·0800·1100·1400·1700·2000·2300 발표, 10분 이후부터 유효
@@ -242,21 +248,21 @@ function getVilageFcstBaseTime(now: Date): {
   base_time: string;
 } {
   const ISSUE_HOURS = [2, 5, 8, 11, 14, 17, 20, 23];
-  const d = new Date(now);
-  const h = d.getHours();
-  const m = d.getMinutes();
+  const kst = toKST(now);
+  const h = kst.getUTCHours();
+  const m = kst.getUTCMinutes();
 
   let baseHour = ISSUE_HOURS[0];
   for (const ih of ISSUE_HOURS) {
     if (h > ih || (h === ih && m >= 10)) baseHour = ih;
   }
   if (h < 2 || (h === 2 && m < 10)) {
-    d.setDate(d.getDate() - 1);
+    kst.setTime(kst.getTime() - 24 * 60 * 60 * 1000);
     baseHour = 23;
   }
 
-  d.setHours(baseHour, 0, 0, 0);
-  return { base_date: toDateStr(d), base_time: toTimeStr(d) };
+  kst.setUTCHours(baseHour, 0, 0, 0);
+  return { base_date: toDateStr(kst), base_time: toTimeStr(kst) };
 }
 
 // ─── 공개 API ────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ export function useWeatherQuery(lat: number | null, lng: number | null) {
     queryKey: ["weather", lat, lng],
     queryFn: () => fetchWeatherAction(lat!, lng!),
     enabled: lat != null && lng != null,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 }

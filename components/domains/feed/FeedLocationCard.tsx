@@ -25,7 +25,7 @@ export function FeedLocationCard() {
 
   const lat = state.status === "granted" ? (state.lat ?? null) : null;
   const lng = state.status === "granted" ? (state.lng ?? null) : null;
-  const { data: weather } = useWeatherQuery(lat, lng);
+  const { data: weather, isPending: weatherPending } = useWeatherQuery(lat, lng);
 
   if (state.status === "granted") {
     const { city } = state;
@@ -48,10 +48,19 @@ export function FeedLocationCard() {
         </div>
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[19px] font-extrabold text-text-primary tracking-[-0.02em] leading-tight">
-              {label}{tempStr ? ` ${tempStr}` : ""} {icon}
-            </p>
-            <p className="text-[12px] text-text-secondary mt-1">{message}</p>
+            {weatherPending ? (
+              <>
+                <div className="h-[23px] w-36 rounded bg-muted animate-pulse" />
+                <div className="h-3 w-28 rounded bg-muted animate-pulse mt-1" />
+              </>
+            ) : (
+              <>
+                <p className="text-[19px] font-extrabold text-text-primary tracking-[-0.02em] leading-tight">
+                  {label}{tempStr ? ` ${tempStr}` : ""} {icon}
+                </p>
+                <p className="text-[12px] text-text-secondary mt-1">{message}</p>
+              </>
+            )}
           </div>
           <span className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground text-[13px] font-bold px-3.5 py-2 rounded-xl whitespace-nowrap">
             <Zap size={13} strokeWidth={2.5} />
