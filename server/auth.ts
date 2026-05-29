@@ -59,6 +59,15 @@ export const auth = betterAuth({
     },
   },
 
+  session: {
+    expiresIn: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24,
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5,
+    },
+  },
+
   plugins: [
     emailOTP({
       async sendVerificationOTP({ email, otp }) {

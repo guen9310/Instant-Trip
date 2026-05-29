@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { PREF_KEYS, PREF_META, type Prefs } from "@/shared/constants/preferences";
@@ -23,6 +24,7 @@ const OPTION_TITLES: Record<string, string> = {
 
 export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [prefs, setLocalPrefs] = useState(initialPrefs);
   const [saveError, setSaveError] = useState<string | null>(null);
   const setPrefs = usePrefsStore((s) => s.setPrefs);
@@ -47,6 +49,7 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
 
   const handleSignOut = async () => {
     await authClient.signOut();
+    queryClient.clear();
     router.push("/sign-in");
   };
 
