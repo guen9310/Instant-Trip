@@ -98,12 +98,16 @@ export function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// 거리 보너스: 사용자 위치에서 가까울수록 높은 점수를 부여한다.
-// 반경 내 가장 가까운 곳(거리=0) → 1.0, 반경 끝(거리=반경) → 0.0
+// 거리 보너스: scale에 따라 방향이 달라진다.
+// 가볍게   → 가까울수록 높음 (1 - dist/radius)
+// 적당히   → 거리 무관 0.5 고정
+// 여유롭게 → 멀수록 높음 (dist/radius, 최대 1.0)
 function calcDistanceBonus(item: TourItem, profile: UserProfile): number {
   const lat = parseFloat(item.mapy);
   const lng = parseFloat(item.mapx);
   if (isNaN(lat) || isNaN(lng)) return 0;
+
+  if (profile.scale === "적당히") return 0.5;
 
   const maxRadiusKm = SCALE_CONFIG[profile.scale].radius / 1000;
   const distKm = haversineKm(
@@ -112,6 +116,8 @@ function calcDistanceBonus(item: TourItem, profile: UserProfile): number {
     lat,
     lng,
   );
+
+  if (profile.scale === "여유롭게") return Math.min(1, distKm / maxRadiusKm);
   return Math.max(0, 1 - distKm / maxRadiusKm);
 }
 

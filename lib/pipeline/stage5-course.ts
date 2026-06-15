@@ -6,6 +6,7 @@ import type { TourItem, TourDetailCommon, TourImage } from "@/lib/tour/types";
 import type { PlaceCandidate, CoursePlace, CourseResult, UserProfile } from "@/lib/pipeline/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
+import { haversineKm } from "@/lib/pipeline/stage4-scoring";
 
 // 이미지와 상세 정보는 자주 바뀌지 않으므로 7일간 캐시한다.
 const IMAGE_TTL  = 7 * 24 * 60 * 60 * 1000; // 7일
@@ -213,7 +214,7 @@ export async function assembleCourse(
   const mainPlace = await buildCoursePlace(mainCandidate, "[메인]");
 
   // 메인 장소 기준 2km 이내 후보를 nearbyPool로 구성한다.
-  const NEARBY_RADIUS_M = 2000;
+  const NEARBY_RADIUS_KM = 2.0;
   const mainLat = parseFloat(mainCandidate.item.mapy);
   const mainLng = parseFloat(mainCandidate.item.mapx);
 
@@ -222,8 +223,8 @@ export async function assembleCourse(
     const lat = parseFloat(c.item.mapy);
     const lng = parseFloat(c.item.mapx);
     if (isNaN(lat) || isNaN(lng) || isNaN(mainLat) || isNaN(mainLng)) return false;
-    const distM = Math.sqrt((lat - mainLat) ** 2 + (lng - mainLng) ** 2) * 111_000;
-    return distM <= NEARBY_RADIUS_M;
+    const distKm = haversineKm(mainLat, mainLng, lat, lng);
+    return distKm <= NEARBY_RADIUS_KM;
   });
 
   console.log(`[stage5] 연계 후보 (2km 이내): ${nearbyPool.length}곳`);
