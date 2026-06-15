@@ -1,42 +1,10 @@
-import fs from "fs";
-import path from "path";
-import { isCacheEnabled } from "@/lib/config";
-
-const CACHE_DIR = path.resolve(process.cwd(), "cache");
-
-function ensureCacheDir() {
-  if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+// Vercel 서버리스 환경에서 파일시스템 캐시는 동작하지 않으므로 no-op으로 대체.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function readCache<T>(_key: string, _ttlMs: number): T | null {
+  return null;
 }
 
-function cachePath(key: string): string {
-  return path.join(CACHE_DIR, `${key}.json`);
-}
-
-interface CacheEntry<T> {
-  savedAt: number;
-  data: T;
-}
-
-export function readCache<T>(key: string, ttlMs: number): T | null {
-  if (!isCacheEnabled()) return null;
-  const file = cachePath(key);
-  if (!fs.existsSync(file)) return null;
-  try {
-    const entry = JSON.parse(fs.readFileSync(file, "utf-8")) as CacheEntry<T>;
-    if (Date.now() - entry.savedAt > ttlMs) return null;
-    return entry.data;
-  } catch {
-    return null;
-  }
-}
-
-export function writeCache<T>(key: string, data: T): void {
-  if (!isCacheEnabled()) return;
-  try {
-    ensureCacheDir();
-    const entry: CacheEntry<T> = { savedAt: Date.now(), data };
-    fs.writeFileSync(cachePath(key), JSON.stringify(entry));
-  } catch (err) {
-    console.warn(`[cache] 저장 실패 (${key}): ${err}`);
-  }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function writeCache<T>(_key: string, _data: T): void {
+  // no-op
 }

@@ -4,7 +4,6 @@ import { collectCandidates } from "@/lib/pipeline/stage1-collect";
 import { filterByAvailability } from "@/lib/pipeline/stage2-availability";
 import { scoreCandidates, applyMappingRules, haversineKm } from "@/lib/pipeline/stage4-scoring";
 import { assembleCourse, fetchFestivalImage } from "@/lib/pipeline/stage5-course";
-import { placeStore, getAreaKey } from "@/lib/db/store";
 import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import { fetchNearby } from "@/lib/clients/kakao-local";
@@ -82,7 +81,7 @@ export async function generateCourse(
   );
   console.log(`[pipeline] 온보딩 태그: ${JSON.stringify(profile.tagWeights)}`);
 
-  // stage1: DB 캐시 확인 → 미스 시 Tour API 호출 후 적재
+  // stage1: Tour API 직접 호출 (매 요청마다)
   let ts = Date.now();
   const radiusKm = SCALE_CONFIG[profile.scale].radius / 1000;
   const { mapY: lat, mapX: lng } = profile.location;
@@ -92,36 +91,24 @@ export async function generateCourse(
     simulationDate: options.simulationDate,
     affinity: profile.festivalAffinity,
   });
-  const areaKey = getAreaKey(lat, lng, radiusKm);
 
-  let placesWithTags: PlaceWithTags[];
+  const items = await collectCandidates(profile);
+  console.log(`[pipeline] stage1 수집 ${items.length}건 | ${elapsed(Date.now() - ts)}`);
 
-  if (!placeStore.isCacheValid(areaKey)) {
-    console.log(`[pipeline] stage1 DB 캐시 미스 (${areaKey}) — Tour API 호출`);
-    const items = await collectCandidates(profile);
-    console.log(`[pipeline] stage1 수집 ${items.length}건 | ${elapsed(Date.now() - ts)}`);
-
-    if (items.length === 0) {
-      console.log(`[pipeline] 후보지 없음 — 종료`);
-      const empty: CourseResult = {
-        mainPlace: null, nearbyPlaces: [], festivals: [], recommended_food: null,
-        scale: profile.scale, generatedAt: new Date().toISOString(),
-      };
-      return { course: empty, debug: { collected: [], available: [], scored: [] } };
-    }
-
-    ts = Date.now();
-    placeStore.upsertPlaces(areaKey, items);
-    const dbStats = placeStore.stats();
-    console.log(
-      `[pipeline] stage1 DB 적재 완료 — 장소 ${dbStats.places}건 / 태그 ${dbStats.tags}건 | ${elapsed(Date.now() - ts)}`,
-    );
-  } else {
-    console.log(`[pipeline] stage1 DB 캐시 히트 (${areaKey}) — Tour API 스킵`);
+  if (items.length === 0) {
+    console.log(`[pipeline] 후보지 없음 — 종료`);
+    const empty: CourseResult = {
+      mainPlace: null, nearbyPlaces: [], festivals: [], recommended_food: null,
+      scale: profile.scale, generatedAt: new Date().toISOString(),
+    };
+    return { course: empty, debug: { collected: [], available: [], scored: [] } };
   }
 
   ts = Date.now();
-  placesWithTags = placeStore.queryPlacesWithTags(lat, lng, radiusKm);
+  const placesWithTags: PlaceWithTags[] = items.map((item) => ({
+    ...item,
+    tagScores: applyMappingRules(item),
+  }));
   console.log(`[pipeline] stage1 완료 — ${placesWithTags.length}건 | ${elapsed(Date.now() - ts)}`);
 
   if (placesWithTags.length === 0) {
@@ -133,9 +120,6 @@ export async function generateCourse(
     return { course: empty, debug: { collected: [], available: [], scored: [] } };
   }
 
-  // PlaceWithTags는 TourItem을 확장하므로 stage2/3에 그대로 전달 가능
-  const tagScoreMap = new Map(placesWithTags.map((p) => [p.contentid, p.tagScores]));
-
   // stage2: 현재 운영 중인 장소만 통과
   ts = Date.now();
   const available = await filterByAvailability(placesWithTags);
@@ -143,10 +127,10 @@ export async function generateCourse(
     `[pipeline] stage2 완료 — ${available.length}/${placesWithTags.length}건 통과 | ${elapsed(Date.now() - ts)}`,
   );
 
-  // stage4: DB에서 읽어온 tagScores를 재부착 후 점수화
+  // stage4: tagScores는 이미 placesWithTags에 부착되어 있으므로 그대로 재부착
   const availableWithTags: PlaceWithTags[] = available.map((item) => ({
     ...item,
-    tagScores: tagScoreMap.get(item.contentid) ?? applyMappingRules(item),
+    tagScores: (item as PlaceWithTags).tagScores ?? applyMappingRules(item),
   }));
 
   ts = Date.now();
