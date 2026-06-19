@@ -74,11 +74,11 @@ export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[
       travel: "",
       badge,
       desc:   p.overview,
+      coord:  p.coord,
     });
   }
 
-  if (result.nearbyPlaces[0]) {
-    const p = result.nearbyPlaces[0];
+  for (const p of result.nearbyPlaces) {
     const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
     const firstTag = p.tags[0];
     const badge = firstTag
@@ -96,6 +96,7 @@ export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[
       travel: "도보 이동",
       badge,
       desc:   p.overview,
+      coord:  p.coord,
     });
   }
 

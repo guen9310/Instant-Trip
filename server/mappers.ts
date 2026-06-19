@@ -49,6 +49,7 @@ export function toJourneyPlace(row: PlaceRow): JourneyPlace {
       variant: (row.badgeVariant as JourneyPlace["badge"]["variant"]) ?? "secondary",
     },
     desc: row.description ?? "",
+    coord: row.lat && row.lng ? { lat: Number(row.lat), lng: Number(row.lng) } : null,
   };
 }
 

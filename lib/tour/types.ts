@@ -116,6 +116,10 @@ export interface TourItem {
   lclsSystm1?: string;       // 분류체계1
   lclsSystm2?: string;       // 분류체계2
   lclsSystm3?: string;       // 분류체계3
+
+  // 카카오 로컬 출처 장소 전용 (source='kakao'일 때만 유효)
+  source?: "tour" | "kakao";
+  kakaoCategory?: string;    // 카카오 category 버킷: AT4(관광명소) | CT1(문화시설)
 }
 
 // ============================================================
