@@ -26,9 +26,13 @@ const REJECT_REASONS = [
 type Props = {
   place: JourneyPlace | null;
   onClose: () => void;
+  /** 거절 이유 선택 후 "여기 말고 다른 곳으로" 클릭 시 호출 */
+  onReject?: (placeId: string, reason: string) => void;
+  /** true이면 거절 기능 비활성화 (maxRerolls 도달 시) */
+  rejectDisabled?: boolean;
 };
 
-export function PlaceDetailSheet({ place, onClose }: Props) {
+export function PlaceDetailSheet({ place, onClose, onReject, rejectDisabled }: Props) {
   return (
     <Sheet
       open={!!place}
@@ -47,7 +51,13 @@ export function PlaceDetailSheet({ place, onClose }: Props) {
         </div>
         {/* key를 place.id로 두어 장소 변경 시 내부 상태 자동 리셋 */}
         {place && (
-          <PlaceDetailContent key={place.id} place={place} onClose={onClose} />
+          <PlaceDetailContent
+            key={place.id}
+            place={place}
+            onClose={onClose}
+            onReject={onReject}
+            rejectDisabled={rejectDisabled}
+          />
         )}
       </SheetContent>
     </Sheet>
@@ -57,12 +67,22 @@ export function PlaceDetailSheet({ place, onClose }: Props) {
 function PlaceDetailContent({
   place,
   onClose,
+  onReject,
+  rejectDisabled,
 }: {
   place: JourneyPlace;
   onClose: () => void;
+  onReject?: (placeId: string, reason: string) => void;
+  rejectDisabled?: boolean;
 }) {
   const [isRejecting, setIsRejecting] = useState(false);
   const [reason, setReason] = useState<string | null>(null);
+
+  const handleConfirmReject = () => {
+    if (!reason) return;
+    onReject?.(place.id, reason);
+    onClose();
+  };
 
   return (
     <div className="overflow-hidden relative">
@@ -106,8 +126,12 @@ function PlaceDetailContent({
 
           <div className="flex flex-col gap-2 mt-5">
             <button
-              onClick={() => setIsRejecting(true)}
-              className="w-full h-12 rounded-lg border border-border text-point text-[14px] font-medium flex items-center justify-center gap-1.5"
+              onClick={() => !rejectDisabled && setIsRejecting(true)}
+              disabled={rejectDisabled}
+              className={cn(
+                "w-full h-12 rounded-lg border border-border text-point text-[14px] font-medium flex items-center justify-center gap-1.5",
+                rejectDisabled && "opacity-40 cursor-not-allowed",
+              )}
             >
               <ThumbsDown size={15} /> 이런 곳은 싫어요
             </button>
@@ -155,7 +179,11 @@ function PlaceDetailContent({
             <p className="text-[11px] text-muted-foreground text-center">
               거절한 장소는 다음 코스에서 제외됩니다
             </p>
-            <Button size="cta" onClick={onClose}>
+            <Button
+              size="cta"
+              disabled={!reason}
+              onClick={handleConfirmReject}
+            >
               여기 말고 다른 곳으로
             </Button>
           </div>

@@ -9,7 +9,8 @@ import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
-import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
+import { useCourseProgressStore, MAX_REROLLS } from "@/client/stores/useCourseProgressStore";
+import { generateCourseAction } from "@/app/actions/course";
 import type { JourneyPlace } from "@/shared/types/course.types";
 
 const TRAVEL_REASON: Record<string, string> = {
@@ -22,6 +23,9 @@ type Props = {
   courseName: string;
   places: JourneyPlace[];
   isLoading?: boolean;
+  mapX?: number;
+  mapY?: number;
+  scale?: string;
 };
 
 export function CourseResultView({
@@ -29,22 +33,67 @@ export function CourseResultView({
   courseName,
   places,
   isLoading = false,
+  mapX,
+  mapY,
+  scale,
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
   const [rerolling, setRerolling] = useState(false);
+  const [currentPlaces, setCurrentPlaces] = useState<JourneyPlace[]>(places);
+  const [currentCourseName, setCurrentCourseName] = useState(courseName);
+  const [rerollExhausted, setRerollExhausted] = useState(false);
+
   const router = useRouter();
   const travelPref = usePrefsStore((s) => s.prefs.travel);
+  const { prefs } = usePrefsStore();
   const startCourse = useCourseProgressStore((s) => s.start);
+  const { rejectedPlaceIds, rerollCount, addRejection, incrementReroll } =
+    useCourseProgressStore();
+
+  const isMaxRerolls = rerollCount >= MAX_REROLLS;
+
+  const doReroll = async (excludeIds: string[]) => {
+    if (!mapX || !mapY || !scale) return;
+    setRerolling(true);
+    setRerollExhausted(false);
+
+    const result = await generateCourseAction({
+      mapX,
+      mapY,
+      scale: scale as "light" | "moderate" | "leisurely",
+      prefs,
+      excludeIds,
+    });
+
+    setRerolling(false);
+
+    if (!result.ok) {
+      setRerollExhausted(true);
+      return;
+    }
+
+    setCurrentPlaces(result.places);
+    setCurrentCourseName(result.courseName);
+    sessionStorage.setItem(
+      "pendingCourse",
+      JSON.stringify({ places: result.places, courseName: result.courseName, mapX, mapY, scale }),
+    );
+  };
 
   const handleReroll = async () => {
-    setRerolling(true);
-    // TODO: 코스 재생성 API 호출로 교체
-    await new Promise((r) => setTimeout(r, 2500));
-    setRerolling(false);
+    if (isMaxRerolls || rerolling) return;
+    incrementReroll();
+    await doReroll(rejectedPlaceIds);
+  };
+
+  const handleReject = async (placeId: string, reason: string) => {
+    console.log(`[reroll] 거절 — placeId: ${placeId}, reason: ${reason}`);
+    addRejection(placeId);
+    await doReroll([...rejectedPlaceIds, placeId]);
   };
 
   const handleStart = () => {
-    startCourse(courseId, places.length);
+    startCourse(courseId, currentPlaces.length);
     router.push(`/course/${courseId}/active`);
   };
 
@@ -79,7 +128,7 @@ export function CourseResultView({
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">
         {/* 헤더 */}
         <h1 className="text-[22px] font-bold text-text-primary tracking-tight mb-1">
-          {courseName}
+          {currentCourseName}
         </h1>
         <div className="flex items-center gap-2 mb-2.5">
           <Badge variant="accent">
@@ -94,13 +143,23 @@ export function CourseResultView({
           {`'${TRAVEL_REASON[travelPref] ?? travelPref}' 취향에 맞게 골랐어요`}
         </div>
 
+        {/* 후보 소진 안내 */}
+        {rerollExhausted && (
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-point/8 border border-point/20 mb-4">
+            <AlertCircle size={16} className="text-point shrink-0 mt-0.5" />
+            <p className="text-[13px] text-point leading-snug">
+              이 근처에서 더 추천할 곳이 없어요. 반경을 넓혀보거나 위치를 옮겨보세요.
+            </p>
+          </div>
+        )}
+
         {/* 타임라인 */}
         <div className="relative pl-8">
           <div className="absolute left-[13px] top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
-          {places.map((p, i) => (
+          {currentPlaces.map((p, i) => (
             <div
               key={p.id}
-              className={cn("relative", i < places.length - 1 ? "mb-3.5" : "")}
+              className={cn("relative", i < currentPlaces.length - 1 ? "mb-3.5" : "")}
             >
               <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold border-[3px] border-background z-10">
                 {i + 1}
@@ -131,8 +190,8 @@ export function CourseResultView({
         </Button>
         <button
           onClick={handleReroll}
-          disabled={rerolling}
-          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5 disabled:opacity-40"
+          disabled={rerolling || isMaxRerolls}
+          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <RefreshCcw size={15} /> 다시 뽑기
         </button>
@@ -141,6 +200,8 @@ export function CourseResultView({
       <PlaceDetailSheet
         place={selectedPlace}
         onClose={() => setSelectedPlace(null)}
+        onReject={handleReject}
+        rejectDisabled={isMaxRerolls || rerolling}
       />
     </>
   );
