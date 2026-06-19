@@ -1,9 +1,19 @@
-import type { UserProfile, CourseResult, PipelineResult, PlaceWithTags, RecommendedFood } from "@/lib/pipeline/types";
+import type {
+  UserProfile,
+  CourseResult,
+  PipelineResult,
+  PlaceWithTags,
+  RecommendedFood,
+} from "@/lib/pipeline/types";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
-import { collectCandidates } from "@/lib/pipeline/stage1-collect";
-import { filterByAvailability } from "@/lib/pipeline/stage2-availability";
-import { scoreCandidates, applyMappingRules, haversineKm } from "@/lib/pipeline/stage4-scoring";
-import { assembleCourse, fetchFestivalImage } from "@/lib/pipeline/stage5-course";
+import { collectCandidates } from "@/lib/pipeline/collect";
+import { filterByAvailability } from "@/lib/pipeline/availability";
+import {
+  scoreCandidates,
+  applyMappingRules,
+  haversineKm,
+} from "@/lib/pipeline/scoring";
+import { assembleCourse, fetchFestivalImage } from "@/lib/pipeline/course";
 import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import { fetchNearby } from "@/lib/clients/kakao-local";
@@ -24,11 +34,15 @@ function elapsed(ms: number): string {
 }
 
 // 원본 데이터를 1시간 메모리 캐시 — 파이프라인마다 API를 재호출하지 않는다
-let _festivalCache: { data: CulturalFestival[]; cachedAt: number } | null = null;
+let _festivalCache: { data: CulturalFestival[]; cachedAt: number } | null =
+  null;
 const FESTIVAL_CACHE_TTL = 60 * 60 * 1000; // 1시간
 
 async function getAllFestivals(): Promise<CulturalFestival[]> {
-  if (_festivalCache && Date.now() - _festivalCache.cachedAt < FESTIVAL_CACHE_TTL) {
+  if (
+    _festivalCache &&
+    Date.now() - _festivalCache.cachedAt < FESTIVAL_CACHE_TTL
+  ) {
     return _festivalCache.data;
   }
   const data = await fetchCulturalFestivals();
@@ -37,32 +51,47 @@ async function getAllFestivals(): Promise<CulturalFestival[]> {
 }
 
 async function fetchNearbyFestivals(
-  lat: number, lng: number, radiusKm: number,
+  lat: number,
+  lng: number,
+  radiusKm: number,
   options: { simulationDate?: string; affinity?: number } = {},
 ): Promise<{ ongoing: CulturalFestival[]; upcoming: CulturalFestival[] }> {
   try {
     const all = await getAllFestivals();
-    const base = options.simulationDate ? new Date(options.simulationDate) : new Date();
+    const base = options.simulationDate
+      ? new Date(options.simulationDate)
+      : new Date();
     const today = base.toISOString().slice(0, 10);
     const oneMonthLater = new Date(base);
     oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
     const limitDate = oneMonthLater.toISOString().slice(0, 10);
 
-    const distKm = (f: CulturalFestival) => haversineKm(lat, lng, f.latitude, f.longitude);
+    const distKm = (f: CulturalFestival) =>
+      haversineKm(lat, lng, f.latitude, f.longitude);
     const inRadius = (f: CulturalFestival) => {
       if (isNaN(f.latitude) || isNaN(f.longitude)) return false;
       return distKm(f) <= radiusKm;
     };
 
-    const ongoing  = all.filter(f => f.fstvlStartDate <= today && f.fstvlEndDate >= today && inRadius(f));
-    const upcoming = all.filter(f => f.fstvlStartDate > today && f.fstvlStartDate <= limitDate && inRadius(f));
+    const ongoing = all.filter(
+      (f) =>
+        f.fstvlStartDate <= today && f.fstvlEndDate >= today && inRadius(f),
+    );
+    const upcoming = all.filter(
+      (f) =>
+        f.fstvlStartDate > today &&
+        f.fstvlStartDate <= limitDate &&
+        inRadius(f),
+    );
 
     // 실외 친화(affinity >= 0.6)면 거리순, 그 외엔 시작일순
     const affinity = options.affinity ?? 0;
     const sort = (list: CulturalFestival[]) =>
       affinity >= 0.6
         ? [...list].sort((a, b) => distKm(a) - distKm(b))
-        : [...list].sort((a, b) => a.fstvlStartDate.localeCompare(b.fstvlStartDate));
+        : [...list].sort((a, b) =>
+            a.fstvlStartDate.localeCompare(b.fstvlStartDate),
+          );
 
     return { ongoing: sort(ongoing), upcoming: sort(upcoming) };
   } catch (err) {
@@ -73,7 +102,7 @@ async function fetchNearbyFestivals(
 
 export async function generateCourse(
   profile: UserProfile,
-  options: { simulationDate?: string } = {},
+  options: { simulationDate?: string; excludeIds?: string[] } = {},
 ): Promise<PipelineResult> {
   const t0 = Date.now();
   console.log(
@@ -93,15 +122,24 @@ export async function generateCourse(
   });
 
   const items = await collectCandidates(profile);
-  console.log(`[pipeline] stage1 수집 ${items.length}건 | ${elapsed(Date.now() - ts)}`);
+  console.log(
+    `[pipeline] stage1 수집 ${items.length}건 | ${elapsed(Date.now() - ts)}`,
+  );
 
   if (items.length === 0) {
     console.log(`[pipeline] 후보지 없음 — 종료`);
     const empty: CourseResult = {
-      mainPlace: null, nearbyPlaces: [], festivals: [], recommended_food: null,
-      scale: profile.scale, generatedAt: new Date().toISOString(),
+      mainPlace: null,
+      nearbyPlaces: [],
+      festivals: [],
+      recommended_food: null,
+      scale: profile.scale,
+      generatedAt: new Date().toISOString(),
     };
-    return { course: empty, debug: { collected: [], available: [], scored: [] } };
+    return {
+      course: empty,
+      debug: { collected: [], available: [], scored: [] },
+    };
   }
 
   ts = Date.now();
@@ -109,15 +147,24 @@ export async function generateCourse(
     ...item,
     tagScores: applyMappingRules(item),
   }));
-  console.log(`[pipeline] stage1 완료 — ${placesWithTags.length}건 | ${elapsed(Date.now() - ts)}`);
+  console.log(
+    `[pipeline] stage1 완료 — ${placesWithTags.length}건 | ${elapsed(Date.now() - ts)}`,
+  );
 
   if (placesWithTags.length === 0) {
     console.log(`[pipeline] 후보지 없음 — 종료`);
     const empty: CourseResult = {
-      mainPlace: null, nearbyPlaces: [], festivals: [], recommended_food: null,
-      scale: profile.scale, generatedAt: new Date().toISOString(),
+      mainPlace: null,
+      nearbyPlaces: [],
+      festivals: [],
+      recommended_food: null,
+      scale: profile.scale,
+      generatedAt: new Date().toISOString(),
     };
-    return { course: empty, debug: { collected: [], available: [], scored: [] } };
+    return {
+      course: empty,
+      debug: { collected: [], available: [], scored: [] },
+    };
   }
 
   // stage2: 현재 운영 중인 장소만 통과
@@ -128,10 +175,19 @@ export async function generateCourse(
   );
 
   // stage4: tagScores는 이미 placesWithTags에 부착되어 있으므로 그대로 재부착
-  const availableWithTags: PlaceWithTags[] = available.map((item) => ({
-    ...item,
-    tagScores: (item as PlaceWithTags).tagScores ?? applyMappingRules(item),
-  }));
+  // excludeIds에 포함된 장소는 후보에서 제외한다 (거절 재추천용)
+  const excludeSet = new Set(options.excludeIds ?? []);
+  const availableWithTags: PlaceWithTags[] = available
+    .filter((item) => !excludeSet.has(item.contentid))
+    .map((item) => ({
+      ...item,
+      tagScores: (item as PlaceWithTags).tagScores ?? applyMappingRules(item),
+    }));
+  if (excludeSet.size > 0) {
+    console.log(
+      `[pipeline] excludeIds ${excludeSet.size}건 제외 — ${available.length} → ${availableWithTags.length}건`,
+    );
+  }
 
   ts = Date.now();
   const scored = await scoreCandidates(availableWithTags, profile);
@@ -160,8 +216,11 @@ export async function generateCourse(
     const nearest = festivalsOngoing[0];
     const festivalImages = await fetchFestivalImage(nearest.fstvlNm);
     // festivalsOngoing[0]에 이미지를 덮어써서 클라이언트가 바로 사용할 수 있게 한다.
-    (nearest as CulturalFestival & { images?: string[] }).images = festivalImages;
-    console.log(`[pipeline] 축제 이미지 로드 — "${nearest.fstvlNm}" (${festivalImages.length}장)`);
+    (nearest as CulturalFestival & { images?: string[] }).images =
+      festivalImages;
+    console.log(
+      `[pipeline] 축제 이미지 로드 — "${nearest.fstvlNm}" (${festivalImages.length}장)`,
+    );
   }
 
   // preferFood=true이면 출발지 1km 이내 가장 가까운 음식점 1곳을 추천한다.
@@ -173,20 +232,24 @@ export async function generateCourse(
       if (nearby.length > 0) {
         const p = nearby[0]; // fetchNearby는 거리순 정렬 반환
         recommended_food = {
-          name:      p.place_name,
-          category:  p.category_name,
-          address:   p.road_address_name || p.address_name,
-          phone:     p.phone,
+          name: p.place_name,
+          category: p.category_name,
+          address: p.road_address_name || p.address_name,
+          phone: p.phone,
           distanceM: parseInt(p.distance),
-          url:       p.place_url,
-          coord:     { lat: parseFloat(p.y), lng: parseFloat(p.x) },
+          url: p.place_url,
+          coord: { lat: parseFloat(p.y), lng: parseFloat(p.x) },
         };
-        console.log(`[pipeline] 식당 추천 — "${p.place_name}" (${p.distance}m)`);
+        console.log(
+          `[pipeline] 식당 추천 — "${p.place_name}" (${p.distance}m)`,
+        );
       } else {
         console.log(`[pipeline] 식당 추천 — 1km 이내 음식점 없음`);
       }
     } catch (err) {
-      console.warn(`[pipeline] 식당 추천 실패 (KAKAO_REST_KEY 미설정 또는 API 오류) — ${err}`);
+      console.warn(
+        `[pipeline] 식당 추천 실패 (KAKAO_REST_KEY 미설정 또는 API 오류) — ${err}`,
+      );
     }
   }
 

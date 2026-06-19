@@ -37,8 +37,8 @@ export async function collectCandidates(profile: UserProfile): Promise<TourItem[
   const results: TourItem[] = [];
   const t0 = Date.now();
 
-  // 5개 타입을 동시에 요청한다.
-  // 순서대로 기다리면 5배 느려지므로 Promise.all로 병렬 처리한다.
+  // 타입별로 동시에 요청한다.
+  // 순서대로 기다리면 배 느려지므로 Promise.all로 병렬 처리한다.
   const fetches = TARGET_CONTENT_TYPES.map(async (contentTypeId) => {
     const label = TYPE_LABEL[contentTypeId];
 
@@ -55,7 +55,7 @@ export async function collectCandidates(profile: UserProfile): Promise<TourItem[
     try {
       // arrange=E: 거리순 정렬. 사용자 위치에서 가까운 장소가 앞에 온다.
       const data = await tourFetch<TourItem>(ENDPOINTS.LOCATION_BASED_LIST, {
-        mapX, mapY, radius, contentTypeId, numOfRows: 20, arrange: "E",
+        mapX, mapY, radius, contentTypeId, numOfRows: 40, arrange: "E",
       });
       const items = extractItems(data);
       const total = data.response.body.totalCount;
@@ -83,5 +83,29 @@ export async function collectCandidates(profile: UserProfile): Promise<TourItem[
 
   const dupeCount = results.length - deduped.length;
   console.log(`[stage1] 완료 — 총 ${results.length}건 → 중복 ${dupeCount}건 제거 → ${deduped.length}건 (총 ${Date.now() - t0}ms)`);
-  return deduped;
+
+  // lclsSystm 기반 부적합 카테고리 제외:
+  // - AC (숙박): AC05(캠핑)만 허용, 나머지 숙박은 당일 코스 불적합
+  // - SH (쇼핑): 코스 구성 목적과 맞지 않음
+  // - FD (음식): 별도 식당 추천 경로로 처리
+  const filtered = deduped.filter((item) => !isExcludedByCategory(item));
+  const excludedCount = deduped.length - filtered.length;
+  if (excludedCount > 0) {
+    console.log(`[stage1] 카테고리 제외 ${excludedCount}건 (숙박/쇼핑/음식) → ${filtered.length}건`);
+  }
+
+  for (const item of filtered) {
+    item.source = "tour";
+  }
+
+  return filtered;
+}
+
+function isExcludedByCategory(item: TourItem): boolean {
+  const s1 = item.lclsSystm1;
+  const s2 = item.lclsSystm2;
+  if (s1 === "AC" && s2 !== "AC05") return true; // 숙박 (캠핑 AC05만 허용)
+  if (s1 === "SH") return true;                   // 쇼핑
+  if (s1 === "FD") return true;                   // 음식
+  return false;
 }

@@ -3,32 +3,50 @@ import { readCache, writeCache } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
 import type { TourItem, TourDetailCommon, TourImage } from "@/lib/tour/types";
 // PhotoGalleryService1은 키워드/위치 검색 미지원 — 장소별 이미지 fallback 불가
-import type { PlaceCandidate, CoursePlace, CourseResult, UserProfile } from "@/lib/pipeline/types";
+import type {
+  PlaceCandidate,
+  CoursePlace,
+  CourseResult,
+  UserProfile,
+} from "@/lib/pipeline/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
-import { haversineKm } from "@/lib/pipeline/stage4-scoring";
 
 // 이미지와 상세 정보는 자주 바뀌지 않으므로 7일간 캐시한다.
-const IMAGE_TTL  = 7 * 24 * 60 * 60 * 1000; // 7일
+const IMAGE_TTL = 7 * 24 * 60 * 60 * 1000; // 7일
 const DETAIL_TTL = 7 * 24 * 60 * 60 * 1000; // 7일
 
 export function stripHtml(html: string): string {
   return html
-    .replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/\n{3,}/g, "\n\n").trim();
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export function toShortAddress(addr1: string): string {
   return addr1
-    .replace("특별시", "").replace("광역시", "")
-    .replace("특별자치도", "").replace("특별자치시", "")
-    .split(" ").slice(0, 2).join(" ");
+    .replace("특별시", "")
+    .replace("광역시", "")
+    .replace("특별자치도", "")
+    .replace("특별자치시", "")
+    .split(" ")
+    .slice(0, 2)
+    .join(" ");
 }
 
 // 현재 위치에서 후보까지의 근접도를 0~1로 반환한다. 좌표가 없으면 0.
-function calcProximityBonus(mapy: string, mapx: string, curLat: number, curLng: number, radiusM: number): number {
+function calcProximityBonus(
+  mapy: string,
+  mapx: string,
+  curLat: number,
+  curLng: number,
+  radiusM: number,
+): number {
   const lat = parseFloat(mapy);
   const lng = parseFloat(mapx);
   if (isNaN(lat) || isNaN(lng) || radiusM <= 0) return 0;
@@ -44,7 +62,10 @@ const CANDIDATE_POOL = 20;
 // firstimage가 있으면 detailImage2 API를 호출하지 않고 바로 반환한다.
 // firstimage가 없을 때만 API를 호출해서 등록된 이미지 목록을 가져온다.
 // 결과는 7일간 파일 캐시에 저장해서 반복 호출을 방지한다.
-export async function fetchImages(contentId: string, firstimage?: string): Promise<string[]> {
+export async function fetchImages(
+  contentId: string,
+  firstimage?: string,
+): Promise<string[]> {
   // firstimage가 있으면 API 호출 없이 바로 반환한다.
   if (firstimage) {
     return [firstimage];
@@ -53,18 +74,28 @@ export async function fetchImages(contentId: string, firstimage?: string): Promi
   const cacheKey = `img_${contentId}`;
   const cached = readCache<string[]>(cacheKey, IMAGE_TTL);
   if (cached) {
-    console.log(`[stage5]   detailImage2(${contentId}) → 캐시 hit (${cached.length}장)`);
+    console.log(
+      `[stage5]   detailImage2(${contentId}) → 캐시 hit (${cached.length}장)`,
+    );
     return cached;
   }
   const ts = Date.now();
   try {
-    const data = await tourFetch<TourImage>(ENDPOINTS.DETAIL_IMAGE, { contentId });
-    const imgs = extractItems(data).filter((img) => img.originimgurl).map((img) => img.originimgurl);
+    const data = await tourFetch<TourImage>(ENDPOINTS.DETAIL_IMAGE, {
+      contentId,
+    });
+    const imgs = extractItems(data)
+      .filter((img) => img.originimgurl)
+      .map((img) => img.originimgurl);
     writeCache(cacheKey, imgs);
-    console.log(`[stage5]   detailImage2(${contentId}) → ${imgs.length}장 (${Date.now() - ts}ms)`);
+    console.log(
+      `[stage5]   detailImage2(${contentId}) → ${imgs.length}장 (${Date.now() - ts}ms)`,
+    );
     return imgs;
   } catch (err) {
-    console.warn(`[stage5]   detailImage2(${contentId}) 실패 (${Date.now() - ts}ms) — ${err}`);
+    console.warn(
+      `[stage5]   detailImage2(${contentId}) 실패 (${Date.now() - ts}ms) — ${err}`,
+    );
     return [];
   }
 }
@@ -72,7 +103,9 @@ export async function fetchImages(contentId: string, firstimage?: string): Promi
 // 장소의 상세 정보(overview)를 가져온다.
 // overview는 장소 소개글로, HTML 태그를 포함한 긴 텍스트다.
 // 결과는 7일간 파일 캐시에 저장해서 반복 호출을 방지한다.
-export async function fetchDetail(contentId: string): Promise<TourDetailCommon | null> {
+export async function fetchDetail(
+  contentId: string,
+): Promise<TourDetailCommon | null> {
   const cacheKey = `detail_${contentId}`;
   const cached = readCache<TourDetailCommon>(cacheKey, DETAIL_TTL);
   if (cached) {
@@ -81,18 +114,23 @@ export async function fetchDetail(contentId: string): Promise<TourDetailCommon |
   }
   const ts = Date.now();
   try {
-    const data = await tourFetch<TourDetailCommon>(ENDPOINTS.DETAIL_COMMON, { contentId });
+    const data = await tourFetch<TourDetailCommon>(ENDPOINTS.DETAIL_COMMON, {
+      contentId,
+    });
     const detail = extractItems(data)[0] ?? null;
     if (detail) writeCache(cacheKey, detail);
     const hasOverview = !!detail?.overview;
-    console.log(`[stage5]   detailCommon2(${contentId}) → overview:${hasOverview ? "있음" : "없음"} (${Date.now() - ts}ms)`);
+    console.log(
+      `[stage5]   detailCommon2(${contentId}) → overview:${hasOverview ? "있음" : "없음"} (${Date.now() - ts}ms)`,
+    );
     return detail;
   } catch (err) {
-    console.warn(`[stage5]   detailCommon2(${contentId}) 실패 (${Date.now() - ts}ms) — ${err}`);
+    console.warn(
+      `[stage5]   detailCommon2(${contentId}) 실패 (${Date.now() - ts}ms) — ${err}`,
+    );
     return null;
   }
 }
-
 
 const FESTIVAL_IMG_TTL = 24 * 60 * 60 * 1000; // 24시간
 
@@ -113,7 +151,7 @@ export async function fetchFestivalImage(fstvlNm: string): Promise<string[]> {
       numOfRows: "5",
     });
     const items = extractItems(data);
-    const first = items.find(i => i.contentid);
+    const first = items.find((i) => i.contentid);
     if (!first) {
       writeCache(cacheKey, []);
       return [];
@@ -127,7 +165,10 @@ export async function fetchFestivalImage(fstvlNm: string): Promise<string[]> {
   }
 }
 
-export function festivalToPlace(festival: CulturalFestival, images: string[] = []): CoursePlace {
+export function festivalToPlace(
+  festival: CulturalFestival,
+  images: string[] = [],
+): CoursePlace {
   const addr = festival.rdnmadr || festival.lnmadr || "";
   const id = `festival_${festival.fstvlStartDate}_${festival.fstvlNm}`;
   return {
@@ -152,13 +193,18 @@ export function festivalToPlace(festival: CulturalFestival, images: string[] = [
 // 2. 상세 정보 수집: 선택된 장소의 이미지와 소개글을 병렬로 가져온다.
 //
 // - 반환값: 방문 순서로 정렬된 CoursePlace 배열을 담은 CourseResult
-async function buildCoursePlace(candidate: PlaceCandidate, label: string): Promise<CoursePlace> {
+async function buildCoursePlace(
+  candidate: PlaceCandidate,
+  label: string,
+): Promise<CoursePlace> {
   const { item } = candidate;
   const ts = Date.now();
   console.log(`[stage5] ${label} "${item.title}" 상세 조회 시작`);
 
   const [images, detail] = await Promise.all([
-    item.firstimage ? Promise.resolve([item.firstimage]) : fetchImages(item.contentid),
+    item.firstimage
+      ? Promise.resolve([item.firstimage])
+      : fetchImages(item.contentid),
     fetchDetail(item.contentid),
   ]);
 
@@ -190,7 +236,12 @@ export async function assembleCourse(
   const t0 = Date.now();
 
   if (scored.length === 0) {
-    return { mainPlace: null, nearbyPlaces: [], scale: profile.scale, generatedAt: new Date().toISOString() };
+    return {
+      mainPlace: null,
+      nearbyPlaces: [],
+      scale: profile.scale,
+      generatedAt: new Date().toISOString(),
+    };
   }
 
   const { radius } = SCALE_CONFIG[profile.scale];
@@ -203,9 +254,18 @@ export async function assembleCourse(
   let bestIdx = 0;
   for (let i = 0; i < pool.length; i++) {
     const c = pool[i];
-    const proximity = calcProximityBonus(c.item.mapy, c.item.mapx, startLat, startLng, radius);
+    const proximity = calcProximityBonus(
+      c.item.mapy,
+      c.item.mapx,
+      startLat,
+      startLng,
+      radius,
+    );
     const combined = c.score * (1 - ROUTE_WEIGHT) + proximity * ROUTE_WEIGHT;
-    if (combined > bestScore) { bestScore = combined; bestIdx = i; }
+    if (combined > bestScore) {
+      bestScore = combined;
+      bestIdx = i;
+    }
   }
 
   const mainCandidate = scored[bestIdx];
@@ -213,50 +273,14 @@ export async function assembleCourse(
 
   const mainPlace = await buildCoursePlace(mainCandidate, "[메인]");
 
-  // 메인 장소 기준 2km 이내 후보를 nearbyPool로 구성한다.
-  const NEARBY_RADIUS_KM = 2.0;
-  const mainLat = parseFloat(mainCandidate.item.mapy);
-  const mainLng = parseFloat(mainCandidate.item.mapx);
-
-  const nearbyPool = scored.filter((c, i) => {
-    if (i === bestIdx) return false;
-    const lat = parseFloat(c.item.mapy);
-    const lng = parseFloat(c.item.mapx);
-    if (isNaN(lat) || isNaN(lng) || isNaN(mainLat) || isNaN(mainLng)) return false;
-    const distKm = haversineKm(mainLat, mainLng, lat, lng);
-    return distKm <= NEARBY_RADIUS_KM;
-  });
-
-  console.log(`[stage5] 연계 후보 (2km 이내): ${nearbyPool.length}곳`);
-
-  // 메인과 cat2가 다른 후보를 우선 선택해 다양성을 확보한다.
-  const mainCat2 = mainCandidate.item.cat2;
-  const nearbySelected: PlaceCandidate[] = [];
-
-  for (const c of nearbyPool) {
-    if (nearbySelected.length >= 1) break;
-    if (c.item.cat2 !== mainCat2) nearbySelected.push(c);
-  }
-
-  // cat2 다양성 조건으로 1곳을 채우지 못한 경우 조건을 완화한다.
-  if (nearbySelected.length < 1) {
-    for (const c of nearbyPool) {
-      if (nearbySelected.length >= 1) break;
-      if (!nearbySelected.includes(c)) nearbySelected.push(c);
-    }
-  }
-
-  console.log(`[stage5] 연계 장소 선택: 최대 1곳 → ${nearbySelected.length}곳`);
-
-  const nearbyPlaces = await Promise.all(
-    nearbySelected.map((c, i) => buildCoursePlace(c, `[연계${i + 1}]`)),
+  console.log(
+    `[stage5] 완료 — 메인 1곳 (총 ${Date.now() - t0}ms)\n` +
+      `[stage5] 수집된 코스:\n  메인. [${mainPlace.contentTypeId}] ${mainPlace.title} | ${mainPlace.shortAddress} | 이미지 ${mainPlace.images.length}장 | score ${mainPlace.score.toFixed(3)}`,
   );
-
-  console.log(`[stage5] 완료 — 메인 1곳 + 연계 ${nearbyPlaces.length}곳 (총 ${Date.now() - t0}ms)`);
 
   return {
     mainPlace,
-    nearbyPlaces,
+    nearbyPlaces: [],
     scale: profile.scale,
     generatedAt: new Date().toISOString(),
   };
