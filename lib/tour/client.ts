@@ -28,7 +28,7 @@ export function createApiFetch(baseUrl: string) {
     const searchParams = new URLSearchParams({
       serviceKey: API_KEY,
       MobileOS: "ETC",
-      MobileApp: "TourAPILab",
+      MobileApp: "Instant-trip",
       _type: "json",
       numOfRows: "10",
       pageNo: "1",
@@ -59,8 +59,10 @@ export function createApiFetch(baseUrl: string) {
       rawBody = text;
 
       if (text.startsWith("<")) {
-        const codeMatch = text.match(/<returnReasonCode>(.*?)<\/returnReasonCode>/);
-        const msgMatch  = text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/);
+        const codeMatch = text.match(
+          /<returnReasonCode>(.*?)<\/returnReasonCode>/,
+        );
+        const msgMatch = text.match(/<returnAuthMsg>(.*?)<\/returnAuthMsg>/);
         throw new Error(
           `API XML 에러: ${codeMatch?.[1] || "unknown"} — ${msgMatch?.[1] || text.slice(0, 200)}`,
         );
@@ -75,7 +77,6 @@ export function createApiFetch(baseUrl: string) {
       }
 
       return data;
-
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
 
@@ -83,12 +84,12 @@ export function createApiFetch(baseUrl: string) {
       if (retryCount === 0) {
         console.warn(
           `[ERR] ⚠ ${endpoint} (시도 ${attempt})\n` +
-          `  URL    : ${safe}\n` +
-          `  HTTP   : ${httpStatus ?? "연결 실패"}\n` +
-          `  원인   : ${errMsg}` +
-          (rawBody && !rawBody.startsWith("{\"response\"")
-            ? `\n  응답   : ${rawBody.slice(0, 300)}`
-            : ""),
+            `  URL    : ${safe}\n` +
+            `  HTTP   : ${httpStatus ?? "연결 실패"}\n` +
+            `  원인   : ${errMsg}` +
+            (rawBody && !rawBody.startsWith('{"response"')
+              ? `\n  응답   : ${rawBody.slice(0, 300)}`
+              : ""),
         );
         console.warn(`[ERR] 1초 후 재시도...`);
         await sleep(1000);
@@ -98,12 +99,12 @@ export function createApiFetch(baseUrl: string) {
       // 재시도도 실패 — 최종 에러 로그
       console.error(
         `[ERR] ✗ ${endpoint} 최종 실패 (시도 ${attempt})\n` +
-        `  URL    : ${safe}\n` +
-        `  HTTP   : ${httpStatus ?? "연결 실패"}\n` +
-        `  원인   : ${errMsg}` +
-        (rawBody && !rawBody.startsWith("{\"response\"")
-          ? `\n  응답   : ${rawBody.slice(0, 300)}`
-          : ""),
+          `  URL    : ${safe}\n` +
+          `  HTTP   : ${httpStatus ?? "연결 실패"}\n` +
+          `  원인   : ${errMsg}` +
+          (rawBody && !rawBody.startsWith('{"response"')
+            ? `\n  응답   : ${rawBody.slice(0, 300)}`
+            : ""),
       );
       throw err;
     }
@@ -128,7 +129,11 @@ export async function fetchAllPages<T>(
   let pageNo = 1;
 
   while (pageNo <= maxPages) {
-    const data = await tourFetch<T>(endpoint, { ...params, pageNo, numOfRows: 100 });
+    const data = await tourFetch<T>(endpoint, {
+      ...params,
+      pageNo,
+      numOfRows: 100,
+    });
     const items = extractItems(data);
     results.push(...items);
     const totalCount = data.response.body.totalCount;
