@@ -13,6 +13,9 @@ export type JourneyPlace = {
   badge: { text: string; variant: BadgeVariant };
   desc: string;
   coord: { lat: number; lng: number } | null;
+  imageUrl: string | null;
+  availabilityUncertain: boolean;
+  estimatedDurationMin: number;
 };
 
 export type NearbyCategory = "all" | "cafe" | "convenience" | "pharmacy" | "restaurant" | "parking" | "gas_station";

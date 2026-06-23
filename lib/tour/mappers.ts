@@ -64,17 +64,20 @@ export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[
       : { text: cat, variant: "secondary" as BadgeVariant };
 
     places.push({
-      id:     p.contentId,
+      id:       p.contentId,
       cat,
-      name:   p.title,
-      addr:   p.address,
-      hours:  "",
-      time:   "",
-      dur:    "자유롭게",
-      travel: "",
+      name:     p.title,
+      addr:     p.address,
+      hours:    "",
+      time:     "",
+      dur:      `보통 ${p.estimatedDurationMin}분 정도`,
+      travel:   "",
       badge,
-      desc:   p.overview,
-      coord:  p.coord,
+      desc:     p.overview,
+      coord:    p.coord,
+      imageUrl: p.images?.[0] ?? null,
+      availabilityUncertain: p.availabilityUncertain,
+      estimatedDurationMin: p.estimatedDurationMin,
     });
   }
 
@@ -86,17 +89,20 @@ export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[
       : { text: cat, variant: "secondary" as BadgeVariant };
 
     places.push({
-      id:     p.contentId,
+      id:       p.contentId,
       cat,
-      name:   p.title,
-      addr:   p.address,
-      hours:  "",
-      time:   "",
-      dur:    "자유롭게",
-      travel: "도보 이동",
+      name:     p.title,
+      addr:     p.address,
+      hours:    "",
+      time:     "",
+      dur:      `보통 ${p.estimatedDurationMin}분 정도`,
+      travel:   "도보 이동",
       badge,
-      desc:   p.overview,
-      coord:  p.coord,
+      desc:     p.overview,
+      coord:    p.coord,
+      imageUrl: p.images?.[0] ?? null,
+      availabilityUncertain: p.availabilityUncertain,
+      estimatedDurationMin: p.estimatedDurationMin,
     });
   }
 
