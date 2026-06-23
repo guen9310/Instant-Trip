@@ -182,6 +182,8 @@ export function festivalToPlace(
     coord: { lat: festival.latitude, lng: festival.longitude },
     tags: [],
     score: 1.0,
+    availabilityUncertain: false,
+    estimatedDurationMin: 60,
   };
 }
 
@@ -199,6 +201,28 @@ async function buildCoursePlace(
 ): Promise<CoursePlace> {
   const { item } = candidate;
   const ts = Date.now();
+  const lat = parseFloat(item.mapy);
+  const lng = parseFloat(item.mapx);
+
+  // Kakao 출처 장소는 TourAPI 상세 조회 불가 — 스킵하고 정규화 시 수집한 필드로 채운다
+  if (item.source === "kakao") {
+    console.log(`[stage5] ${label} "${item.title}" — kakao 출처, 상세 조회 스킵`);
+    return {
+      contentId: item.contentid,
+      contentTypeId: item.contenttypeid,
+      title: item.title,
+      address: item.addr1,
+      shortAddress: toShortAddress(item.addr1),
+      overview: "",
+      images: [],
+      coord: !isNaN(lat) && !isNaN(lng) ? { lat, lng } : null,
+      tags: candidate.tags,
+      score: candidate.score,
+      availabilityUncertain: candidate.availabilityUncertain,
+      estimatedDurationMin: candidate.estimatedDurationMin,
+    };
+  }
+
   console.log(`[stage5] ${label} "${item.title}" 상세 조회 시작`);
 
   const [images, detail] = await Promise.all([
@@ -208,8 +232,6 @@ async function buildCoursePlace(
     fetchDetail(item.contentid),
   ]);
 
-  const lat = parseFloat(item.mapy);
-  const lng = parseFloat(item.mapx);
   console.log(
     `[stage5] ${label} "${item.title}" 완료 — 이미지:${images.length}장 / 개요:${detail?.overview ? detail.overview.length + "자" : "없음"} (${Date.now() - ts}ms)`,
   );
@@ -220,11 +242,13 @@ async function buildCoursePlace(
     title: item.title,
     address: item.addr1,
     shortAddress: toShortAddress(item.addr1),
-    overview: detail?.overview ? stripHtml(detail.overview).slice(0, 300) : "",
+    overview: detail?.overview ? stripHtml(detail.overview) : "",
     images,
     coord: !isNaN(lat) && !isNaN(lng) ? { lat, lng } : null,
     tags: candidate.tags,
     score: candidate.score,
+    availabilityUncertain: candidate.availabilityUncertain,
+    estimatedDurationMin: candidate.estimatedDurationMin,
   };
 }
 

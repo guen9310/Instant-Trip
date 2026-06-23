@@ -8,12 +8,17 @@ import type {
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
 import { collectCandidates } from "@/lib/pipeline/collect";
 import { filterByAvailability } from "@/lib/pipeline/availability";
+import type { TourItem } from "@/lib/tour/types";
 import {
   scoreCandidates,
   applyMappingRules,
   haversineKm,
 } from "@/lib/pipeline/scoring";
 import { assembleCourse, fetchFestivalImage } from "@/lib/pipeline/course";
+import {
+  supplementWithKakao,
+  KAKAO_SUPPLEMENT_MIN,
+} from "@/lib/pipeline/kakaoCollect";
 import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import { fetchNearby } from "@/lib/clients/kakao-local";
@@ -174,14 +179,48 @@ export async function generateCourse(
     `[pipeline] stage2 완료 — ${available.length}/${placesWithTags.length}건 통과 | ${elapsed(Date.now() - ts)}`,
   );
 
+  // stage3.5: 가볍게 + 가용 후보 부족 시 카카오 후보 보충
+  // supplementWithKakao는 TourItem[]을 반환하므로 TourItem[]으로 받고, 이후 맵에서 availabilityUncertain를 복원
+  let availablePool: TourItem[] = available;
+  if (profile.scale === "가볍게" && available.length < KAKAO_SUPPLEMENT_MIN) {
+    try {
+      ts = Date.now();
+      availablePool = await supplementWithKakao(
+        available,
+        lat,
+        lng,
+        SCALE_CONFIG[profile.scale].radius,
+      );
+      console.log(
+        `[pipeline] stage3.5 보충 완료 — ${available.length} → ${availablePool.length}건 | ${elapsed(Date.now() - ts)}`,
+      );
+    } catch (err) {
+      console.warn(`[pipeline] stage3.5 카카오 보충 실패, 기존 후보 유지 — ${err}`);
+    }
+  } else if (profile.scale === "가볍게") {
+    console.log(
+      `[pipeline] stage3.5 보충 스킵 — 가용 ${available.length}건 ≥ ${KAKAO_SUPPLEMENT_MIN}`,
+    );
+  }
+
+  // source 분포 로깅
+  const tourCount = availablePool.filter((i) => i.source !== "kakao").length;
+  const kakaoCount = availablePool.filter((i) => i.source === "kakao").length;
+  if (kakaoCount > 0) {
+    console.log(`[pipeline] 후보 source 분포 — tour:${tourCount} / kakao:${kakaoCount}`);
+  }
+
   // stage4: tagScores는 이미 placesWithTags에 부착되어 있으므로 그대로 재부착
   // excludeIds에 포함된 장소는 후보에서 제외한다 (거절 재추천용)
   const excludeSet = new Set(options.excludeIds ?? []);
-  const availableWithTags: PlaceWithTags[] = available
+  const availableWithTags: PlaceWithTags[] = availablePool
     .filter((item) => !excludeSet.has(item.contentid))
     .map((item) => ({
       ...item,
+      // Kakao 보충 아이템은 tagScores가 없으므로 항상 applyMappingRules 적용
       tagScores: (item as PlaceWithTags).tagScores ?? applyMappingRules(item),
+      // filterByAvailability가 부착한 플래그; 카카오 보충 아이템엔 없으므로 false 기본값
+      availabilityUncertain: (item as PlaceWithTags).availabilityUncertain ?? false,
     }));
   if (excludeSet.size > 0) {
     console.log(
@@ -273,6 +312,6 @@ export async function generateCourse(
 
   return {
     course,
-    debug: { collected: placesWithTags, available, scored: scoredWithCourse },
+    debug: { collected: availablePool, available: availablePool, scored: scoredWithCourse },
   };
 }

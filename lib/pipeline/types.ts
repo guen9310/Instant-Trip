@@ -73,7 +73,7 @@ export const SCALE_CONFIG: Record<TravelScale, { radius: number; maxNearby: numb
 };
 
 // DB에서 조회한 장소 (tag_scores 사전 계산 포함)
-export type PlaceWithTags = TourItem & { tagScores: Record<TagKey, number> };
+export type PlaceWithTags = TourItem & { tagScores: Record<TagKey, number>; availabilityUncertain?: boolean };
 
 export interface PlaceCandidate {
   item: TourItem;
@@ -81,6 +81,8 @@ export interface PlaceCandidate {
   tags: TagKey[];
   score: number;
   available: boolean;
+  availabilityUncertain: boolean;
+  estimatedDurationMin: number;
 }
 
 export interface CoursePlace {
@@ -94,6 +96,8 @@ export interface CoursePlace {
   coord: { lat: number; lng: number } | null;
   tags: TagKey[];
   score: number;
+  availabilityUncertain: boolean;
+  estimatedDurationMin: number;
 }
 
 // Kakao 로컬 API에서 가져온 식당 요약 — preferFood=true일 때만 채워짐

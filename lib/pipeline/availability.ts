@@ -1,13 +1,34 @@
 import { tourFetch, extractItems } from "@/lib/tour/client";
 import { readCache, writeCache } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
-import type { TourItem, TourDetailIntroAttraction, TourDetailIntroRestaurant } from "@/lib/tour/types";
+import type {
+  TourItem,
+  TourDetailIntroAttraction,
+  TourDetailIntroCulture,
+  TourDetailIntroLeports,
+  TourDetailIntroRestaurant,
+} from "@/lib/tour/types";
+
+export type AvailableItem = TourItem & { availabilityUncertain: boolean };
 
 // 운영시간·휴무일 정보는 자주 바뀌지 않으므로 24시간 캐시해도 무방하다.
 const INTRO_TTL = 24 * 60 * 60 * 1000; // 24시간
 const BATCH_SIZE = 10;
 
-type IntroItem = TourDetailIntroAttraction | TourDetailIntroRestaurant;
+type IntroItem =
+  | TourDetailIntroAttraction
+  | TourDetailIntroCulture
+  | TourDetailIntroLeports
+  | TourDetailIntroRestaurant;
+
+// contentTypeId별 운영시간·휴무일 필드명 매핑.
+// 새로운 콘텐츠 타입 추가 시 이 맵에만 추가하면 된다.
+const INTRO_FIELDS: Record<string, { usetime: string; restdate: string }> = {
+  "12": { usetime: "usetime",        restdate: "restdate" },
+  "14": { usetime: "usetimeculture", restdate: "restdateculture" },
+  "28": { usetime: "usetimeleports", restdate: "restdateleports" },
+  "39": { usetime: "opentimefood",   restdate: "restdatefood" },
+};
 
 // "09:00~18:00" 또는 "9시~18시" 형식의 운영시간 문자열을 파싱해서
 // { open: 분 단위 시작, close: 분 단위 종료 } 형태로 반환한다.
@@ -42,9 +63,18 @@ export function isRestDay(restdate: string, dayIndex: number = new Date().getDay
   return DAY_PATTERNS[dayIndex].test(restdate);
 }
 
+type Verdict =
+  | "제외(휴무)"
+  | "제외(운영종료)"
+  | "통과(영업중)"
+  | "통과(데이터없음)"
+  | "통과(파싱실패)"
+  | "통과(API오류)"
+  | "검사안함(source=kakao)";
+
 type OpenResult =
-  | { open: true;  reason: string }
-  | { open: false; reason: string };
+  | { open: true;  reason: string; label: Verdict }
+  | { open: false; reason: string; label: Verdict };
 
 // 운영시간(usetime)과 휴무일(restdate) 문자열을 받아서 현재 시각에 운영 중인지 판단한다.
 //
@@ -56,18 +86,18 @@ type OpenResult =
 // 5. 시간 범위 파싱 실패 → 통과 (자유 텍스트라 파싱 못하는 경우가 많음)
 function checkAvailability(usetime: string, restdate: string): OpenResult {
   if (isRestDay(restdate)) {
-    return { open: false, reason: `휴무일 (${restdate.slice(0, 20)})` };
+    return { open: false, reason: `휴무일 (${restdate.slice(0, 20)})`, label: "제외(휴무)" };
   }
   if (!usetime) {
-    return { open: true, reason: "이용시간 데이터 없음 → 통과" };
+    return { open: true, reason: "이용시간 데이터 없음 → 통과", label: "통과(데이터없음)" };
   }
   const lower = usetime.toLowerCase();
   if (lower.includes("24시간") || lower.includes("연중무휴")) {
-    return { open: true, reason: "24시간/연중무휴" };
+    return { open: true, reason: "24시간/연중무휴", label: "통과(영업중)" };
   }
   const range = parseTimeRange(usetime);
   if (!range) {
-    return { open: true, reason: `파싱불가 → 통과 (원문: "${usetime.slice(0, 30)}")` };
+    return { open: true, reason: `파싱불가 → 통과 (원문: "${usetime.slice(0, 30)}")`, label: "통과(파싱실패)" };
   }
   const now = new Date();
   const cur = now.getHours() * 60 + now.getMinutes();
@@ -82,7 +112,8 @@ function checkAvailability(usetime: string, restdate: string): OpenResult {
     : cur >= range.open && cur <= range.close;
   return {
     open: isOpen,
-    reason: `${openStr}~${closeStr} / 현재 ${timeStr} → ${isOpen ? "운영중" : "운영종료"}`,
+    reason: `${openStr}~${closeStr} / 현재 ${timeStr}`,
+    label: isOpen ? "통과(영업중)" : "제외(운영종료)",
   };
 }
 
@@ -92,16 +123,24 @@ function checkAvailability(usetime: string, restdate: string): OpenResult {
 // - 10개씩 배치로 묶어 Promise.all로 병렬 처리해서 속도를 높인다.
 // - 행사(contenttypeid=15)는 운영시간 개념이 없으므로 이 단계를 건너뛰고 stage3에서 처리한다.
 // - API 실패 시에도 해당 장소를 통과시킨다 (코스 생성이 멈추는 것보다 낫다).
-// - 반환값: 운영 중으로 판단된 TourItem 배열 (이후 stage4로 전달됨)
-export async function filterByAvailability(items: TourItem[]): Promise<TourItem[]> {
-  const available: TourItem[] = [];
+// - 반환값: 운영 중으로 판단된 AvailableItem 배열 (availabilityUncertain 플래그 포함)
+export async function filterByAvailability(items: TourItem[]): Promise<AvailableItem[]> {
+  const available: AvailableItem[] = [];
   const t0 = Date.now();
   let passed = 0, blocked = 0, skipped = 0, errCount = 0;
 
   console.log(`[stage2] ${items.length}건 가용성 검사 시작 (배치 ${BATCH_SIZE})`);
 
-  const checkItem = async (item: TourItem, globalIdx: number): Promise<TourItem | null> => {
+  const checkItem = async (item: TourItem, globalIdx: number): Promise<AvailableItem | null> => {
     const idx = `[${globalIdx + 1}/${items.length}]`;
+    const prefix = `[stage2] ${idx} "${item.title}" type=${item.contenttypeid} src=${item.source ?? "tour"}`;
+
+    // 카카오 출처 장소는 Tour API detailIntro2가 없으므로 검사를 건너뛴다.
+    if (item.source === "kakao") {
+      passed++;
+      console.log(`${prefix} → 검사안함(source=kakao)`);
+      return { ...item, availabilityUncertain: false };
+    }
 
     const cacheKey = `intro_${item.contentid}`;
     const cachedIntro = readCache<IntroItem>(cacheKey, INTRO_TTL);
@@ -111,7 +150,6 @@ export async function filterByAvailability(items: TourItem[]): Promise<TourItem[
 
     if (cachedIntro) {
       intro = cachedIntro;
-      console.log(`[stage2] ${idx} "${item.title}" — 캐시 hit`);
     } else {
       try {
         const data = await tourFetch<IntroItem>(ENDPOINTS.DETAIL_INTRO, {
@@ -122,8 +160,8 @@ export async function filterByAvailability(items: TourItem[]): Promise<TourItem[
         if (intro) writeCache(cacheKey, intro);
       } catch (err) {
         errCount++;
-        console.warn(`[stage2] ${idx} "${item.title}" — detailIntro2 실패, 통과 처리 (${Date.now() - ts}ms)`);
-        return item;
+        console.warn(`${prefix} → 통과(API오류) (${Date.now() - ts}ms)`);
+        return { ...item, availabilityUncertain: false };
       }
     }
 
@@ -133,23 +171,34 @@ export async function filterByAvailability(items: TourItem[]): Promise<TourItem[
     // 데이터 미비로 인한 것이므로 통과시킨다.
     if (!intro) {
       passed++;
-      console.log(`[stage2] ${idx} "${item.title}" — intro 없음, 통과 (${elapsed}ms)`);
-      return item;
+      console.log(`${prefix} → 통과(데이터없음) intro 자체 없음 → uncertain=true (${elapsed}ms)`);
+      return { ...item, availabilityUncertain: true };
     }
 
-    // 관광지는 usetime/restdate, 음식점은 opentimefood/restdatefood 필드명이 다르다.
-    // 두 타입을 통합해서 처리하기 위해 각각 시도하고 없으면 빈 문자열로 처리한다.
-    const usetime  = (intro as TourDetailIntroAttraction).usetime   ?? (intro as TourDetailIntroRestaurant).opentimefood  ?? "";
-    const restdate = (intro as TourDetailIntroAttraction).restdate  ?? (intro as TourDetailIntroRestaurant).restdatefood  ?? "";
-    const result   = checkAvailability(usetime, restdate);
+    // contentTypeId별 필드명을 INTRO_FIELDS 맵으로 조회해서 운영시간·휴무일을 추출한다.
+    // 알 수 없는 타입은 빈 문자열로 처리(통과).
+    const fields = INTRO_FIELDS[item.contenttypeid] ?? { usetime: "", restdate: "" };
+    const raw = intro as unknown as Record<string, string>;
+    const usetime  = raw[fields.usetime]  ?? "";
+    const restdate = raw[fields.restdate] ?? "";
+
+    const restdayResult = isRestDay(restdate);
+    const result = checkAvailability(usetime, restdate);
+
+    // 필드명과 원문값, isRestDay 입력·결과를 한 줄로 출력한다.
+    const fieldLog = fields.restdate
+      ? `${fields.restdate}="${restdate}" ${fields.usetime}="${usetime.slice(0, 40)}"`
+      : `(알수없는타입=${item.contenttypeid})`;
+    const restdayLog = `isRestDay("${restdate.slice(0, 20)}")=${restdayResult}`;
 
     if (result.open) {
+      const uncertain = result.label === "통과(데이터없음)" || result.label === "통과(파싱실패)";
       passed++;
-      console.log(`[stage2] ${idx} "${item.title}" ✓ ${result.reason} (${elapsed}ms)`);
-      return item;
+      console.log(`${prefix} | ${fieldLog}\n         → ${restdayLog} → ${result.label} ${result.reason} → uncertain=${uncertain} (${elapsed}ms)`);
+      return { ...item, availabilityUncertain: uncertain };
     } else {
       blocked++;
-      console.log(`[stage2] ${idx} "${item.title}" ✗ ${result.reason} (${elapsed}ms)`);
+      console.log(`${prefix} | ${fieldLog}\n         → ${restdayLog} → ${result.label} ${result.reason} (${elapsed}ms)`);
       return null;
     }
   };

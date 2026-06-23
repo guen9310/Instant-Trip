@@ -111,8 +111,14 @@ export const TAG_MAPPING_RULES: TagMappingRule[] = [
 export function applyMappingRules(item: TourItem): Record<TagKey, number> {
   const result = {} as Record<TagKey, number>;
   for (const rule of TAG_MAPPING_RULES) {
+    // contenttypeid 규칙은 TourAPI 출처에만 적용한다.
+    // Kakao 후보는 contenttypeid(12/14)가 버킷 편의용으로 부여됐을 뿐이므로
+    // 태그 매핑에선 무시하고 kakao_category 규칙만 사용한다.
+    // (timeBonus는 contenttypeid를 별도로 읽으므로 값 자체는 삭제하지 않는다)
+    const isKakao = item.source === "kakao";
     const matched =
       (rule.code_type === "contenttypeid" &&
+        !isKakao &&
         item.contenttypeid === rule.code_value) ||
       (rule.code_type === "cat1" && item.cat1 === rule.code_value) ||
       (rule.code_type === "lclssystm1" && item.lclsSystm1 === rule.code_value) ||
@@ -257,7 +263,7 @@ export async function scoreCandidates(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true };
+    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDurationMin: dur };
   });
 
   scored.sort((a, b) => b.score - a.score);
