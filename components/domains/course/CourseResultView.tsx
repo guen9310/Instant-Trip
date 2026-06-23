@@ -9,9 +9,13 @@ import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
-import { useCourseProgressStore, MAX_REROLLS } from "@/client/stores/useCourseProgressStore";
+import {
+  useCourseProgressStore,
+  MAX_REROLLS,
+} from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
 import type { JourneyPlace } from "@/shared/types/course.types";
+import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 
 const TRAVEL_REASON: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -76,7 +80,13 @@ export function CourseResultView({
     setCurrentCourseName(result.courseName);
     sessionStorage.setItem(
       "pendingCourse",
-      JSON.stringify({ places: result.places, courseName: result.courseName, mapX, mapY, scale }),
+      JSON.stringify({
+        places: result.places,
+        courseName: result.courseName,
+        mapX,
+        mapY,
+        scale,
+      }),
     );
   };
 
@@ -135,9 +145,6 @@ export function CourseResultView({
             <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block mr-1" />
             지금 출발 가능
           </Badge>
-          <span className="text-xs text-text-secondary">
-            총 약 3시간 · 이동 포함
-          </span>
         </div>
         <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
           {`'${TRAVEL_REASON[travelPref] ?? travelPref}' 취향에 맞게 골랐어요`}
@@ -148,39 +155,48 @@ export function CourseResultView({
           <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-point/8 border border-point/20 mb-4">
             <AlertCircle size={16} className="text-point shrink-0 mt-0.5" />
             <p className="text-[13px] text-point leading-snug">
-              이 근처에서 더 추천할 곳이 없어요. 반경을 넓혀보거나 위치를 옮겨보세요.
+              이 근처에서 더 추천할 곳이 없어요. 반경을 넓혀보거나 위치를
+              옮겨보세요.
             </p>
           </div>
         )}
 
         {/* 타임라인 */}
         <div className="relative pl-8">
-          <div className="absolute left-[13px] top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
+          <div className="absolute left-3.25 top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
           {currentPlaces.map((p, i) => (
             <div
               key={p.id}
-              className={cn("relative", i < currentPlaces.length - 1 ? "mb-3.5" : "")}
+              className={cn(
+                "relative",
+                i < currentPlaces.length - 1 ? "mb-3.5" : "",
+              )}
             >
               <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold border-[3px] border-background z-10">
                 {i + 1}
               </div>
-              <PlaceCardTimeline place={p} onClick={() => setSelectedPlace(p)} />
+              <PlaceCardTimeline
+                place={p}
+                onClick={() => setSelectedPlace(p)}
+              />
             </div>
           ))}
         </div>
 
-        {/* 총 소요 카드 */}
-        <div className="mt-6 p-4 rounded-xl bg-card flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
-            <Clock size={18} />
+        {/* 예상 체류 카드 */}
+        {currentPlaces[0]?.dur && (
+          <div className="mt-6 p-4 rounded-xl bg-card flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
+              <Clock size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-text-secondary">예상 체류</p>
+              <p className="text-[15px] font-semibold text-text-primary">
+                {currentPlaces[0].dur}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-text-secondary">총 소요</p>
-            <p className="text-[15px] font-semibold text-text-primary">
-              약 3시간 · 이동 포함
-            </p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* CTA 바 */}
@@ -217,24 +233,28 @@ function PlaceCardTimeline({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-3.5 rounded-xl bg-card border border-border flex flex-col gap-1.5 active:scale-[0.98] transition-transform"
+      className="w-full text-left p-3.5 rounded-xl bg-card border border-border flex items-center justify-between gap-3 active:scale-[0.98] transition-transform"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-text-secondary">
-          {place.cat}
-        </span>
-        <div className="flex items-center gap-1.5">
+      <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-text-secondary">
+            {place.cat}
+          </span>
           <Badge variant={place.badge.variant}>{place.badge.text}</Badge>
-          <ChevronRight size={14} className="text-text-secondary" />
         </div>
+        <p className="text-[16px] font-bold text-text-primary tracking-tight truncate">
+          {place.name}
+        </p>
       </div>
-      <p className="text-[16px] font-bold text-text-primary tracking-tight">
-        {place.name}
-      </p>
-      <p className="text-xs text-text-secondary">
-        <span className="font-semibold text-text-primary">{place.time}</span> ·{" "}
-        {place.dur} · {place.travel}
-      </p>
+      <div className="flex items-center gap-2 shrink-0">
+        <PlaceThumbnail
+          imageUrl={place.imageUrl}
+          cat={place.cat}
+          className="w-14 h-14 rounded-lg"
+          sizes="56px"
+        />
+        <ChevronRight size={14} className="text-text-secondary" />
+      </div>
     </button>
   );
 }
@@ -245,7 +265,7 @@ function CourseResultSkeleton() {
       <div className="h-7 w-48 rounded-lg bg-muted mb-2" />
       <div className="h-4 w-32 rounded bg-muted mb-5" />
       <div className="relative pl-8">
-        <div className="absolute left-[13px] top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
+        <div className="absolute left-3.25 top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
         {[0, 1, 2].map((i) => (
           <div key={i} className={cn("relative", i < 2 ? "mb-3.5" : "")}>
             <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-muted border-[3px] border-background z-10" />
