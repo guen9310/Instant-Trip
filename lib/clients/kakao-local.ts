@@ -42,6 +42,12 @@ export interface KakaoPlaceTagged extends KakaoPlace {
   kakaoCategory: KakaoCourseCategoryCode;
 }
 
+export interface CourseKakaoResult {
+  items: KakaoPlaceTagged[];
+  // 중복 제거 전 원본 수집 건수 — 로깅용
+  rawCounts: { at4Category: number; ct1Category: number; parkKeyword: number };
+}
+
 async function fetchByCode(
   lat: number,
   lng: number,
@@ -96,7 +102,9 @@ async function fetchByKeyword(
   return data.documents;
 }
 
-// 공원 키워드 검색 — place_name에 "공원" 포함 + 노이즈 카테고리 제거
+// 공원 키워드 검색 — place_name이 "공원"으로 끝날 때만 통과 + 노이즈 카테고리 제거
+// endsWith: "화봉공원 화장실", "대리공원앞교차로" 같은 노이즈를 차단하고
+//           "화봉근린공원", "수변공원" 등 실제 공원만 남긴다
 async function fetchParkKeyword(
   lat: number,
   lng: number,
@@ -104,7 +112,7 @@ async function fetchParkKeyword(
 ): Promise<KakaoPlace[]> {
   const places = await fetchByKeyword(lat, lng, "공원", radiusM);
   return places
-    .filter((p) => p.place_name.includes("공원"))
+    .filter((p) => p.place_name.trim().endsWith("공원"))
     .filter((p) => !PARK_DROP_CODES.has(p.category_group_code))
     .map((p) => ({ ...p, category_group_code: "AT4" }));
 }
@@ -141,7 +149,7 @@ export async function fetchCourseKakao(
   lat: number,
   lng: number,
   radiusM: number,
-): Promise<KakaoPlaceTagged[]> {
+): Promise<CourseKakaoResult> {
   if (!REST_KEY)
     throw new Error("KAKAO_REST_KEY 환경변수가 설정되지 않았습니다.");
 
@@ -158,9 +166,18 @@ export async function fetchCourseKakao(
   ];
 
   const seen = new Set<string>();
-  return tagged.filter((p) => {
+  const items = tagged.filter((p) => {
     if (seen.has(p.id)) return false;
     seen.add(p.id);
     return true;
   });
+
+  return {
+    items,
+    rawCounts: {
+      at4Category: at4.length,
+      ct1Category: ct1.length,
+      parkKeyword: parks.length,
+    },
+  };
 }
