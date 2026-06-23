@@ -9,7 +9,8 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "pipeline": "tsx --tsconfig tsconfig.json scripts/pipeline-run.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -30,6 +31,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.75.0",
+    "react-kakao-maps-sdk": "^1.2.1",
     "resend": "^6.12.2",
     "shadcn": "^4.7.0",
     "tailwind-merge": "^3.5.0",
@@ -53,6 +55,7 @@
     "jsdom": "^29.1.0",
     "msw": "^2.14.2",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.5"
   },
