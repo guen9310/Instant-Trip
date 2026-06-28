@@ -10,7 +10,6 @@ import type {
   UserProfile,
 } from "@/lib/pipeline/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
-import { SCALE_CONFIG } from "@/lib/pipeline/types";
 
 // 이미지와 상세 정보는 자주 바뀌지 않으므로 7일간 캐시한다.
 const IMAGE_TTL = 7 * 24 * 60 * 60 * 1000; // 7일
@@ -38,25 +37,6 @@ export function toShortAddress(addr1: string): string {
     .slice(0, 2)
     .join(" ");
 }
-
-// 현재 위치에서 후보까지의 근접도를 0~1로 반환한다. 좌표가 없으면 0.
-function calcProximityBonus(
-  mapy: string,
-  mapx: string,
-  curLat: number,
-  curLng: number,
-  radiusM: number,
-): number {
-  const lat = parseFloat(mapy);
-  const lng = parseFloat(mapx);
-  if (isNaN(lat) || isNaN(lng) || radiusM <= 0) return 0;
-  const radiusDeg = radiusM / 111_000;
-  const distDeg = Math.sqrt((lat - curLat) ** 2 + (lng - curLng) ** 2);
-  return Math.max(0, 1 - distDeg / radiusDeg);
-}
-
-const ROUTE_WEIGHT = 0.25;
-const CANDIDATE_POOL = 20;
 
 // 장소의 이미지 목록을 가져온다.
 // firstimage가 있으면 detailImage2 API를 호출하지 않고 바로 반환한다.
@@ -187,14 +167,7 @@ export function festivalToPlace(
   };
 }
 
-// [stage5] 점수화된 후보 중 최종 장소를 선택하고 코스를 조립한다.
-//
-// 처리 순서:
-// 1. 선택 + 동선 최적화: selectWithRouteAndDiversity로 행사 우선 배치 후
-//    그리디 방식으로 (점수 + 현재 위치 근접도)를 조합해 순서대로 장소를 선택한다.
-// 2. 상세 정보 수집: 선택된 장소의 이미지와 소개글을 병렬로 가져온다.
-//
-// - 반환값: 방문 순서로 정렬된 CoursePlace 배열을 담은 CourseResult
+// 선택된 후보의 상세 정보(이미지·소개글)를 가져와 CoursePlace로 변환한다.
 async function buildCoursePlace(
   candidate: PlaceCandidate,
   label: string,
@@ -252,7 +225,12 @@ async function buildCoursePlace(
   };
 }
 
-// [stage5] 메인 장소 1곳 선택 + 메인 장소 기준 2km 이내 연계 장소 최대 1곳 제안
+// [stage5] stage4 점수 1위 후보를 메인 장소로 채택한다.
+//
+// 이전에는 사용자 위치 근접도를 0.25 가중으로 재반영해 점수 순위를 뒤집는 로직이 있었으나,
+// distanceBonus(stage4, scoring.ts)가 이미 같은 신호(거리)를 0.25 가중으로 반영하고 있어
+// 사실상 거리를 두 번 반영하는 구조였다. 후보가 희소한 지역에서 점수 12위가 1위를 제치는
+// 사례가 실측으로 확인되어(2026-06-27) 제거했다. distanceBonus 하나로 충분하다.
 export async function assembleCourse(
   scored: PlaceCandidate[],
   profile: UserProfile,
@@ -268,31 +246,7 @@ export async function assembleCourse(
     };
   }
 
-  const { radius } = SCALE_CONFIG[profile.scale];
-  const startLat = profile.location.mapY;
-  const startLng = profile.location.mapX;
-
-  // 사용자 위치 기준 근접도 가중 점수로 메인 장소 1곳 선택
-  const pool = scored.slice(0, CANDIDATE_POOL);
-  let bestScore = -Infinity;
-  let bestIdx = 0;
-  for (let i = 0; i < pool.length; i++) {
-    const c = pool[i];
-    const proximity = calcProximityBonus(
-      c.item.mapy,
-      c.item.mapx,
-      startLat,
-      startLng,
-      radius,
-    );
-    const combined = c.score * (1 - ROUTE_WEIGHT) + proximity * ROUTE_WEIGHT;
-    if (combined > bestScore) {
-      bestScore = combined;
-      bestIdx = i;
-    }
-  }
-
-  const mainCandidate = scored[bestIdx];
+  const mainCandidate = scored[0];
   console.log(`[stage5] 메인 장소: "${mainCandidate.item.title}"`);
 
   const mainPlace = await buildCoursePlace(mainCandidate, "[메인]");

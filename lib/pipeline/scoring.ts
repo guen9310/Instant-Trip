@@ -52,13 +52,17 @@ function getEstimatedDuration(
   if (s3 === "VE010200") return 40; // 타워/전망대
   if (s3 === "VE040300" || s3 === "VE040100") return 40; // 둘레길, 골목길/문화거리
   if (s2 === "VE03") return 40; // 도시공원
-  if (s2 === "AC05") return 40; // 캠핑 — 당일 방문 야외 공간
-  if (s1 === "NA") return 40; // 자연관광 전체
+
+  // 캠핑·자연관광 — 도시공원보다 머무는 시간이 길다(휴식·물놀이 등 활동 포함)
+  if (s2 === "AC05") return 90; // 캠핑 — 당일 방문 야외 공간
+  if (s1 === "NA") return 60; // 자연관광 전체(해수욕장·산·강 등, 위 세부 분류 제외 나머지)
 
   // 120분 — 오래 머무는 실내/체험
   if (s2 === "VE07") return 120; // 전시시설(박물관/미술관 등)
-  if (s2 === "VE02") return 120; // 테마공원
   if (s1 === "EX") return 120; // 체험관광 전체
+
+  // 테마공원 — 박물관형 체류가 아니라 반나절 단위 위락시설 체류가 일반적
+  if (s2 === "VE02") return 200; // 테마공원
 
   // 그 외(역사유적·랜드마크 등) → 90분
   return 90;
@@ -184,16 +188,13 @@ function calcDistanceBonus(item: TourItem, profile: UserProfile): number {
 }
 
 // 시간대 보너스: 현재 시각에 어울리는 콘텐츠 타입에 가중치를 부여한다.
-// 반환값 범위: [-1.0, 1.0]
+// 반환값 범위: [0, 1.0]
+// (음식점 type=39 분기는 음식점이 후보 수집 단계(2번)에서 이미 제외되어 도달 불가능한
+// 코드였으므로 제거했다 — 2026-06-28)
 function calcTimeBonus(item: TourItem): number {
   const hour = new Date().getHours();
   const type = item.contenttypeid;
 
-  if (type === "39") {
-    return (hour >= 11 && hour <= 13) || (hour >= 17 && hour <= 20)
-      ? 1.0
-      : -0.5;
-  }
   if ((hour >= 9 && hour < 11) || (hour >= 13 && hour < 17)) {
     if (type === "12" || type === "14") return 1.0;
   }
@@ -206,8 +207,8 @@ function calcTimeBonus(item: TourItem): number {
 // [stage4] stage2/stage3를 통과한 일반 장소에 점수를 부여하고 내림차순으로 정렬한다.
 //
 // 최종 점수 = W.tag × tagScore + W.distance × distanceBonus + W.time × timeBonus + W.budget × budgetFitness
-//           = 0.5 × [0,1] + 0.25 × [0,1] + 0.1 × [-0.5,1.0] + 0.15 × [0,1]
-//           → 범위: [-0.05, 1.0]
+//           = 0.5 × [0,1] + 0.25 × [0,1] + 0.1 × [0,1] + 0.15 × [0,1]
+//           → 범위: [0, 1.0]
 export async function scoreCandidates(
   items: PlaceWithTags[],
   profile: UserProfile,

@@ -59,7 +59,7 @@ export function toJourneyPlace(row: PlaceRow): JourneyPlace {
         ? { lat: Number(row.lat), lng: Number(row.lng) }
         : null,
     imageUrl: null,
-    availabilityUncertain: false,
+    availabilityUncertain: row.availabilityUncertain,
     estimatedDurationMin: row.durationMin ?? 60,
   };
 }
