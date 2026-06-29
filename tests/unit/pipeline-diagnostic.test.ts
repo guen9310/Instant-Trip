@@ -1,6 +1,7 @@
 /**
  * 파이프라인 진단 스크립트 — 수정 사항을 수시로 확인할 때 사용한다.
- * 실행: pnpm pipeline
+ * 실제 외부 API(TourAPI, Kakao)를 호출하므로 CI(pnpm test)에서는 제외되어 있다.
+ * 실행: pnpm test:diagnostic
  *
  * 확인 항목:
  *   1. [stage1] 카테고리 제외 — 숙박(AC 중 AC05 외)/쇼핑(SH)/음식(FD) 제거

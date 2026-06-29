@@ -7,7 +7,6 @@ import {
   Calendar,
   ThumbsDown,
   ChevronLeft,
-  X,
   AlertCircle,
   ExternalLink,
 } from "lucide-react";

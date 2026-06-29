@@ -13,29 +13,35 @@ type PendingCourse = {
   scale?: string;
 };
 
+function readPendingCourse(): PendingCourse | null {
+  try {
+    const raw = sessionStorage.getItem("pendingCourse");
+    if (!raw) return null;
+    const parsed: PendingCourse = JSON.parse(raw);
+    if (!parsed.places || !parsed.courseName) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export default function CoursePreviewPage() {
   const router = useRouter();
-  const [course, setCourse] = useState<PendingCourse | null>(null);
+  const [course, setCourse] = useState<PendingCourse | null | "loading">(
+    "loading",
+  );
 
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem("pendingCourse");
-      if (!raw) {
-        router.push("/start");
-        return;
-      }
-      const parsed: PendingCourse = JSON.parse(raw);
-      if (!parsed.places || !parsed.courseName) {
-        router.push("/start");
-        return;
-      }
-      setCourse(parsed);
-    } catch {
-      router.push("/start");
-    }
-  }, [router]);
+    const loaded = readPendingCourse();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCourse(loaded);
+  }, []);
 
-  if (!course) return null;
+  useEffect(() => {
+    if (course === null) router.push("/start");
+  }, [course, router]);
+
+  if (course === "loading" || course === null) return null;
 
   return (
     <CourseResultView
