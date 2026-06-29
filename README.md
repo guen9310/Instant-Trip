@@ -16,21 +16,26 @@
 
 ## 🛠 기술 스택
 
-| 역할         | 기술                            |
-| ------------ | ------------------------------- |
-| 프레임워크   | Next.js (App Router)            |
-| 언어         | TypeScript                      |
-| 스타일링     | Tailwind CSS                    |
-| 인증         | better-auth + emailOTP 플러그인 |
-| 이메일 발송  | Resend                          |
-| 데이터베이스 | Neon (PostgreSQL)               |
-| ORM          | Drizzle ORM                     |
-| 배포         | Vercel                          |
-| PWA          | next-pwa (추후 적용)            |
+| 역할             | 기술                                        |
+| ---------------- | ------------------------------------------- |
+| 프레임워크       | Next.js 16 (App Router, RSC)                |
+| 언어             | TypeScript 5                                |
+| 스타일링         | Tailwind CSS 4                              |
+| 컴포넌트         | Shadcn/ui + Base UI                         |
+| 애니메이션       | Framer Motion 12                            |
+| 서버 상태        | TanStack Query 5                            |
+| 클라이언트 상태  | Zustand 5                                   |
+| 폼 & 유효성 검사 | React Hook Form 7 + Zod 4                   |
+| 인증             | better-auth + emailOTP 플러그인             |
+| 이메일 발송      | Resend                                      |
+| 데이터베이스     | Neon (PostgreSQL) + Drizzle ORM             |
+| 지도             | Kakao Maps SDK + react-kakao-maps-sdk       |
+| 테스트           | Vitest + Testing Library + MSW              |
+| 배포             | Vercel                                      |
 
 ## 🗺 핵심 API
 
-한국관광공사 TourAPI 4.4 (국문 관광정보 서비스)
+### 한국관광공사 TourAPI 4.4
 
 | API                | 용도                                       |
 | ------------------ | ------------------------------------------ |
@@ -40,7 +45,15 @@
 | detailImage2       | 코스 카드 썸네일 이미지                    |
 | detailCommon2      | 관광지 기본 정보 (명칭, 주소, 좌표)        |
 
-## 📱 주요 화면 구조
+### 외부 API
+
+| API               | 용도                                           |
+| ----------------- | ---------------------------------------------- |
+| Kakao Local API   | 코스 진행 중 근처 카페·식당·약국·주차장 검색   |
+| 공공데이터 문화축제 | 실시간 축제 데이터 (피드 + 코스 우선순위 반영) |
+| Weather API       | 날씨 정보 표시                                 |
+
+## 📱 화면 구조
 
 ```
 /sign-in              이메일 입력 (회원가입/로그인 통합)
@@ -49,12 +62,28 @@
 /onboarding/done      성향 요약 확인
 /                     랜딩 페이지
 /start                위치 확인 + 여행 규모 선택
-/course/[id]          코스 생성 결과 (장소 상세 모달 + 거절 플로우 포함)
-/course/[id]/active   코스 진행 중
-/course/[id]/done     코스 완료 + 후기 + XP 지급
+/course/[id]          코스 생성 결과 (장소 상세 모달 + 거절 플로우)
+/course/[id]/active   코스 진행 중 (지도 + 장소 체크리스트 + 주변 POI)
+/course/[id]/done     코스 완료 + 별점 후기 + XP 지급
 /feed                 다른 사용자 완료 코스 피드
 /profile              내 정보 + 완료 코스 목록
 /settings             성향 재설정
+```
+
+## 📂 디렉토리 구조
+
+```
+├── app/              # Next.js App Router (라우트, 레이아웃, Server Actions)
+├── client/           # 브라우저 전용 (hooks, Zustand stores, providers)
+├── server/           # 백엔드 전용 (auth, DB, schema, session)
+├── shared/           # 공용 코드 (types, constants, utils)
+├── components/
+│   ├── commons/      # 도메인 무관 UI 컴포넌트 (Button, Card, …)
+│   └── domains/      # 기능별 컴포넌트 (auth, course, feed, profile, …)
+└── lib/
+    ├── pipeline/     # 코스 생성 파이프라인 (5단계)
+    ├── tour/         # TourAPI 클라이언트 + 매퍼
+    └── clients/      # 외부 API 클라이언트 (Kakao, Weather, Festival)
 ```
 
 ## 🎨 디자인 시스템
@@ -89,12 +118,13 @@
 이메일 입력 → 6자리 OTP 코드 발송 (Resend) → 코드 입력 → 세션 생성
 ```
 
-## 🧠 코스 생성 알고리즘
+## 🧠 코스 생성 파이프라인
 
 ```
 1단계 후보지 수집
   locationBasedList2로 GPS 좌표 + 반경 내 관광지 목록 조회
   (contentTypeId: 12 관광지, 14 문화시설, 28 레포츠, 39 음식점)
+  여행 규모: light(5km) / moderate(10km) / leisurely(20km)
 
 2단계 실시간 가용성 필터링
   detailIntro2로 운영시간, 휴무일 확인
@@ -107,10 +137,11 @@
 4단계 태그 기반 점수화
   온보딩 yes/no 답변 → 태그 가중치 변환
   사용자 태그 가중치 × 관광지 태그 매핑 → 적합도 점수 산출
-  거절 이력 반영하여 실시간 보정
+  거절 이력 반영하여 실시간 보정 (최대 3회 재생성)
 
 5단계 최종 코스 생성
   여행 규모에 맞는 장소 수만큼 상위 점수 관광지 선정
+  Kakao Local API로 근처 식당 추가 (음식 선호 시)
   detailImage2로 썸네일 조회 후 코스 카드 구성
 ```
 
@@ -124,7 +155,7 @@
 | 첫 지역 방문 보너스 | +10 XP |
 | 후기 작성 (선택)    | +5 XP  |
 
-레벨업 시 칭호 부여 (탐험가 → 지역 전문가 → ...)
+레벨업 시 칭호 부여 (탐험가 → 지역 전문가 → …)
 
 ## 🚀 시작하기
 
@@ -135,42 +166,62 @@ pnpm install
 # 환경 변수 설정
 cp .env.example .env.local
 
+# DB 마이그레이션
+pnpm drizzle-kit push
+
 # 개발 서버 실행
 pnpm dev
 ```
 
 브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 확인할 수 있습니다.
 
+### 필수 환경 변수
+
+```
+DATABASE_URL=          # Neon PostgreSQL 연결 URL
+BETTER_AUTH_SECRET=    # better-auth 시크릿 키
+RESEND_API_KEY=        # Resend 이메일 발송 API 키
+TOUR_API_KEY=          # 한국관광공사 TourAPI 인증 키
+KAKAO_REST_API_KEY=    # Kakao REST API 키 (Local API)
+NEXT_PUBLIC_KAKAO_MAP_KEY=  # Kakao 지도 SDK 앱 키
+```
+
 ## 🌱 개발 로드맵
 
-### 1순위 (MVP)
+### 1순위 (MVP) — 완료
 
-- [x] 프로젝트 초기 설정
-- [ ] better-auth + emailOTP 인증
-- [ ] TourAPI 연동 및 코스 생성 알고리즘
-- [ ] 운영시간 필터링 로직
-- [ ] 코스 결과 화면 + 거절 재추천
-- [ ] 코스 진행 화면
+- [x] 프로젝트 초기 설정 및 아키텍처 구성
+- [x] better-auth + emailOTP 인증 (이메일 → OTP → 세션)
+- [x] 온보딩 5문항 성향 파악 + 태그 가중치 변환
+- [x] TourAPI 연동 및 5단계 코스 생성 파이프라인
+- [x] 실시간 운영시간 필터링 (detailIntro2)
+- [x] 축제·행사 우선 반영 (searchFestival2)
+- [x] 코스 결과 화면 + 거절 재추천 (최대 3회)
+- [x] 코스 진행 화면 (지도 + 체크리스트 + 주변 POI)
+- [x] 코스 완료 화면 (별점 후기 + XP 지급)
 
-### 2순위
+### 2순위 — 완료
 
-- [ ] 온보딩 yes/no 성향 파악
-- [ ] 태그 가중치 개인화
-- [ ] 코스 피드 + 별점
-- [ ] 게이미피케이션 (XP/레벨)
-- [ ] 프로필 페이지
+- [x] 태그 가중치 개인화 (온보딩 답변 기반)
+- [x] 코스 피드 + 별점
+- [x] 프로필 페이지 (완료 코스 목록)
+- [x] Kakao Maps 지도 연동
+- [x] Kakao Local API 주변 POI 검색
+- [x] 다크 모드
 
-### 3순위
+### 3순위 — 예정
 
+- [ ] 게이미피케이션 XP/레벨 실제 연동
+- [ ] 날씨 API 연동 완성
 - [ ] PWA 적용 (next-pwa)
-- [ ] 날씨 API 연동
 - [ ] 대중교통 예상 비용 (ODsay API)
 - [ ] 다국어 지원
 
 ## 📄 관련 문서
 
-- [UI/UX 디자인 컨셉](./docs/design.md)
-- [TourAPI 활용 방안](./docs/tourapi.md)
+- [UI/UX 디자인 컨셉](./docs/plan/design.md)
+- [TourAPI 활용 방안](./docs/plan/tourapi.md)
+- [API/DB 설계](./docs/plan/api-db-design.md)
 
 ---
 

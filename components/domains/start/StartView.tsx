@@ -9,28 +9,33 @@ import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingO
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import { NoNearbyView } from "@/components/domains/course/NoNearbyView";
 import { useLocationStore } from "@/client/stores/useLocationStore";
+import { usePrefsStore } from "@/client/stores/usePrefsStore";
+import { generateCourseAction } from "@/app/actions/course";
 
 const SCALES = [
   {
     id: "light" as const,
     icon: Footprints,
     title: "오늘은 산책이면 충분해",
-    desc: "2~3시간 · 동네 한 바퀴 · 장소 1~2곳",
-    radius: "반경 3~5km",
+    iconColor: "text-accent",
+    iconBg: "bg-accent/10",
+    unselBg: "bg-accent/[0.04] hover:bg-accent/[0.08]",
   },
   {
     id: "moderate" as const,
     icon: Map,
     title: "반나절쯤 어딘가 다녀오고 싶어",
-    desc: "반나절 · 근교 나들이 · 장소 2~3곳",
-    radius: "반경 10~15km",
+    iconColor: "text-secondary",
+    iconBg: "bg-secondary/10",
+    unselBg: "bg-card hover:bg-secondary/[0.06]",
   },
   {
     id: "leisurely" as const,
     icon: Compass,
     title: "오늘 하루 제대로 쓰고 싶어",
-    desc: "하루 · 당일치기 · 장소 3~5곳",
-    radius: "반경 20~30km",
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+    unselBg: "bg-primary/[0.04] hover:bg-primary/[0.08]",
   },
 ];
 
@@ -43,6 +48,7 @@ export function StartView() {
   const [showManualPicker, setShowManualPicker] = useState(false);
   const router = useRouter();
   const { state, setCity } = useLocationStore();
+  const { prefs } = usePrefsStore();
 
   const isDenied =
     state.status === "denied" ||
@@ -77,10 +83,37 @@ export function StartView() {
   }
 
   const handleStart = async () => {
+    if (state.status !== "granted" || !state.lat || !state.lng) {
+      console.warn("[StartView] coords 없음 — 코스 생성 중단");
+      return;
+    }
+    const coords = { lat: state.lat, lng: state.lng };
+
     setLoading(true);
-    // TODO: 코스 생성 API 호출로 교체. 결과 없으면 setNoNearby(true)
-    await new Promise((r) => setTimeout(r, 2500));
-    router.push("/course/1");
+
+    const result = await generateCourseAction({
+      mapX: coords.lng,
+      mapY: coords.lat,
+      scale: selected,
+      prefs,
+    });
+
+    if (!result.ok) {
+      setLoading(false);
+      return;
+    }
+
+    sessionStorage.setItem(
+      "pendingCourse",
+      JSON.stringify({
+        places: result.places,
+        courseName: result.courseName,
+        mapX: coords.lng,
+        mapY: coords.lat,
+        scale: selected,
+      }),
+    );
+    router.push("/course/preview");
   };
 
   return (
@@ -119,10 +152,10 @@ export function StartView() {
           오늘 얼마나 떠날까요?
         </h2>
         <p className="text-[13px] text-text-secondary mb-5">
-          선택한 템포에 맞게 코스를 즉석에서 짜드려요
+          지금 갈 만한 곳을 골라드려요
         </p>
 
-        <div className="flex flex-1 flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {SCALES.map((s) => {
             const sel = selected === s.id;
             return (
@@ -130,33 +163,24 @@ export function StartView() {
                 key={s.id}
                 onClick={() => setSelected(s.id)}
                 className={cn(
-                  "flex flex-1 items-center gap-3.5 p-4 rounded-xl border text-left transition-colors active:scale-[0.98]",
-                  sel ? "bg-primary/5 border-primary" : "bg-card border-border"
+                  "w-full flex items-center gap-4 px-4 py-4 rounded-xl border text-left transition-colors active:scale-[0.98]",
+                  sel ? "bg-primary/5 border-primary" : `${s.unselBg} border-border`
                 )}
               >
                 <div
                   className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
-                    sel ? "bg-surface text-primary" : "bg-muted text-text-primary"
+                    "w-14 h-14 rounded-xl flex items-center justify-center shrink-0",
+                    s.iconBg, s.iconColor
                   )}
                 >
-                  <s.icon size={24} strokeWidth={2} />
+                  <s.icon size={28} strokeWidth={1.75} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[16px] font-bold text-text-primary mb-0.5">{s.title}</p>
-                  <p className="text-xs text-text-secondary leading-[1.4]">{s.desc}</p>
-                  <p
-                    className={cn(
-                      "text-[11px] font-medium mt-1",
-                      sel ? "text-primary" : "text-text-secondary"
-                    )}
-                  >
-                    {s.radius}
-                  </p>
+                  <p className="text-[16px] font-bold text-text-primary">{s.title}</p>
                 </div>
                 {sel && (
-                  <div className="w-[22px] h-[22px] rounded-full bg-primary flex items-center justify-center shrink-0">
-                    <Check size={14} color="white" strokeWidth={3} />
+                  <div className="w-5.5 h-5.5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <Check size={13} color="white" strokeWidth={3} />
                   </div>
                 )}
               </button>
