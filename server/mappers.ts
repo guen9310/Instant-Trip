@@ -1,6 +1,10 @@
 import type { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import type { FeedCourse, FeedPlace } from "@/shared/types/feed.types";
-import type { JourneyPlace, CourseProgress, CompletedCourse } from "@/shared/types/course.types";
+import type {
+  JourneyPlace,
+  CourseProgress,
+  CompletedCourse,
+} from "@/shared/types/course.types";
 
 // DB row 타입 — schema에서 직접 추론
 type CourseRow = typeof courses.$inferSelect;
@@ -46,9 +50,17 @@ export function toJourneyPlace(row: PlaceRow): JourneyPlace {
     travel: row.travelToNextMin ? `이동 ${row.travelToNextMin}분` : "",
     badge: {
       text: row.badgeText ?? row.category,
-      variant: (row.badgeVariant as JourneyPlace["badge"]["variant"]) ?? "secondary",
+      variant:
+        (row.badgeVariant as JourneyPlace["badge"]["variant"]) ?? "secondary",
     },
     desc: row.description ?? "",
+    coord:
+      row.lat && row.lng
+        ? { lat: Number(row.lat), lng: Number(row.lng) }
+        : null,
+    imageUrl: null,
+    availabilityUncertain: row.availabilityUncertain,
+    estimatedDurationMin: row.durationMin ?? 60,
   };
 }
 
@@ -114,7 +126,11 @@ function formatHours(
 function formatDate(date: Date | null): string {
   if (!date) return "";
   return date
-    .toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })
+    .toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
     .replace(/\. /g, ".")
     .replace(/\.$/, "");
 }

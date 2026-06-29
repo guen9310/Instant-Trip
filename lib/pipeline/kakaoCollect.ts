@@ -1,0 +1,133 @@
+import type { TourItem } from "@/lib/tour/types";
+import { fetchCourseKakao } from "@/lib/clients/kakao-local";
+import type { KakaoPlaceTagged } from "@/lib/clients/kakao-local";
+import { haversineKm } from "@/lib/pipeline/scoring";
+
+// 가용 TourAPI 후보가 이 값 미만일 때만 카카오 보충 발동 (scale='가볍게' 조건과 AND)
+export const KAKAO_SUPPLEMENT_MIN = 5;
+
+// 중복 판정 거리 임계값 — TourAPI 후보 50m 이내 Kakao 후보는 드롭
+const DEDUP_THRESHOLD_KM = 0.05;
+
+// 좌표 그리드 단위: 0.01도 ≈ 1km. 같은 그리드+반경이면 캐시 히트.
+const GRID = 0.01;
+
+interface CacheEntry {
+  items: TourItem[];
+  rawCounts: { at4Category: number; ct1Category: number; parkKeyword: number };
+  cachedAt: number;
+}
+
+const _cache = new Map<string, CacheEntry>();
+const KAKAO_CACHE_TTL = 30 * 60 * 1000; // 30분
+
+function makeCacheKey(lat: number, lng: number, radiusM: number): string {
+  return `${Math.round(lat / GRID)}_${Math.round(lng / GRID)}_${radiusM}`;
+}
+
+function normalizeKakaoPlace(place: KakaoPlaceTagged): TourItem {
+  // contenttypeid: CT1(문화시설) → "14", AT4(관광명소) → "12"
+  const contenttypeid = place.kakaoCategory === "CT1" ? "14" : "12";
+
+  return {
+    contentid: `kakao_${place.id}`,
+    contenttypeid,
+    title: place.place_name,
+    addr1: place.address_name,
+    addr2: "",
+    mapx: place.x,
+    mapy: place.y,
+    firstimage: "",
+    firstimage2: "",
+    cat1: "",
+    cat2: "",
+    cat3: "",
+    areacode: "",
+    sigungucode: "",
+    createdtime: "",
+    modifiedtime: "",
+    tel: place.phone ?? "",
+    source: "kakao",
+    kakaoCategory: place.kakaoCategory,
+    placeUrl: place.place_url,
+    // lclsSystm은 위조하지 않는다 — 태그/체류시간은 kakaoCategory로만 부여
+  };
+}
+
+// 검증 스크립트용 — 카카오 후보만 단독 수집
+export async function collectKakaoCandidates(
+  lat: number,
+  lng: number,
+  radiusM: number,
+): Promise<TourItem[]> {
+  console.log(`[kakao] 카카오 코스 후보 수집 시작 — 위치 (${lat}, ${lng}), 반경 ${radiusM}m`);
+  const t0 = Date.now();
+
+  const { items: places, rawCounts } = await fetchCourseKakao(lat, lng, radiusM);
+  const items = places.map(normalizeKakaoPlace);
+
+  console.log(
+    `[kakao] 수집 완료 — AT4카테고리:${rawCounts.at4Category} CT1:${rawCounts.ct1Category} 공원키워드:${rawCounts.parkKeyword}건` +
+    ` → 중복제거후 ${items.length}건 (${Date.now() - t0}ms)`,
+  );
+
+  return items;
+}
+
+// 파이프라인 배선용 — stage2 통과 TourAPI 후보에 카카오 후보를 보충
+// 두 조건 모두 충족 시 발동: scale='가볍게' AND tourAvailable.length < KAKAO_SUPPLEMENT_MIN
+export async function supplementWithKakao(
+  tourAvailable: TourItem[],
+  lat: number,
+  lng: number,
+  radiusM: number,
+): Promise<TourItem[]> {
+  const key = makeCacheKey(lat, lng, radiusM);
+  let kakaoItems: TourItem[];
+  let rawCounts: { at4Category: number; ct1Category: number; parkKeyword: number };
+
+  const cached = _cache.get(key);
+  if (cached && Date.now() - cached.cachedAt < KAKAO_CACHE_TTL) {
+    kakaoItems = cached.items;
+    rawCounts = cached.rawCounts;
+    console.log(`[보충] 캐시 hit — 카카오 후보 ${kakaoItems.length}건`);
+  } else {
+    const result = await fetchCourseKakao(lat, lng, radiusM);
+    kakaoItems = result.items.map(normalizeKakaoPlace);
+    rawCounts = result.rawCounts;
+    _cache.set(key, { items: kakaoItems, rawCounts, cachedAt: Date.now() });
+  }
+
+  // 중복 제거: TourAPI 후보 50m 이내 Kakao 후보 드롭 (좌표만 비교, 이름 무관)
+  const dedupedKakao = kakaoItems.filter((kakao) => {
+    const kLat = parseFloat(kakao.mapy);
+    const kLng = parseFloat(kakao.mapx);
+    if (isNaN(kLat) || isNaN(kLng)) return false;
+
+    for (const tour of tourAvailable) {
+      const tLat = parseFloat(tour.mapy);
+      const tLng = parseFloat(tour.mapx);
+      if (isNaN(tLat) || isNaN(tLng)) continue;
+      if (haversineKm(kLat, kLng, tLat, tLng) < DEDUP_THRESHOLD_KM) return false;
+    }
+    return true;
+  });
+
+  // 내부 중복(id 기준): rawCounts 합산 - 정규화 후 배열 크기
+  const rawTotal = rawCounts.at4Category + rawCounts.ct1Category + rawCounts.parkKeyword;
+  const internalDupCount = rawTotal - kakaoItems.length;
+  // 좌표 중복(tour-vs-kakao 50m 기준)
+  const coordDupCount = kakaoItems.length - dedupedKakao.length;
+
+  const at4Final = dedupedKakao.filter((i) => i.kakaoCategory === "AT4").length;
+  const ct1Final = dedupedKakao.filter((i) => i.kakaoCategory === "CT1").length;
+
+  console.log(
+    `[보충] 발동 (가용 ${tourAvailable.length}<${KAKAO_SUPPLEMENT_MIN})` +
+    ` → AT4 ${rawCounts.at4Category} + 공원 ${rawCounts.parkKeyword} + CT1 ${rawCounts.ct1Category},` +
+    ` 내부중복 ${internalDupCount}건 / 좌표중복 ${coordDupCount}건 제거,` +
+    ` 최종 tour:${tourAvailable.length}/kakao:${at4Final + ct1Final}`,
+  );
+
+  return [...tourAvailable, ...dedupedKakao];
+}

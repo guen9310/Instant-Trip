@@ -117,6 +117,8 @@ export const coursePlaces = pgTable(
     closedDays: text("closed_days").array(), // ['월', '화']
     durationMin: smallint("duration_min").notNull(),
     travelToNextMin: smallint("travel_to_next_min"), // 마지막 장소는 NULL
+    // 휴무 데이터 불확실 플래그(stage2). 실시간 경로(lib/tour/mappers.ts)와 동일하게 보존한다.
+    availabilityUncertain: boolean("availability_uncertain").notNull().default(false),
     description: text("description"),
     badgeText: text("badge_text"),
     badgeVariant: text("badge_variant"),

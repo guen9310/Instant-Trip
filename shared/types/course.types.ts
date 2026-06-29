@@ -12,9 +12,13 @@ export type JourneyPlace = {
   travel: string;
   badge: { text: string; variant: BadgeVariant };
   desc: string;
+  coord: { lat: number; lng: number } | null;
+  imageUrl: string | null;
+  availabilityUncertain: boolean;
+  estimatedDurationMin: number;
 };
 
-export type NearbyCategory = "all" | "cafe" | "restroom" | "convenience" | "pharmacy";
+export type NearbyCategory = "all" | "cafe" | "convenience" | "pharmacy" | "restaurant" | "parking" | "gas_station";
 
 export type NearbyPoi = {
   id: string;
@@ -22,6 +26,8 @@ export type NearbyPoi = {
   name: string;
   dist: string;
   isOpen: boolean;
+  coord: { lat: number; lng: number };
+  placeUrl: string;
 };
 
 // 프로필 — 진행 중인 코스 상태
