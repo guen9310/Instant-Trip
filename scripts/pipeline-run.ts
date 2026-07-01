@@ -104,7 +104,9 @@ function prefsToProfile(prefs: Prefs) {
       조용함: prefs.vibe === "quiet" ? 1 : 0,
     } as Record<TagKey, number>,
     preferFood: prefs.food === "matjip",
-    festivalAffinity: prefs.indoor === "indoor" ? 0 : 0.6,
+    festivalAffinity:
+      (prefs.indoor === "outdoor" ? 0.6 : 0) +
+      (prefs.vibe === "lively" ? 0.4 : 0),
   };
 }
 
@@ -299,6 +301,22 @@ async function run() {
   }
   for (const p of course.nearbyPlaces) {
     printPlace("연계 ", p);
+  }
+
+  sep("축제 (ongoing/upcoming)");
+  console.log(`  진행중 ${course.festivals.ongoing.length}건, 예정 ${course.festivals.upcoming.length}건`);
+  for (const f of course.festivals.ongoing) {
+    console.log(`  [진행중] ${f.fstvlNm} (${f.fstvlStartDate}~${f.fstvlEndDate})`);
+  }
+  for (const f of course.festivals.upcoming) {
+    console.log(`  [예정]   ${f.fstvlNm} (${f.fstvlStartDate}~${f.fstvlEndDate})`);
+  }
+
+  sep("식당 추천 (preferFood)");
+  if (course.recommended_food) {
+    console.log(`  ${course.recommended_food.name} (${course.recommended_food.distanceM}m) | ${course.recommended_food.category}`);
+  } else {
+    console.log(`  (없음 — preferFood=${preferFood})`);
   }
 
   sep("점수화 상위 10 (전체)");

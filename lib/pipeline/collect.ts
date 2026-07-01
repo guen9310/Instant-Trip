@@ -22,9 +22,9 @@ const TARGET_CONTENT_TYPES = ["12", "14", "28"];
 
 // [stage1] 사용자 현재 위치 반경 내 장소를 수집한다.
 //
-// - 여행 규모(scale)에 따라 반경이 달라진다: 가볍게=5km, 적당히=15km, 여유롭게=30km
-// - 5개 콘텐츠 타입을 Promise.all로 동시에 호출해서 병렬로 가져온다.
-// - 각 타입당 최대 20건씩 수집하므로 합산 최대 100건이 된다.
+// - 여행 규모(scale)에 따라 반경이 달라진다: 가볍게=5km, 적당히=10km, 여유롭게=20km
+// - 3개 콘텐츠 타입(12/14/28)을 Promise.all로 동시에 호출해서 병렬로 가져온다.
+// - 각 타입당 최대 40건씩 수집하므로 합산 최대 120건이 된다.
 // - 여러 타입에 중복 등록된 장소가 있을 수 있어서, contentid 기준으로 중복을 제거한다.
 // - 반환값: 중복 제거된 TourItem 배열 (이후 stage2로 전달됨)
 export async function collectCandidates(profile: UserProfile): Promise<TourItem[]> {
