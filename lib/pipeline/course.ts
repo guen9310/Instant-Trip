@@ -9,7 +9,7 @@ import type {
   CourseResult,
   UserProfile,
 } from "@/lib/pipeline/types";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+
 
 // 이미지와 상세 정보는 자주 바뀌지 않으므로 7일간 캐시한다.
 const IMAGE_TTL = 7 * 24 * 60 * 60 * 1000; // 7일
@@ -145,27 +145,6 @@ export async function fetchFestivalImage(fstvlNm: string): Promise<string[]> {
   }
 }
 
-export function festivalToPlace(
-  festival: CulturalFestival,
-  images: string[] = [],
-): CoursePlace {
-  const addr = festival.rdnmadr || festival.lnmadr || "";
-  const id = `festival_${festival.fstvlStartDate}_${festival.fstvlNm}`;
-  return {
-    contentId: id,
-    contentTypeId: "festival",
-    title: festival.fstvlNm,
-    address: addr,
-    shortAddress: toShortAddress(addr),
-    overview: festival.fstvlCo || "",
-    images,
-    coord: { lat: festival.latitude, lng: festival.longitude },
-    tags: [],
-    score: 1.0,
-    availabilityUncertain: false,
-    estimatedDurationMin: 60,
-  };
-}
 
 // 선택된 후보의 상세 정보(이미지·소개글)를 가져와 CoursePlace로 변환한다.
 async function buildCoursePlace(

@@ -86,7 +86,6 @@ export const TAG_MAPPING_RULES: TagMappingRule[] = [
   { code_type: "contenttypeid", code_value: "14", tag: "실내", score: 1.0 },
   { code_type: "contenttypeid", code_value: "14", tag: "1인여행", score: 0.5 },
   { code_type: "contenttypeid", code_value: "28", tag: "도보친화", score: 0.5 }, // 레포츠 — 실외
-  { code_type: "contenttypeid", code_value: "38", tag: "실내", score: 1.0 }, // 쇼핑 — 실내
   // cat1 기반 (음식점 A05는 코스에서 제외되므로 규칙 없음)
   // lclssystm1 기반
   { code_type: "lclssystm1", code_value: "NA", tag: "조용함", score: 1.0 },

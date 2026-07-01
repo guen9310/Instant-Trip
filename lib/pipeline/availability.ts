@@ -27,7 +27,6 @@ const INTRO_FIELDS: Record<string, { usetime: string; restdate: string }> = {
   "12": { usetime: "usetime", restdate: "restdate" },
   "14": { usetime: "usetimeculture", restdate: "restdateculture" },
   "28": { usetime: "usetimeleports", restdate: "restdateleports" },
-  "39": { usetime: "opentimefood", restdate: "restdatefood" },
 };
 
 // "09:00~18:00" 또는 "9시~18시" 형식의 운영시간 문자열을 파싱해서
@@ -174,13 +173,6 @@ export async function filterByAvailability(
   ): Promise<AvailableItem | null> => {
     const idx = `[${globalIdx + 1}/${items.length}]`;
     const prefix = `[stage2] ${idx} "${item.title}" type=${item.contenttypeid} src=${item.source ?? "tour"}`;
-
-    // 카카오 출처 장소는 Tour API detailIntro2가 없으므로 검사를 건너뛴다.
-    if (item.source === "kakao") {
-      passed++;
-      console.log(`${prefix} → 검사안함(source=kakao)`);
-      return { ...item, availabilityUncertain: false };
-    }
 
     const cacheKey = `intro_${item.contentid}`;
     const cachedIntro = readCache<IntroItem>(cacheKey, INTRO_TTL);
