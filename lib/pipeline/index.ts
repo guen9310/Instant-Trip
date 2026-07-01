@@ -9,17 +9,13 @@ import { SCALE_CONFIG } from "@/lib/pipeline/types";
 import { collectCandidates } from "@/lib/pipeline/collect";
 import { filterByAvailability } from "@/lib/pipeline/availability";
 import type { TourItem } from "@/lib/tour/types";
-import {
-  scoreCandidates,
-  applyMappingRules,
-  haversineKm,
-} from "@/lib/pipeline/scoring";
+import { scoreCandidates, applyMappingRules } from "@/lib/pipeline/scoring";
 import { assembleCourse, fetchFestivalImage } from "@/lib/pipeline/course";
 import {
   supplementWithKakao,
   KAKAO_SUPPLEMENT_MIN,
 } from "@/lib/pipeline/kakaoCollect";
-import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
+import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import { fetchNearby } from "@/lib/clients/kakao-local";
 
@@ -36,73 +32,6 @@ export { onboardingToProfile, applyFeedback } from "@/lib/pipeline/types";
 
 function elapsed(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
-}
-
-// 원본 데이터를 1시간 메모리 캐시 — 파이프라인마다 API를 재호출하지 않는다
-let _festivalCache: { data: CulturalFestival[]; cachedAt: number } | null =
-  null;
-const FESTIVAL_CACHE_TTL = 60 * 60 * 1000; // 1시간
-
-async function getAllFestivals(): Promise<CulturalFestival[]> {
-  if (
-    _festivalCache &&
-    Date.now() - _festivalCache.cachedAt < FESTIVAL_CACHE_TTL
-  ) {
-    return _festivalCache.data;
-  }
-  const data = await fetchCulturalFestivals();
-  _festivalCache = { data, cachedAt: Date.now() };
-  return data;
-}
-
-async function fetchNearbyFestivals(
-  lat: number,
-  lng: number,
-  radiusKm: number,
-  options: { simulationDate?: string; affinity?: number } = {},
-): Promise<{ ongoing: CulturalFestival[]; upcoming: CulturalFestival[] }> {
-  try {
-    const all = await getAllFestivals();
-    const base = options.simulationDate
-      ? new Date(options.simulationDate)
-      : new Date();
-    const today = base.toISOString().slice(0, 10);
-    const oneMonthLater = new Date(base);
-    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
-    const limitDate = oneMonthLater.toISOString().slice(0, 10);
-
-    const distKm = (f: CulturalFestival) =>
-      haversineKm(lat, lng, f.latitude, f.longitude);
-    const inRadius = (f: CulturalFestival) => {
-      if (isNaN(f.latitude) || isNaN(f.longitude)) return false;
-      return distKm(f) <= radiusKm;
-    };
-
-    const ongoing = all.filter(
-      (f) =>
-        f.fstvlStartDate <= today && f.fstvlEndDate >= today && inRadius(f),
-    );
-    const upcoming = all.filter(
-      (f) =>
-        f.fstvlStartDate > today &&
-        f.fstvlStartDate <= limitDate &&
-        inRadius(f),
-    );
-
-    // 실외 친화(affinity >= 0.6)면 거리순, 그 외엔 시작일순
-    const affinity = options.affinity ?? 0;
-    const sort = (list: CulturalFestival[]) =>
-      affinity >= 0.6
-        ? [...list].sort((a, b) => distKm(a) - distKm(b))
-        : [...list].sort((a, b) =>
-            a.fstvlStartDate.localeCompare(b.fstvlStartDate),
-          );
-
-    return { ongoing: sort(ongoing), upcoming: sort(upcoming) };
-  } catch (err) {
-    console.warn(`[pipeline] 문화축제 조회 실패 — ${err}`);
-    return { ongoing: [], upcoming: [] };
-  }
 }
 
 export async function generateCourse(
@@ -136,7 +65,7 @@ export async function generateCourse(
     const empty: CourseResult = {
       mainPlace: null,
       nearbyPlaces: [],
-      festivals: [],
+      festivals: { ongoing: [], upcoming: [] },
       recommended_food: null,
       scale: profile.scale,
       generatedAt: new Date().toISOString(),
@@ -161,7 +90,7 @@ export async function generateCourse(
     const empty: CourseResult = {
       mainPlace: null,
       nearbyPlaces: [],
-      festivals: [],
+      festivals: { ongoing: [], upcoming: [] },
       recommended_food: null,
       scale: profile.scale,
       generatedAt: new Date().toISOString(),
@@ -244,9 +173,10 @@ export async function generateCourse(
   );
 
   ts = Date.now();
-  const { ongoing: festivalsOngoing } = await festivalPromise;
+  const { ongoing: festivalsOngoing, upcoming: festivalsUpcoming } =
+    await festivalPromise;
   console.log(
-    `[pipeline] 문화축제 — 진행중 ${festivalsOngoing.length}건 | ${elapsed(Date.now() - ts)}`,
+    `[pipeline] 문화축제 — 진행중 ${festivalsOngoing.length}건 / 예정 ${festivalsUpcoming.length}건 | ${elapsed(Date.now() - ts)}`,
   );
 
   // festivalAffinity >= 0.6(실외 선호)이면 가장 가까운 축제 이미지를 미리 로드해둔다.
@@ -294,7 +224,7 @@ export async function generateCourse(
 
   const course: CourseResult = {
     ...courseBase,
-    festivals: festivalsOngoing,
+    festivals: { ongoing: festivalsOngoing, upcoming: festivalsUpcoming },
     recommended_food,
   };
 
