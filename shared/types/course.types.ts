@@ -18,6 +18,24 @@ export type JourneyPlace = {
   estimatedDurationMin: number;
 };
 
+// 코스 결과의 보조 정보 — 진행중/예정 축제 (product-plan.md 4번 "부가" 참조)
+export type FestivalSummary = {
+  id: string;
+  name: string;
+  status: "ongoing" | "upcoming";
+  period: string;
+  address: string;
+  imageUrl: string | null;
+};
+
+// 코스 결과의 보조 정보 — preferFood=true일 때만 채워지는 식당 1곳 추천
+export type RecommendedFoodSummary = {
+  name: string;
+  category: string;
+  distance: string;
+  url: string;
+};
+
 export type NearbyCategory = "all" | "cafe" | "convenience" | "pharmacy" | "restaurant" | "parking" | "gas_station";
 
 export type NearbyPoi = {

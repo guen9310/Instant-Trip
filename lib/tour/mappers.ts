@@ -1,6 +1,12 @@
 import type { UserProfile, TravelScale } from "@/lib/pipeline/types";
 import type { CourseResult } from "@/lib/pipeline/types";
-import type { JourneyPlace, BadgeVariant } from "@/shared/types/course.types";
+import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type {
+  JourneyPlace,
+  BadgeVariant,
+  FestivalSummary,
+  RecommendedFoodSummary,
+} from "@/shared/types/course.types";
 
 type EnglishScale = "light" | "moderate" | "leisurely";
 
@@ -44,7 +50,10 @@ export function prefsToProfile(
       조용함:   prefs.vibe   === "quiet"  ? 1 : 0,
     },
     preferFood: prefs.food === "matjip",
-    festivalAffinity: prefs.indoor === "indoor" ? 0 : 0.6,
+    // 실외 선호(0.6) + 활기참 선호(0.4) 합산 — 둘 다면 1.0, 둘 다 아니면 0
+    festivalAffinity:
+      (prefs.indoor === "outdoor" ? 0.6 : 0) +
+      (prefs.vibe === "lively" ? 0.4 : 0),
     location,
     scale: SCALE_MAP[scale],
     areaCode: "",
@@ -107,4 +116,48 @@ export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[
   }
 
   return places;
+}
+
+// 공공데이터포털 응답은 "YYYY-MM-DD"(대시 포함, 2026-06-29 확인) 형식이다.
+// 혹시 대시 없는 "YYYYMMDD"가 오는 경우도 방어적으로 처리한다.
+function formatFestivalDate(dateStr: string): string {
+  const dashed = dateStr.match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (dashed) return `${dashed[1]}.${dashed[2]}`;
+  if (dateStr.length === 8) return `${dateStr.slice(4, 6)}.${dateStr.slice(6, 8)}`;
+  return dateStr;
+}
+
+// CulturalFestival → 화면 표시용 FestivalSummary. festivals.ongoing[0]에는
+// pipeline/index.ts가 미리 로드한 images가 덮어써져 있을 수 있다(있으면 사용).
+export function courseResultToFestivalSummaries(
+  result: CourseResult,
+): FestivalSummary[] {
+  const toSummary = (
+    f: CulturalFestival,
+    status: "ongoing" | "upcoming",
+  ): FestivalSummary => ({
+    id: `${f.fstvlStartDate}_${f.fstvlNm}`,
+    name: f.fstvlNm,
+    status,
+    period: `${formatFestivalDate(f.fstvlStartDate)} ~ ${formatFestivalDate(f.fstvlEndDate)}`,
+    address: f.rdnmadr || f.lnmadr || "",
+    imageUrl: (f as CulturalFestival & { images?: string[] }).images?.[0] ?? null,
+  });
+
+  // upcoming은 코스 결과 화면에 표시하지 않는다 — "지금 갈 곳"을 결정하는 맥락에서
+  // 예정 축제는 즉시 활용 불가한 정보라 혼란만 준다. 피드 기능에서 별도 활용 예정.
+  return result.festivals.ongoing.map((f) => toSummary(f, "ongoing"));
+}
+
+export function courseResultToRecommendedFood(
+  result: CourseResult,
+): RecommendedFoodSummary | null {
+  const f = result.recommended_food;
+  if (!f) return null;
+  return {
+    name: f.name,
+    category: f.category,
+    distance: `${f.distanceM}m`,
+    url: f.url,
+  };
 }

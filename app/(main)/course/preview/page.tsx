@@ -3,11 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CourseResultView } from "@/components/domains/course/CourseResultView";
-import type { JourneyPlace } from "@/shared/types/course.types";
+import type {
+  JourneyPlace,
+  FestivalSummary,
+  RecommendedFoodSummary,
+} from "@/shared/types/course.types";
 
 type PendingCourse = {
   places: JourneyPlace[];
   courseName: string;
+  festivals?: FestivalSummary[];
+  recommendedFood?: RecommendedFoodSummary | null;
   mapX?: number;
   mapY?: number;
   scale?: string;
@@ -48,6 +54,8 @@ export default function CoursePreviewPage() {
       courseId="preview"
       courseName={course.courseName}
       places={course.places}
+      festivals={course.festivals ?? []}
+      recommendedFood={course.recommendedFood ?? null}
       mapX={course.mapX}
       mapY={course.mapY}
       scale={course.scale}

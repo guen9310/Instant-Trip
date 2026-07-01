@@ -65,11 +65,11 @@ export function applyFeedback(
   return { ...profile, tagWeights: updated };
 }
 
-// 여행 규모별 설정 — radius: 수집 반경(m), maxNearby: 메인 외 연계 장소 최대 수
-export const SCALE_CONFIG: Record<TravelScale, { radius: number; maxNearby: number }> = {
-  가볍게:   { radius: 5000,  maxNearby: 1 },
-  적당히:   { radius: 10000, maxNearby: 2 },
-  여유롭게: { radius: 20000, maxNearby: 4 },
+// 여행 규모별 설정 — radius: 수집 반경(m)
+export const SCALE_CONFIG: Record<TravelScale, { radius: number }> = {
+  가볍게:   { radius: 5000 },
+  적당히:   { radius: 10000 },
+  여유롭게: { radius: 20000 },
 };
 
 // DB에서 조회한 장소 (tag_scores 사전 계산 포함)
@@ -114,7 +114,7 @@ export interface RecommendedFood {
 export interface CourseResult {
   mainPlace: CoursePlace | null;
   nearbyPlaces: CoursePlace[];
-  festivals: CulturalFestival[];
+  festivals: { ongoing: CulturalFestival[]; upcoming: CulturalFestival[] };
   recommended_food: RecommendedFood | null;
   scale: TravelScale;
   generatedAt: string;

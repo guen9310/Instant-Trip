@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCcw, Clock, ChevronRight, AlertCircle } from "lucide-react";
+import {
+  RefreshCcw,
+  Clock,
+  ChevronRight,
+  AlertCircle,
+  PartyPopper,
+  UtensilsCrossed,
+  ExternalLink,
+} from "lucide-react";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -14,7 +22,11 @@ import {
   MAX_REROLLS,
 } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
-import type { JourneyPlace } from "@/shared/types/course.types";
+import type {
+  JourneyPlace,
+  FestivalSummary,
+  RecommendedFoodSummary,
+} from "@/shared/types/course.types";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 
 const TRAVEL_REASON: Record<string, string> = {
@@ -26,6 +38,8 @@ type Props = {
   courseId: string;
   courseName: string;
   places: JourneyPlace[];
+  festivals?: FestivalSummary[];
+  recommendedFood?: RecommendedFoodSummary | null;
   isLoading?: boolean;
   mapX?: number;
   mapY?: number;
@@ -36,6 +50,8 @@ export function CourseResultView({
   courseId,
   courseName,
   places,
+  festivals = [],
+  recommendedFood = null,
   isLoading = false,
   mapX,
   mapY,
@@ -45,6 +61,8 @@ export function CourseResultView({
   const [rerolling, setRerolling] = useState(false);
   const [currentPlaces, setCurrentPlaces] = useState<JourneyPlace[]>(places);
   const [currentCourseName, setCurrentCourseName] = useState(courseName);
+  const [currentFestivals, setCurrentFestivals] = useState(festivals);
+  const [currentFood, setCurrentFood] = useState(recommendedFood);
   const [rerollExhausted, setRerollExhausted] = useState(false);
 
   const router = useRouter();
@@ -78,11 +96,15 @@ export function CourseResultView({
 
     setCurrentPlaces(result.places);
     setCurrentCourseName(result.courseName);
+    setCurrentFestivals(result.festivals);
+    setCurrentFood(result.recommendedFood);
     sessionStorage.setItem(
       "pendingCourse",
       JSON.stringify({
         places: result.places,
         courseName: result.courseName,
+        festivals: result.festivals,
+        recommendedFood: result.recommendedFood,
         mapX,
         mapY,
         scale,
@@ -195,6 +217,54 @@ export function CourseResultView({
                 {currentPlaces[0].dur}
               </p>
             </div>
+          </div>
+        )}
+
+        {/* 보조 정보 — 근처 식당 추천 / 진행중·예정 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
+        {(currentFood || currentFestivals.length > 0) && (
+          <div className="mt-3 flex flex-col gap-2.5">
+            {currentFood && (
+              <a
+                href={currentFood.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border"
+              >
+                <div className="w-9 h-9 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                  <UtensilsCrossed size={16} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-text-secondary">근처 식당 추천</p>
+                  <p className="text-[14px] font-semibold text-text-primary truncate">
+                    {currentFood.name} · {currentFood.distance}
+                  </p>
+                </div>
+                <ExternalLink size={14} className="text-text-secondary shrink-0" />
+              </a>
+            )}
+
+            {currentFestivals.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-card border border-border">
+                <p className="flex items-center gap-1.5 text-xs text-text-secondary mb-2.5">
+                  <PartyPopper size={14} /> 주변 축제
+                </p>
+                <div className="flex flex-col gap-2.5">
+                  {currentFestivals.slice(0, 3).map((f) => (
+                    <div key={f.id} className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-medium text-text-primary truncate">
+                          {f.name}
+                        </p>
+                        <p className="text-[11px] text-text-secondary">{f.period}</p>
+                      </div>
+                      <Badge variant={f.status === "ongoing" ? "accent" : "outline"}>
+                        {f.status === "ongoing" ? "진행중" : "예정"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

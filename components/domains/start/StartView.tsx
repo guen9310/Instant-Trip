@@ -108,6 +108,8 @@ export function StartView() {
       JSON.stringify({
         places: result.places,
         courseName: result.courseName,
+        festivals: result.festivals,
+        recommendedFood: result.recommendedFood,
         mapX: coords.lng,
         mapY: coords.lat,
         scale: selected,

@@ -1,10 +1,21 @@
 "use server";
 
 import { generateCourse } from "@/lib/pipeline";
-import { prefsToProfile, courseResultToJourneyPlaces } from "@/lib/tour/mappers";
+import {
+  prefsToProfile,
+  courseResultToJourneyPlaces,
+  courseResultToFestivalSummaries,
+  courseResultToRecommendedFood,
+} from "@/lib/tour/mappers";
 import { fetchNearby } from "@/lib/clients/kakao-local";
 import type { NearbyCategoryCode } from "@/lib/clients/kakao-local";
-import type { JourneyPlace, NearbyCategory, NearbyPoi } from "@/shared/types/course.types";
+import type {
+  JourneyPlace,
+  NearbyCategory,
+  NearbyPoi,
+  FestivalSummary,
+  RecommendedFoodSummary,
+} from "@/shared/types/course.types";
 
 type Scale = "light" | "moderate" | "leisurely";
 
@@ -23,7 +34,13 @@ interface GenerateCoursePayload {
 }
 
 type GenerateCourseResult =
-  | { ok: true; places: JourneyPlace[]; courseName: string }
+  | {
+      ok: true;
+      places: JourneyPlace[];
+      courseName: string;
+      festivals: FestivalSummary[];
+      recommendedFood: RecommendedFoodSummary | null;
+    }
   | { ok: false; error: string };
 
 const COURSE_SUFFIX: Record<Scale, string> = {
@@ -99,8 +116,10 @@ export async function generateCourseAction(
 
     const places = courseResultToJourneyPlaces(course);
     const courseName = course.mainPlace.title + COURSE_SUFFIX[scale];
+    const festivals = courseResultToFestivalSummaries(course);
+    const recommendedFood = courseResultToRecommendedFood(course);
 
-    return { ok: true, places, courseName };
+    return { ok: true, places, courseName, festivals, recommendedFood };
   } catch (err) {
     const message = err instanceof Error ? err.message : "코스 생성 중 오류가 발생했습니다.";
     return { ok: false, error: message };
