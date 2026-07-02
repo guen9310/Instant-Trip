@@ -137,6 +137,7 @@ export async function generateCourse(
 
   // stage4: tagScores는 이미 placesWithTags에 부착되어 있으므로 그대로 재부착
   // excludeIds에 포함된 장소는 후보에서 제외한다 (거절 재추천용)
+  // 데이터 출처: item.source === "kakao" → Kakao 로컬 API 보충분 / 그 외 → 한국관광공사 Tour API
   const excludeSet = new Set(options.excludeIds ?? []);
   const availableWithTags: PlaceWithTags[] = availablePool
     .filter((item) => !excludeSet.has(item.contentid))
@@ -155,8 +156,10 @@ export async function generateCourse(
 
   ts = Date.now();
   const scored = await scoreCandidates(availableWithTags, profile);
+  const tourScored = scored.filter((p) => p.item.source !== "kakao").length;
+  const kakaoScored = scored.filter((p) => p.item.source === "kakao").length;
   console.log(
-    `[pipeline] stage4 완료 — ${scored.length}건 점수화 | ${elapsed(Date.now() - ts)}`,
+    `[pipeline] stage4 완료 — ${scored.length}건 점수화 (관광공사:${tourScored} / 카카오:${kakaoScored}) | ${elapsed(Date.now() - ts)}`,
   );
 
   const allCandidates = [...scored];

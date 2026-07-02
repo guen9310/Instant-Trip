@@ -255,7 +255,7 @@ export async function scoreCandidates(
     const timeSuffix =
       timeBonus < 0 ? `${timeBonus.toFixed(2)}` : `+${timeBonus.toFixed(2)}`;
     console.log(
-      `[stage4] ${idx} "${item.title}" (${TYPE_LABEL[item.contenttypeid] ?? item.contenttypeid})` +
+      `[stage4] ${idx} "${item.title}" (${TYPE_LABEL[item.contenttypeid] ?? item.contenttypeid}) (${item.source === "kakao" ? "카카오" : "관광공사"})` +
         ` lcs:${item.lclsSystm1 ?? "-"}/${item.lclsSystm2 ?? "-"}/${item.lclsSystm3 ?? "-"} dur:${dur}min` +
         ` 태그:[${tagLabel}] 태그:${tagScore.toFixed(2)} 거리:+${distanceBonus.toFixed(2)} 시간:${timeSuffix} 예산:+${budgetFitness.toFixed(2)} → 최종:${score.toFixed(3)}`,
     );

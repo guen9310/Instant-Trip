@@ -3,13 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  RefreshCcw,
+  Settings2,
   Clock,
   ChevronRight,
   AlertCircle,
   PartyPopper,
 } from "lucide-react";
-import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
@@ -56,12 +55,13 @@ export function CourseResultView({
   const [currentCourseName, setCurrentCourseName] = useState(courseName);
   const [currentFestivals, setCurrentFestivals] = useState(festivals);
   const [rerollExhausted, setRerollExhausted] = useState(false);
+  const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
 
   const router = useRouter();
   const travelPref = usePrefsStore((s) => s.prefs.travel);
   const { prefs } = usePrefsStore();
   const startCourse = useCourseProgressStore((s) => s.start);
-  const { rejectedPlaceIds, rerollCount, addRejection, incrementReroll } =
+  const { rejectedPlaceIds, rerollCount, addRejection } =
     useCourseProgressStore();
 
   const isMaxRerolls = rerollCount >= MAX_REROLLS;
@@ -70,6 +70,8 @@ export function CourseResultView({
     if (!mapX || !mapY || !scale) return;
     setRerolling(true);
     setRerollExhausted(false);
+
+    const prevIds = new Set(currentPlaces.map((p) => p.id));
 
     const result = await generateCourseAction({
       mapX,
@@ -89,6 +91,13 @@ export function CourseResultView({
     setCurrentPlaces(result.places);
     setCurrentCourseName(result.courseName);
     setCurrentFestivals(result.festivals);
+
+    const replaced = result.places.find((p) => !prevIds.has(p.id));
+    if (replaced) {
+      setNewPlaceId(replaced.id);
+      setTimeout(() => setNewPlaceId(null), 3000);
+    }
+
     sessionStorage.setItem(
       "pendingCourse",
       JSON.stringify({
@@ -102,13 +111,7 @@ export function CourseResultView({
     );
   };
 
-  const handleReroll = async () => {
-    if (isMaxRerolls || rerolling) return;
-    incrementReroll();
-    await doReroll(rejectedPlaceIds);
-  };
-
-  const handleReject = async (placeId: string, reason: string) => {
+  const handleReject = async (placeId: string, reason: string): Promise<void> => {
     console.log(`[reroll] 거절 — placeId: ${placeId}, reason: ${reason}`);
     addRejection(placeId);
     await doReroll([...rejectedPlaceIds, placeId]);
@@ -137,8 +140,8 @@ export function CourseResultView({
             조건에 맞는 코스를 찾지 못했어요
           </p>
         </div>
-        <Button onClick={handleReroll} disabled={rerolling} className="gap-2">
-          <RefreshCcw size={15} /> 다시 시도
+        <Button onClick={() => router.push("/start")} className="gap-2">
+          <Settings2 size={15} /> 취향 다시 설정
         </Button>
       </div>
     );
@@ -146,7 +149,6 @@ export function CourseResultView({
 
   return (
     <>
-      {rerolling && <CourseLoadingOverlay />}
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">
         {/* 헤더 */}
         <h1 className="text-[22px] font-bold text-text-primary tracking-tight mb-1">
@@ -190,6 +192,7 @@ export function CourseResultView({
               <PlaceCardTimeline
                 place={p}
                 onClick={() => setSelectedPlace(p)}
+                isNew={p.id === newPlaceId}
               />
             </div>
           ))}
@@ -256,11 +259,10 @@ export function CourseResultView({
           이 코스로 갈게요
         </Button>
         <button
-          onClick={handleReroll}
-          disabled={rerolling || isMaxRerolls}
-          className="w-full h-12 text-[15px] font-medium text-text-primary flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={() => router.push("/start")}
+          className="w-full h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
         >
-          <RefreshCcw size={15} /> 다시 뽑기
+          <Settings2 size={15} /> 취향 다시 설정
         </button>
       </div>
 
@@ -277,14 +279,19 @@ export function CourseResultView({
 function PlaceCardTimeline({
   place,
   onClick,
+  isNew = false,
 }: {
   place: JourneyPlace;
   onClick: () => void;
+  isNew?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left p-3.5 rounded-xl bg-card border border-border flex items-center justify-between gap-3 active:scale-[0.98] transition-transform"
+      className={cn(
+        "w-full text-left p-3.5 rounded-xl bg-card border flex items-center justify-between gap-3 active:scale-[0.98] transition-all duration-200",
+        isNew ? "border-primary ring-1 ring-primary/25" : "border-border",
+      )}
     >
       <div className="flex-1 flex flex-col gap-1.5 min-w-0">
         <div className="flex items-center gap-2">
@@ -292,6 +299,11 @@ function PlaceCardTimeline({
             {place.cat}
           </span>
           <Badge variant={place.badge.variant}>{place.badge.text}</Badge>
+          {isNew && (
+            <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+              새 장소
+            </span>
+          )}
         </div>
         <p className="text-[16px] font-bold text-text-primary tracking-tight truncate">
           {place.name}
