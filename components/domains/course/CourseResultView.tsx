@@ -8,8 +8,6 @@ import {
   ChevronRight,
   AlertCircle,
   PartyPopper,
-  UtensilsCrossed,
-  ExternalLink,
 } from "lucide-react";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
 import { cn } from "@/shared/utils";
@@ -22,12 +20,9 @@ import {
   MAX_REROLLS,
 } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
-import type {
-  JourneyPlace,
-  FestivalSummary,
-  RecommendedFoodSummary,
-} from "@/shared/types/course.types";
+import type { JourneyPlace, FestivalSummary } from "@/shared/types/course.types";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
+import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
 
 const TRAVEL_REASON: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -39,7 +34,6 @@ type Props = {
   courseName: string;
   places: JourneyPlace[];
   festivals?: FestivalSummary[];
-  recommendedFood?: RecommendedFoodSummary | null;
   isLoading?: boolean;
   mapX?: number;
   mapY?: number;
@@ -51,7 +45,6 @@ export function CourseResultView({
   courseName,
   places,
   festivals = [],
-  recommendedFood = null,
   isLoading = false,
   mapX,
   mapY,
@@ -62,7 +55,6 @@ export function CourseResultView({
   const [currentPlaces, setCurrentPlaces] = useState<JourneyPlace[]>(places);
   const [currentCourseName, setCurrentCourseName] = useState(courseName);
   const [currentFestivals, setCurrentFestivals] = useState(festivals);
-  const [currentFood, setCurrentFood] = useState(recommendedFood);
   const [rerollExhausted, setRerollExhausted] = useState(false);
 
   const router = useRouter();
@@ -97,14 +89,12 @@ export function CourseResultView({
     setCurrentPlaces(result.places);
     setCurrentCourseName(result.courseName);
     setCurrentFestivals(result.festivals);
-    setCurrentFood(result.recommendedFood);
     sessionStorage.setItem(
       "pendingCourse",
       JSON.stringify({
         places: result.places,
         courseName: result.courseName,
         festivals: result.festivals,
-        recommendedFood: result.recommendedFood,
         mapX,
         mapY,
         scale,
@@ -220,28 +210,19 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 보조 정보 — 근처 식당 추천 / 진행중·예정 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
-        {(currentFood || currentFestivals.length > 0) && (
+        {/* 보조 정보 — 근처 맛집 / 진행중 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
+        {(prefs.food === "matjip" || currentFestivals.length > 0) && (
           <div className="mt-3 flex flex-col gap-2.5">
-            {currentFood && (
-              <a
-                href={currentFood.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border"
-              >
-                <div className="w-9 h-9 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
-                  <UtensilsCrossed size={16} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-text-secondary">근처 식당 추천</p>
-                  <p className="text-[14px] font-semibold text-text-primary truncate">
-                    {currentFood.name} · {currentFood.distance}
-                  </p>
-                </div>
-                <ExternalLink size={14} className="text-text-secondary shrink-0" />
-              </a>
-            )}
+            {prefs.food === "matjip" && currentPlaces[0]?.name && (() => {
+              const coord = currentPlaces[0].coord ?? (mapX && mapY ? { lat: mapY, lng: mapX } : null);
+              return coord ? (
+                <NearbyRestaurants
+                  placeName={currentPlaces[0].name}
+                  addr={currentPlaces[0].addr}
+                  coord={coord}
+                />
+              ) : null;
+            })()}
 
             {currentFestivals.length > 0 && (
               <div className="p-3.5 rounded-xl bg-card border border-border">

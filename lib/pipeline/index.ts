@@ -3,7 +3,6 @@ import type {
   CourseResult,
   PipelineResult,
   PlaceWithTags,
-  RecommendedFood,
 } from "@/lib/pipeline/types";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
 import { collectCandidates } from "@/lib/pipeline/collect";
@@ -17,7 +16,6 @@ import {
 } from "@/lib/pipeline/kakaoCollect";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
-import { fetchNearby } from "@/lib/clients/kakao-local";
 
 export type {
   UserProfile,
@@ -66,7 +64,6 @@ export async function generateCourse(
       mainPlace: null,
       nearbyPlaces: [],
       festivals: { ongoing: [], upcoming: [] },
-      recommended_food: null,
       scale: profile.scale,
       generatedAt: new Date().toISOString(),
     };
@@ -91,7 +88,6 @@ export async function generateCourse(
       mainPlace: null,
       nearbyPlaces: [],
       festivals: { ongoing: [], upcoming: [] },
-      recommended_food: null,
       scale: profile.scale,
       generatedAt: new Date().toISOString(),
     };
@@ -192,40 +188,9 @@ export async function generateCourse(
     );
   }
 
-  // preferFood=true이면 출발지 1km 이내 가장 가까운 음식점 1곳을 추천한다.
-  // 코스 장소로 포함하지 않고 별도 필드로 반환 — 동선 최적화 대상 밖.
-  let recommended_food: RecommendedFood | null = null;
-  if (profile.preferFood) {
-    try {
-      const nearby = await fetchNearby(lat, lng, "FD6", 1000);
-      if (nearby.length > 0) {
-        const p = nearby[0]; // fetchNearby는 거리순 정렬 반환
-        recommended_food = {
-          name: p.place_name,
-          category: p.category_name,
-          address: p.road_address_name || p.address_name,
-          phone: p.phone,
-          distanceM: parseInt(p.distance),
-          url: p.place_url,
-          coord: { lat: parseFloat(p.y), lng: parseFloat(p.x) },
-        };
-        console.log(
-          `[pipeline] 식당 추천 — "${p.place_name}" (${p.distance}m)`,
-        );
-      } else {
-        console.log(`[pipeline] 식당 추천 — 1km 이내 음식점 없음`);
-      }
-    } catch (err) {
-      console.warn(
-        `[pipeline] 식당 추천 실패 (KAKAO_REST_KEY 미설정 또는 API 오류) — ${err}`,
-      );
-    }
-  }
-
   const course: CourseResult = {
     ...courseBase,
     festivals: { ongoing: festivalsOngoing, upcoming: festivalsUpcoming },
-    recommended_food,
   };
 
   const courseIds = new Set([

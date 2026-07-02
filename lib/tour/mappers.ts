@@ -5,7 +5,6 @@ import type {
   JourneyPlace,
   BadgeVariant,
   FestivalSummary,
-  RecommendedFoodSummary,
 } from "@/shared/types/course.types";
 
 type EnglishScale = "light" | "moderate" | "leisurely";
@@ -149,15 +148,3 @@ export function courseResultToFestivalSummaries(
   return result.festivals.ongoing.map((f) => toSummary(f, "ongoing"));
 }
 
-export function courseResultToRecommendedFood(
-  result: CourseResult,
-): RecommendedFoodSummary | null {
-  const f = result.recommended_food;
-  if (!f) return null;
-  return {
-    name: f.name,
-    category: f.category,
-    distance: `${f.distanceM}m`,
-    url: f.url,
-  };
-}

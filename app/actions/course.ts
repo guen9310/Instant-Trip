@@ -5,7 +5,6 @@ import {
   prefsToProfile,
   courseResultToJourneyPlaces,
   courseResultToFestivalSummaries,
-  courseResultToRecommendedFood,
 } from "@/lib/tour/mappers";
 import { fetchNearby } from "@/lib/clients/kakao-local";
 import type { NearbyCategoryCode } from "@/lib/clients/kakao-local";
@@ -14,7 +13,6 @@ import type {
   NearbyCategory,
   NearbyPoi,
   FestivalSummary,
-  RecommendedFoodSummary,
 } from "@/shared/types/course.types";
 
 type Scale = "light" | "moderate" | "leisurely";
@@ -39,7 +37,6 @@ type GenerateCourseResult =
       places: JourneyPlace[];
       courseName: string;
       festivals: FestivalSummary[];
-      recommendedFood: RecommendedFoodSummary | null;
     }
   | { ok: false; error: string };
 
@@ -117,9 +114,8 @@ export async function generateCourseAction(
     const places = courseResultToJourneyPlaces(course);
     const courseName = course.mainPlace.title + COURSE_SUFFIX[scale];
     const festivals = courseResultToFestivalSummaries(course);
-    const recommendedFood = courseResultToRecommendedFood(course);
 
-    return { ok: true, places, courseName, festivals, recommendedFood };
+    return { ok: true, places, courseName, festivals };
   } catch (err) {
     const message = err instanceof Error ? err.message : "코스 생성 중 오류가 발생했습니다.";
     return { ok: false, error: message };

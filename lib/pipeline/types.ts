@@ -100,22 +100,10 @@ export interface CoursePlace {
   estimatedDurationMin: number;
 }
 
-// Kakao 로컬 API에서 가져온 식당 요약 — preferFood=true일 때만 채워짐
-export interface RecommendedFood {
-  name: string;
-  category: string;    // 카테고리명 (예: "한식 > 해물,생선요리")
-  address: string;
-  phone: string;
-  distanceM: number;
-  url: string;
-  coord: { lat: number; lng: number };
-}
-
 export interface CourseResult {
   mainPlace: CoursePlace | null;
   nearbyPlaces: CoursePlace[];
   festivals: { ongoing: CulturalFestival[]; upcoming: CulturalFestival[] };
-  recommended_food: RecommendedFood | null;
   scale: TravelScale;
   generatedAt: string;
 }

@@ -313,11 +313,7 @@ async function run() {
   }
 
   sep("식당 추천 (preferFood)");
-  if (course.recommended_food) {
-    console.log(`  ${course.recommended_food.name} (${course.recommended_food.distanceM}m) | ${course.recommended_food.category}`);
-  } else {
-    console.log(`  (없음 — preferFood=${preferFood})`);
-  }
+  console.log(`  preferFood=${preferFood} — Kakao Map 링크 방식으로 전환, 파이프라인에서 별도 조회하지 않음`);
 
   sep("점수화 상위 10 (전체)");
   for (const c of debug.scored.slice(0, 10)) {

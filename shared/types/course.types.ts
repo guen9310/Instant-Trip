@@ -28,13 +28,6 @@ export type FestivalSummary = {
   imageUrl: string | null;
 };
 
-// 코스 결과의 보조 정보 — preferFood=true일 때만 채워지는 식당 1곳 추천
-export type RecommendedFoodSummary = {
-  name: string;
-  category: string;
-  distance: string;
-  url: string;
-};
 
 export type NearbyCategory = "all" | "cafe" | "convenience" | "pharmacy" | "restaurant" | "parking" | "gas_station";
 
