@@ -26,8 +26,8 @@ function makeCacheKey(lat: number, lng: number, radiusM: number): string {
 }
 
 function normalizeKakaoPlace(place: KakaoPlaceTagged): TourItem {
-  // contenttypeid: CT1(문화시설) → "14", AT4(관광명소) → "12"
-  const contenttypeid = place.kakaoCategory === "CT1" ? "14" : "12";
+  // 공원류만 수집하므로 contenttypeid는 항상 "12" (관광지)
+  const contenttypeid = "12";
 
   return {
     contentid: `kakao_${place.id}`,
@@ -67,8 +67,7 @@ export async function collectKakaoCandidates(
   const items = places.map(normalizeKakaoPlace);
 
   console.log(
-    `[kakao] 수집 완료 — AT4카테고리:${rawCounts.at4Category} CT1:${rawCounts.ct1Category} 공원키워드:${rawCounts.parkKeyword}건` +
-    ` → 중복제거후 ${items.length}건 (${Date.now() - t0}ms)`,
+    `[kakao] 수집 완료 — 공원:${rawCounts.parkKeyword}건 (${Date.now() - t0}ms)`,
   );
 
   return items;
@@ -113,20 +112,16 @@ export async function supplementWithKakao(
     return true;
   });
 
-  // 내부 중복(id 기준): rawCounts 합산 - 정규화 후 배열 크기
-  const rawTotal = rawCounts.at4Category + rawCounts.ct1Category + rawCounts.parkKeyword;
-  const internalDupCount = rawTotal - kakaoItems.length;
   // 좌표 중복(tour-vs-kakao 50m 기준)
   const coordDupCount = kakaoItems.length - dedupedKakao.length;
 
-  const at4Final = dedupedKakao.filter((i) => i.kakaoCategory === "AT4").length;
-  const ct1Final = dedupedKakao.filter((i) => i.kakaoCategory === "CT1").length;
+  const parkFinal = dedupedKakao.length;
 
   console.log(
     `[보충] 발동 (가용 ${tourAvailable.length}<${KAKAO_SUPPLEMENT_MIN})` +
-    ` → AT4 ${rawCounts.at4Category} + 공원 ${rawCounts.parkKeyword} + CT1 ${rawCounts.ct1Category},` +
-    ` 내부중복 ${internalDupCount}건 / 좌표중복 ${coordDupCount}건 제거,` +
-    ` 최종 tour:${tourAvailable.length}/kakao:${at4Final + ct1Final}`,
+    ` → 공원키워드 ${rawCounts.parkKeyword}건,` +
+    ` 좌표중복 ${coordDupCount}건 제거,` +
+    ` 최종 tour:${tourAvailable.length}/공원:${parkFinal}`,
   );
 
   return [...tourAvailable, ...dedupedKakao];
