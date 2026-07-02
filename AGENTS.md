@@ -167,3 +167,27 @@ Do not use effects to cascade React state updates. If you find yourself writing 
 ### Read custom hook implementations before solving a problem they already solve
 
 Before introducing a workaround (e.g. a "latest ref" to avoid stale closures), check whether the hook you are calling already handles it internally. Duplicating a solution the hook owns makes the code harder to follow and introduces subtle bugs.
+
+---
+
+## 9. Change Summary After Code Modifications
+
+After completing code changes, provide a **file-by-file explanation of what changed and why**.
+
+### Format
+
+- Write a separate entry for each modified file.
+- Each entry must include **what changed** (before/after, or added/removed) and **why** (bug, design decision, dead code, etc.).
+- Only state facts confirmed from the actual diff. Do not fill entries with speculation or intent.
+- For new files, summarize the file's role and key design decisions instead of a diff.
+
+### Level of Detail
+
+- Trivial changes (type fixes, comment corrections) can be a single line.
+- Logic changes or structural refactors must include concrete before/after.
+- Bug fixes with a clear "why" should describe what was going wrong and under what conditions.
+
+### Timing
+
+- Provide after any task that modifies 3 or more files, or when explicitly requested.
+- Write it immediately after changes are complete so the user can review before staging or committing.
