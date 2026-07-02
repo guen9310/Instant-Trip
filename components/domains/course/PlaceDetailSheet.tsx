@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { ElementType } from "react";
 import { cn } from "@/shared/utils";
-import { Sheet, SheetContent } from "@/components/commons/Sheet";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/commons/Drawer";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import type { JourneyPlace } from "@/shared/types/course.types";
@@ -41,22 +41,9 @@ export function PlaceDetailSheet({
   rejectDisabled,
 }: Props) {
   return (
-    <Sheet
-      open={!!place}
-      onOpenChange={(open: boolean) => {
-        if (!open) onClose();
-      }}
-    >
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        className="p-0 rounded-t-[20px] max-h-[90dvh] gap-0 overflow-hidden"
-      >
-        {/* 드래그 핸들 */}
-        <div className="flex justify-center pt-2 pb-3.5">
-          <div className="w-9 h-1 rounded-full bg-border" />
-        </div>
-        {/* key를 place.id로 두어 장소 변경 시 내부 상태 자동 리셋 */}
+    <Drawer open={!!place} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DrawerContent className="h-[90dvh]">
+        <DrawerTitle className="sr-only">{place?.name ?? "장소 상세"}</DrawerTitle>
         {place && (
           <PlaceDetailContent
             key={place.id}
@@ -66,8 +53,8 @@ export function PlaceDetailSheet({
             rejectDisabled={rejectDisabled}
           />
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -87,6 +74,9 @@ function PlaceDetailContent({
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [descHasMore, setDescHasMore] = useState(false);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const roadviewRef = useRef<HTMLDivElement>(null);
+  const [viewMode, setViewMode] = useState<"photo" | "roadview">("photo");
+  const [roadviewAvailable, setRoadviewAvailable] = useState(false);
 
   useEffect(() => {
     const el = descRef.current;
@@ -98,6 +88,35 @@ function PlaceDetailContent({
       }
     }
   }, [place.desc]);
+
+  // 로드뷰 커버리지 확인 — coord 없으면 스킵
+  useEffect(() => {
+    if (!place.coord) return;
+    const win = window as unknown as { kakao?: { maps?: { load?: (cb: () => void) => void } } };
+    win.kakao?.maps?.load?.(() => {
+      const pos = new kakao.maps.LatLng(place.coord!.lat, place.coord!.lng);
+      const client = new kakao.maps.RoadviewClient();
+      client.getNearestPanoId(pos, 50, (panoId) => {
+        setRoadviewAvailable(panoId > 0);
+      });
+    });
+  }, [place.coord]);
+
+  // 거리뷰 모드 진입 시 Roadview 초기화
+  useEffect(() => {
+    if (viewMode !== "roadview" || !roadviewRef.current || !place.coord) return;
+    const win = window as unknown as { kakao?: { maps?: { load?: (cb: () => void) => void } } };
+    win.kakao?.maps?.load?.(() => {
+      if (!roadviewRef.current) return;
+      const pos = new kakao.maps.LatLng(place.coord!.lat, place.coord!.lng);
+      const rv = new kakao.maps.Roadview(roadviewRef.current);
+      const client = new kakao.maps.RoadviewClient();
+      client.getNearestPanoId(pos, 50, (panoId) => {
+        rv.setPanoId(panoId, pos);
+        requestAnimationFrame(() => rv.relayout());
+      });
+    });
+  }, [viewMode, place.coord]);
 
   const handleToggleDesc = () => {
     if (isDescExpanded && descRef.current) {
@@ -113,23 +132,49 @@ function PlaceDetailContent({
   };
 
   return (
-    <div className="overflow-hidden relative">
+    <div className="overflow-hidden relative flex-1 min-h-0">
       <div
-        className="flex transition-transform duration-250 ease-in-out"
+        className="flex transition-transform duration-250 ease-in-out h-full"
         style={{
           transform: isRejecting ? "translateX(-50%)" : "translateX(0)",
           width: "200%",
         }}
       >
         {/* 기본 패널 */}
-        <div className="w-1/2 pb-5 box-border">
-          <div className="px-5">
-            <PlaceThumbnail
-              imageUrl={place.imageUrl}
-              cat={place.cat}
-              className="w-full h-44 rounded-xl"
-              sizes="50vw"
-            />
+        <div className="w-1/2 overflow-y-auto pb-5">
+          <div className="relative px-5">
+            {viewMode === "photo" ? (
+              <PlaceThumbnail
+                imageUrl={place.imageUrl}
+                cat={place.cat}
+                className="w-full h-44 rounded-xl"
+                sizes="50vw"
+              />
+            ) : (
+              <div ref={roadviewRef} className="w-full h-44 rounded-xl overflow-hidden" />
+            )}
+            {roadviewAvailable && (
+              <div className="absolute top-2 right-7 flex rounded-lg overflow-hidden border border-border bg-background/90 shadow-sm backdrop-blur-sm">
+                <button
+                  onClick={() => setViewMode("photo")}
+                  className={cn(
+                    "px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    viewMode === "photo" ? "bg-primary text-white" : "text-text-secondary",
+                  )}
+                >
+                  사진
+                </button>
+                <button
+                  onClick={() => setViewMode("roadview")}
+                  className={cn(
+                    "px-2.5 py-1 text-[11px] font-medium transition-colors",
+                    viewMode === "roadview" ? "bg-primary text-white" : "text-text-secondary",
+                  )}
+                >
+                  거리뷰
+                </button>
+              </div>
+            )}
           </div>
           <div className="px-5 pt-3">
             <div className="flex items-start justify-between gap-3">
@@ -235,7 +280,7 @@ function PlaceDetailContent({
         </div>
 
         {/* 거절 패널 */}
-        <div className="w-1/2 px-5 pt-3 pb-5 box-border">
+        <div className="w-1/2 px-5 pt-3 pb-5 overflow-y-auto">
           <button
             onClick={() => setIsRejecting(false)}
             className="flex items-center gap-1 text-text-secondary text-[14px] font-medium mb-3.5"

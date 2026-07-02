@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, MapPin } from "lucide-react";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/commons/Sheet";
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/commons/Drawer";
 import {
   Accordion,
   AccordionContent,
@@ -79,11 +79,9 @@ export function FeedCourseSheet({
   if (!course) return null;
 
   return (
-    <Sheet open={open} onOpenChange={(o) => onOpenChange(o)}>
-      <SheetContent
-        side="bottom"
-        className="rounded-t-2xl overflow-y-auto max-h-[80vh] dark:bg-surface"
-      >
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[80vh] dark:bg-surface">
+        <div className="overflow-y-auto flex-1 min-h-0">
         {phase === "loading" ? (
           <div className="flex flex-col items-center justify-center min-h-[280px] gap-4">
             <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -93,11 +91,11 @@ export function FeedCourseSheet({
           </div>
         ) : (
           <>
-            <SheetHeader>
-              <SheetTitle className="text-[18px] font-bold tracking-[-0.01em]">
+            <DrawerHeader>
+              <DrawerTitle className="text-[18px] font-bold tracking-[-0.01em]">
                 {course.name}
-              </SheetTitle>
-              <SheetDescription>
+              </DrawerTitle>
+              <DrawerDescription>
                 <a
                   href={`https://map.kakao.com/link/search/${encodeURIComponent(course.name)}`}
                   target="_blank"
@@ -107,8 +105,8 @@ export function FeedCourseSheet({
                   <MapPin size={13} />
                   {course.region}
                 </a>
-              </SheetDescription>
-            </SheetHeader>
+              </DrawerDescription>
+            </DrawerHeader>
 
             <Accordion className="px-4">
               {displayFeedPlaces.map((place, i) => {
@@ -181,7 +179,7 @@ export function FeedCourseSheet({
               </p>
             )}
 
-            <SheetFooter>
+            <DrawerFooter>
               {phase === "default" && (
                 <Button size="cta" onClick={handleGoActive}>
                   나도 이 코스 가볼게요
@@ -206,10 +204,11 @@ export function FeedCourseSheet({
                   이 코스로 갈게요
                 </Button>
               )}
-            </SheetFooter>
+            </DrawerFooter>
           </>
         )}
-      </SheetContent>
-    </Sheet>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
