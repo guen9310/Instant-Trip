@@ -3,7 +3,7 @@
 import { generateCourse } from "@/lib/pipeline";
 import {
   prefsToProfile,
-  courseResultToJourneyPlaces,
+  coursePlaceToJourneyPlace,
   courseResultToFestivalSummaries,
 } from "@/lib/tour/mappers";
 import { fetchNearby } from "@/lib/clients/kakao-local";
@@ -34,7 +34,7 @@ interface GenerateCoursePayload {
 type GenerateCourseResult =
   | {
       ok: true;
-      places: JourneyPlace[];
+      place: JourneyPlace;
       courseName: string;
       festivals: FestivalSummary[];
     }
@@ -74,8 +74,7 @@ export async function fetchNearbyPoisAction(
           console.error(`[nearby] ${cat}(${code}) 실패:`, e);
           return [];
         });
-        console.log(`[nearby] ${cat}(${code}) raw ${places.length}건:`, places.map((p) => p.place_name));
-        const mapped = places
+        return places
           .filter((p) => p.x && p.y)
           .map((p): NearbyPoi => ({
             id:       p.id,
@@ -86,13 +85,10 @@ export async function fetchNearbyPoisAction(
             coord:    { lat: parseFloat(p.y), lng: parseFloat(p.x) },
             placeUrl: p.place_url,
           }));
-        console.log(`[nearby] ${cat} 최종 ${mapped.length}건:`, mapped.map((p) => p.name));
-        return mapped;
       }),
     );
     const pois = results.flat();
     pois.sort((a, b) => parseInt(a.dist) - parseInt(b.dist));
-    console.log(`[nearby] 전체 합계 ${pois.length}건`);
     return { ok: true, pois };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "조회 실패" };
@@ -111,11 +107,11 @@ export async function generateCourseAction(
       return { ok: false, error: "주변에 적합한 장소를 찾지 못했습니다." };
     }
 
-    const places = courseResultToJourneyPlaces(course);
+    const place = coursePlaceToJourneyPlace(course.mainPlace);
     const courseName = course.mainPlace.title + COURSE_SUFFIX[scale];
     const festivals = courseResultToFestivalSummaries(course);
 
-    return { ok: true, places, courseName, festivals };
+    return { ok: true, place, courseName, festivals };
   } catch (err) {
     const message = err instanceof Error ? err.message : "코스 생성 중 오류가 발생했습니다.";
     return { ok: false, error: message };

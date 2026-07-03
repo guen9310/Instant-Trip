@@ -11,6 +11,7 @@ import { NoNearbyView } from "@/components/domains/course/NoNearbyView";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { generateCourseAction } from "@/app/actions/course";
+import type { PendingCourse } from "@/shared/types/course.types";
 
 const SCALES = [
   {
@@ -103,17 +104,15 @@ export function StartView() {
       return;
     }
 
-    sessionStorage.setItem(
-      "pendingCourse",
-      JSON.stringify({
-        places: result.places,
-        courseName: result.courseName,
-        festivals: result.festivals,
-        mapX: coords.lng,
-        mapY: coords.lat,
-        scale: selected,
-      }),
-    );
+    const pending: PendingCourse = {
+      place: result.place,
+      courseName: result.courseName,
+      festivals: result.festivals,
+      mapX: coords.lng,
+      mapY: coords.lat,
+      scale: selected,
+    };
+    localStorage.setItem("pendingCourse", JSON.stringify(pending));
     router.push("/course/preview");
   };
 

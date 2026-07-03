@@ -19,7 +19,7 @@ import {
   MAX_REROLLS,
 } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
-import type { JourneyPlace, FestivalSummary } from "@/shared/types/course.types";
+import type { JourneyPlace, FestivalSummary, PendingCourse } from "@/shared/types/course.types";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
 
@@ -31,7 +31,7 @@ const TRAVEL_REASON: Record<string, string> = {
 type Props = {
   courseId: string;
   courseName: string;
-  places: JourneyPlace[];
+  place: JourneyPlace;
   festivals?: FestivalSummary[];
   isLoading?: boolean;
   mapX?: number;
@@ -42,7 +42,7 @@ type Props = {
 export function CourseResultView({
   courseId,
   courseName,
-  places,
+  place,
   festivals = [],
   isLoading = false,
   mapX,
@@ -51,7 +51,7 @@ export function CourseResultView({
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
   const [rerolling, setRerolling] = useState(false);
-  const [currentPlaces, setCurrentPlaces] = useState<JourneyPlace[]>(places);
+  const [currentPlace, setCurrentPlace] = useState<JourneyPlace>(place);
   const [currentCourseName, setCurrentCourseName] = useState(courseName);
   const [currentFestivals, setCurrentFestivals] = useState(festivals);
   const [rerollExhausted, setRerollExhausted] = useState(false);
@@ -71,7 +71,7 @@ export function CourseResultView({
     setRerolling(true);
     setRerollExhausted(false);
 
-    const prevIds = new Set(currentPlaces.map((p) => p.id));
+    const prevId = currentPlace.id;
 
     const result = await generateCourseAction({
       mapX,
@@ -88,27 +88,24 @@ export function CourseResultView({
       return;
     }
 
-    setCurrentPlaces(result.places);
+    setCurrentPlace(result.place);
     setCurrentCourseName(result.courseName);
     setCurrentFestivals(result.festivals);
 
-    const replaced = result.places.find((p) => !prevIds.has(p.id));
-    if (replaced) {
-      setNewPlaceId(replaced.id);
+    if (result.place.id !== prevId) {
+      setNewPlaceId(result.place.id);
       setTimeout(() => setNewPlaceId(null), 3000);
     }
 
-    sessionStorage.setItem(
-      "pendingCourse",
-      JSON.stringify({
-        places: result.places,
-        courseName: result.courseName,
-        festivals: result.festivals,
-        mapX,
-        mapY,
-        scale,
-      }),
-    );
+    const pending: PendingCourse = {
+      place: result.place,
+      courseName: result.courseName,
+      festivals: result.festivals,
+      mapX,
+      mapY,
+      scale,
+    };
+    localStorage.setItem("pendingCourse", JSON.stringify(pending));
   };
 
   const handleReject = async (placeId: string, reason: string): Promise<void> => {
@@ -118,33 +115,12 @@ export function CourseResultView({
   };
 
   const handleStart = () => {
-    startCourse(courseId, currentPlaces.length);
+    startCourse(courseId);
     router.push(`/course/${courseId}/active`);
   };
 
   if (isLoading) {
     return <CourseResultSkeleton />;
-  }
-
-  if (places.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-12">
-        <div className="w-14 h-14 rounded-full bg-point/10 flex items-center justify-center">
-          <AlertCircle size={28} className="text-point" strokeWidth={2} />
-        </div>
-        <div className="text-center">
-          <p className="text-[16px] font-bold text-text-primary mb-1">
-            코스 생성에 실패했어요
-          </p>
-          <p className="text-[13px] text-text-secondary leading-relaxed">
-            조건에 맞는 코스를 찾지 못했어요
-          </p>
-        </div>
-        <Button onClick={() => router.push("/start")} className="gap-2">
-          <Settings2 size={15} /> 취향 다시 설정
-        </Button>
-      </div>
-    );
   }
 
   return (
@@ -175,31 +151,15 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 타임라인 */}
-        <div className="relative pl-8">
-          <div className="absolute left-3.25 top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
-          {currentPlaces.map((p, i) => (
-            <div
-              key={p.id}
-              className={cn(
-                "relative",
-                i < currentPlaces.length - 1 ? "mb-3.5" : "",
-              )}
-            >
-              <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold border-[3px] border-background z-10">
-                {i + 1}
-              </div>
-              <PlaceCardTimeline
-                place={p}
-                onClick={() => setSelectedPlace(p)}
-                isNew={p.id === newPlaceId}
-              />
-            </div>
-          ))}
-        </div>
+        {/* 추천 장소 카드 */}
+        <PlaceCardTimeline
+          place={currentPlace}
+          onClick={() => setSelectedPlace(currentPlace)}
+          isNew={currentPlace.id === newPlaceId}
+        />
 
         {/* 예상 체류 카드 */}
-        {currentPlaces[0]?.dur && (
+        {currentPlace.dur && (
           <div className="mt-6 p-4 rounded-xl bg-card flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
               <Clock size={18} />
@@ -207,7 +167,7 @@ export function CourseResultView({
             <div>
               <p className="text-xs text-text-secondary">예상 체류</p>
               <p className="text-[15px] font-semibold text-text-primary">
-                {currentPlaces[0].dur}
+                {currentPlace.dur}
               </p>
             </div>
           </div>
@@ -216,12 +176,12 @@ export function CourseResultView({
         {/* 보조 정보 — 근처 맛집 / 진행중 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
         {(prefs.food === "matjip" || currentFestivals.length > 0) && (
           <div className="mt-3 flex flex-col gap-2.5">
-            {prefs.food === "matjip" && currentPlaces[0]?.name && (() => {
-              const coord = currentPlaces[0].coord ?? (mapX && mapY ? { lat: mapY, lng: mapX } : null);
+            {prefs.food === "matjip" && (() => {
+              const coord = currentPlace.coord ?? (mapX && mapY ? { lat: mapY, lng: mapX } : null);
               return coord ? (
                 <NearbyRestaurants
-                  placeName={currentPlaces[0].name}
-                  addr={currentPlaces[0].addr}
+                  placeName={currentPlace.name}
+                  addr={currentPlace.addr}
                   coord={coord}
                 />
               ) : null;
@@ -327,15 +287,7 @@ function CourseResultSkeleton() {
     <div className="flex-1 px-4 pt-5 pb-4 animate-pulse">
       <div className="h-7 w-48 rounded-lg bg-muted mb-2" />
       <div className="h-4 w-32 rounded bg-muted mb-5" />
-      <div className="relative pl-8">
-        <div className="absolute left-3.25 top-2.5 bottom-2.5 w-0.5 bg-border rounded-full" />
-        {[0, 1, 2].map((i) => (
-          <div key={i} className={cn("relative", i < 2 ? "mb-3.5" : "")}>
-            <div className="absolute -left-8 top-2.5 w-7 h-7 rounded-full bg-muted border-[3px] border-background z-10" />
-            <div className="h-20 rounded-xl bg-muted" />
-          </div>
-        ))}
-      </div>
+      <div className="h-20 rounded-xl bg-muted" />
       <div className="mt-6 h-16 rounded-xl bg-muted" />
     </div>
   );

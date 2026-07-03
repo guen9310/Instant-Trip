@@ -66,7 +66,7 @@ export function NearbyRestaurants({ placeName, addr, coord }: Props) {
         },
       );
     });
-  }, [placeName, coord.lat, coord.lng]);
+  }, [placeName, addr, coord.lat, coord.lng]);
 
   if (failed || (places !== null && places.length === 0)) {
     return <FallbackLink placeName={placeName} addr={addr} />;

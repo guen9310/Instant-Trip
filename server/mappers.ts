@@ -72,8 +72,6 @@ export function toCourseProgress(
 ): CourseProgress {
   return {
     name: course.name,
-    current: completion.currentPlaceIndex + 1,
-    total: 0, // 호출부에서 places.length로 채워야 함
     region: course.region,
     courseId: course.id,
   };

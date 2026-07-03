@@ -1,5 +1,5 @@
 import type { UserProfile, TravelScale } from "@/lib/pipeline/types";
-import type { CourseResult } from "@/lib/pipeline/types";
+import type { CourseResult, CoursePlace } from "@/lib/pipeline/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import type {
   JourneyPlace,
@@ -60,61 +60,29 @@ export function prefsToProfile(
   };
 }
 
-export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[] {
-  const places: JourneyPlace[] = [];
+export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
+  const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
+  const firstTag = p.tags[0];
+  const badge = firstTag
+    ? (TAG_BADGE[firstTag] ?? { text: cat, variant: "secondary" as BadgeVariant })
+    : { text: cat, variant: "secondary" as BadgeVariant };
 
-  if (result.mainPlace) {
-    const p = result.mainPlace;
-    const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
-    const firstTag = p.tags[0];
-    const badge = firstTag
-      ? (TAG_BADGE[firstTag] ?? { text: cat, variant: "secondary" as BadgeVariant })
-      : { text: cat, variant: "secondary" as BadgeVariant };
-
-    places.push({
-      id:       p.contentId,
-      cat,
-      name:     p.title,
-      addr:     p.address,
-      hours:    "",
-      time:     "",
-      dur:      `보통 ${p.estimatedDurationMin}분 정도`,
-      travel:   "",
-      badge,
-      desc:     p.overview,
-      coord:    p.coord,
-      imageUrl: p.images?.[0] ?? null,
-      availabilityUncertain: p.availabilityUncertain,
-      estimatedDurationMin: p.estimatedDurationMin,
-    });
-  }
-
-  for (const p of result.nearbyPlaces) {
-    const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
-    const firstTag = p.tags[0];
-    const badge = firstTag
-      ? (TAG_BADGE[firstTag] ?? { text: cat, variant: "secondary" as BadgeVariant })
-      : { text: cat, variant: "secondary" as BadgeVariant };
-
-    places.push({
-      id:       p.contentId,
-      cat,
-      name:     p.title,
-      addr:     p.address,
-      hours:    "",
-      time:     "",
-      dur:      `보통 ${p.estimatedDurationMin}분 정도`,
-      travel:   "도보 이동",
-      badge,
-      desc:     p.overview,
-      coord:    p.coord,
-      imageUrl: p.images?.[0] ?? null,
-      availabilityUncertain: p.availabilityUncertain,
-      estimatedDurationMin: p.estimatedDurationMin,
-    });
-  }
-
-  return places;
+  return {
+    id:       p.contentId,
+    cat,
+    name:     p.title,
+    addr:     p.address,
+    hours:    "",
+    time:     "",
+    dur:      `보통 ${p.estimatedDurationMin}분 정도`,
+    travel:   "",
+    badge,
+    desc:     p.overview,
+    coord:    p.coord,
+    imageUrl: p.images?.[0] ?? null,
+    availabilityUncertain: p.availabilityUncertain,
+    estimatedDurationMin: p.estimatedDurationMin,
+  };
 }
 
 // 공공데이터포털 응답은 "YYYY-MM-DD"(대시 포함, 2026-06-29 확인) 형식이다.

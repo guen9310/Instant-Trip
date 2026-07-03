@@ -110,18 +110,9 @@ export function ProfileView({ user, inProgress, completed }: Props) {
                   </span>
                   <Badge variant="secondary">진행 중</Badge>
                 </div>
-                <p className="text-[12px] text-text-secondary mb-2">
-                  장소 {inProgress.current} / {inProgress.total} ·{" "}
+                <p className="text-[12px] text-text-secondary">
                   {inProgress.region}
                 </p>
-                <div className="h-1.5 rounded-full bg-border">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{
-                      width: `${(inProgress.current / inProgress.total) * 100}%`,
-                    }}
-                  />
-                </div>
               </div>
               <Link
                 href={`/course/${inProgress.courseId}/active`}

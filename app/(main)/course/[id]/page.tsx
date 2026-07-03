@@ -7,7 +7,7 @@ export default function CoursePage({ params }: { params: { id: string } }) {
     <CourseResultView
       courseId={params.id}
       courseName="적당히 즐기는 코스"
-      places={MOCK_PLACES}
+      place={MOCK_PLACES[0]}
     />
   );
 }

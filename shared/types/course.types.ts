@@ -1,6 +1,6 @@
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
 
-// 코스 진행 중 한 장소의 상세 데이터 (여정 화면에서 사용)
+// 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)
 export type JourneyPlace = {
   id: string;
   cat: string;
@@ -41,11 +41,19 @@ export type NearbyPoi = {
   placeUrl: string;
 };
 
+// localStorage "pendingCourse" — 생성된 추천을 프리뷰/진행 화면으로 전달
+export type PendingCourse = {
+  place: JourneyPlace;
+  courseName: string;
+  festivals?: FestivalSummary[];
+  mapX?: number;
+  mapY?: number;
+  scale?: string;
+};
+
 // 프로필 — 진행 중인 코스 상태
 export type CourseProgress = {
   name: string;
-  current: number;
-  total: number;
   region: string;
   courseId: string;
 };

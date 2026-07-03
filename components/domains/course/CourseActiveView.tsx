@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowRight,
   Navigation,
   Coffee,
   ShoppingBag,
@@ -11,6 +10,7 @@ import {
   Utensils,
   SquareParking,
   Fuel,
+  Check,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -45,8 +45,8 @@ const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
   { id: "gas_station", label: "주유소" },
 ];
 
-export function CourseActiveView() {
-  const state = useCourseActive();
+export function CourseActiveView({ courseId }: { courseId: string }) {
+  const state = useCourseActive(courseId);
 
   if (state.status === "loading") {
     return (
@@ -56,7 +56,7 @@ export function CourseActiveView() {
     );
   }
 
-  const { places, idx, current, next, cat, setCat, pois, filteredPois, poisLoading, selectedPoiId, selectPoi, handleAdvance } = state;
+  const { place, cat, setCat, pois, filteredPois, poisLoading, selectedPoiId, selectPoi, handleComplete } = state;
 
   const selectedPoi = selectedPoiId ? pois.find((p) => p.id === selectedPoiId) ?? null : null;
   const kakaoNavUrl = selectedPoi
@@ -72,12 +72,11 @@ export function CourseActiveView() {
           <h1 className="text-[18px] font-bold text-text-primary tracking-tight">
             진행 중인 코스
           </h1>
-          <StepDots total={places.length} current={idx} />
         </div>
 
-        {current.coord ? (
+        {place.coord ? (
           <CourseMap
-            mainPlace={{ name: current.name, coord: current.coord }}
+            mainPlace={{ name: place.name, coord: place.coord }}
             pois={selectedPoiId ? pois.filter((p) => p.id === selectedPoiId) : []}
             selectedPoiId={selectedPoiId}
             onSelectPoi={selectPoi}
@@ -108,27 +107,22 @@ export function CourseActiveView() {
 
       {/* 바텀시트 — 세 섹션으로 분리 */}
       <div className="flex-1 overflow-y-auto bg-background rounded-t-3xl -mt-5 z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        {/* 드래그 핸들 */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-9 h-1 rounded-full bg-border" />
-        </div>
-
-        <div className="px-4 pt-2 pb-4 flex flex-col gap-4">
+        <div className="px-4 pt-4 pb-4 flex flex-col gap-4">
           {/* 섹션 A: 지금 여기 */}
           <div className="rounded-xl bg-card border-l-4 border-primary px-4 py-3.5">
             <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-2">
               지금 여기
             </p>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[17px] font-bold text-text-primary leading-tight">{current.name}</span>
+              <span className="text-[17px] font-bold text-text-primary leading-tight">{place.name}</span>
               <Badge variant="secondary">현재</Badge>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
-                {current.cat}
+                {place.cat}
               </span>
               <span className="text-text-secondary/50">·</span>
-              <span className="text-xs text-text-secondary">{current.dur} 머무는 중</span>
+              <span className="text-xs text-text-secondary">{place.dur} 머무는 중</span>
             </div>
           </div>
 
@@ -146,37 +140,14 @@ export function CourseActiveView() {
               onSelect={selectPoi}
             />
           </div>
-
-          {/* 섹션 C: 다음 장소 */}
-          {next && (
-            <div className="p-4 rounded-xl bg-card border border-border">
-              <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-[0.04em] mb-2.5">
-                다음 장소
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
-                  <Navigation size={16} strokeWidth={2} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-bold text-text-primary tracking-tight mb-1">
-                    {next.name}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={next.badge.variant}>{next.cat}</Badge>
-                    <span className="text-xs text-text-secondary">{next.travel} 이동</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
-        <Button size="cta" className="w-full gap-2" onClick={handleAdvance}>
-          {idx >= places.length - 1 ? "코스 완료" : "여기 완료, 다음으로"}
-          <ArrowRight size={16} />
+        <Button size="cta" className="w-full gap-2" onClick={handleComplete}>
+          코스 완료
+          <Check size={16} />
         </Button>
       </div>
     </>
@@ -290,22 +261,6 @@ function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: Ne
             </button>
           )}
         </div>
-      ))}
-    </div>
-  );
-}
-
-function StepDots({ total, current }: { total: number; current: number }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          className={cn(
-            "rounded-full transition-all",
-            i < current ? "w-2 h-2 bg-primary/30" : i === current ? "w-4 h-2 bg-primary" : "w-2 h-2 bg-border",
-          )}
-        />
       ))}
     </div>
   );
