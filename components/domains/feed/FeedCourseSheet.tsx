@@ -73,7 +73,7 @@ export function FeedCourseSheet({
 
   const handleGoActive = () => {
     onOpenChange(false);
-    router.push(`/course/${course?.id}/active`);
+    router.push(`/course/active/${course?.id}`);
   };
 
   if (!course) return null;

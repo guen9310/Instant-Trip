@@ -92,7 +92,7 @@ export function useCourseActive(courseId: string): CourseActiveState {
 
   const handleComplete = () => {
     complete();
-    router.push(`/course/${courseId}/done`);
+    router.push(`/course/done/${courseId}`);
   };
 
   return {

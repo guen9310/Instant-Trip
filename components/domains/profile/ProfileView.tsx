@@ -115,7 +115,7 @@ export function ProfileView({ user, inProgress, completed }: Props) {
                 </p>
               </div>
               <Link
-                href={`/course/${inProgress.courseId}/active`}
+                href={`/course/active/${inProgress.courseId}`}
                 className={cn(
                   buttonVariants({ size: "default" }),
                   "shrink-0 rounded-lg px-3.5 text-[13px] font-semibold",

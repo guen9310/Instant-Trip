@@ -119,7 +119,7 @@ export function CourseResultView({
 
   const handleStart = () => {
     startCourse(currentCourseId);
-    router.push(`/course/${currentCourseId}/active`);
+    router.push(`/course/active/${currentCourseId}`);
   };
 
   if (isLoading) {
