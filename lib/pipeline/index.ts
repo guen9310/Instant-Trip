@@ -145,8 +145,10 @@ export async function generateCourse(
       ...item,
       // Kakao 보충 아이템은 tagScores가 없으므로 항상 applyMappingRules 적용
       tagScores: (item as PlaceWithTags).tagScores ?? applyMappingRules(item),
-      // filterByAvailability가 부착한 플래그; 카카오 보충 아이템엔 없으므로 false 기본값
-      availabilityUncertain: (item as PlaceWithTags).availabilityUncertain ?? false,
+      // filterByAvailability가 부착한 플래그; 카카오 보충 아이템은 운영시간 데이터가
+      // 아예 없으므로(가용성 검사 미통과) 항상 불확실로 처리한다.
+      availabilityUncertain:
+        (item as PlaceWithTags).availabilityUncertain ?? item.source === "kakao",
     }));
   if (excludeSet.size > 0) {
     console.log(

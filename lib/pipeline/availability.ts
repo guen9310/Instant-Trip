@@ -193,8 +193,9 @@ export async function filterByAvailability(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         errCount++;
-        console.warn(`${prefix} → 통과(API오류) (${Date.now() - ts}ms)`);
-        return { ...item, availabilityUncertain: false };
+        console.warn(`${prefix} → 통과(API오류) → uncertain=true (${Date.now() - ts}ms)`);
+        // 운영시간을 확인하지 못한 채 통과시키는 것이므로 불확실 플래그를 켠다.
+        return { ...item, availabilityUncertain: true };
       }
     }
 
