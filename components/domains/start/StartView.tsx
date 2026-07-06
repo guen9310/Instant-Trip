@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Footprints, Map, Compass, Check, Shuffle, AlertCircle } from "lucide-react";
+import {
+  MapPin,
+  Footprints,
+  Map,
+  Compass,
+  Check,
+  Shuffle,
+  AlertCircle,
+} from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingOverlay";
@@ -46,10 +54,51 @@ export function StartView() {
   const [selected, setSelected] = useState<ScaleId>("moderate");
   const [loading, setLoading] = useState(false);
   const [noNearby, setNoNearby] = useState(false);
+  // 마지막 생성 시도에 실제 사용된 검색 반경(m) — NoNearbyView 문구·확장 반경 계산용
+  const [searchRadiusM, setSearchRadiusM] = useState<number | null>(null);
   const [showManualPicker, setShowManualPicker] = useState(false);
   const router = useRouter();
   const { state, setCity } = useLocationStore();
   const { prefs } = usePrefsStore();
+
+  const generate = async (radiusM?: number) => {
+    if (state.status !== "granted" || !state.lat || !state.lng) {
+      console.warn("[StartView] coords 없음 — 코스 생성 중단");
+      return;
+    }
+    const coords = { lat: state.lat, lng: state.lng };
+
+    setLoading(true);
+
+    const result = await generateCourseAction({
+      mapX: coords.lng,
+      mapY: coords.lat,
+      scale: selected,
+      prefs,
+      radiusM,
+    });
+
+    if (!result.ok) {
+      setLoading(false);
+      if (result.code === "NO_PLACE") {
+        setSearchRadiusM(result.radiusM);
+        setNoNearby(true);
+      }
+      return;
+    }
+
+    const pending: PendingCourse = {
+      courseId: result.courseId,
+      place: result.place,
+      courseName: result.courseName,
+      festivals: result.festivals,
+      mapX: coords.lng,
+      mapY: coords.lat,
+      scale: selected,
+    };
+    localStorage.setItem("pendingCourse", JSON.stringify(pending));
+    router.push("/course/preview");
+  };
 
   const isDenied =
     state.status === "denied" ||
@@ -73,49 +122,31 @@ export function StartView() {
 
   // 주변 코스 없음 → 대안 선택 UI
   if (noNearby && city) {
+    const searchRadiusKm = searchRadiusM !== null ? searchRadiusM / 1000 : null;
+    // 확장 반경 = 현재의 2배(5→10→20km), 최대 반경(20km)에서 실패했으면 확장 옵션 숨김
+    const expandedRadiusKm =
+      searchRadiusKm !== null && searchRadiusKm < 20
+        ? searchRadiusKm * 2
+        : null;
+
     return (
-      <NoNearbyView
-        city={city}
-        onExpandRadius={() => router.push("/course/1")}
-        onChangeScale={() => setNoNearby(false)}
-        onChangeRegion={() => setShowManualPicker(true)}
-      />
+      <>
+        {loading && <CourseLoadingOverlay />}
+        <NoNearbyView
+          city={city}
+          radiusKm={searchRadiusKm}
+          expandedRadiusKm={expandedRadiusKm}
+          onExpandRadius={() => {
+            if (expandedRadiusKm !== null) generate(expandedRadiusKm * 1000);
+          }}
+          onChangeScale={() => setNoNearby(false)}
+          onChangeRegion={() => setShowManualPicker(true)}
+        />
+      </>
     );
   }
 
-  const handleStart = async () => {
-    if (state.status !== "granted" || !state.lat || !state.lng) {
-      console.warn("[StartView] coords 없음 — 코스 생성 중단");
-      return;
-    }
-    const coords = { lat: state.lat, lng: state.lng };
-
-    setLoading(true);
-
-    const result = await generateCourseAction({
-      mapX: coords.lng,
-      mapY: coords.lat,
-      scale: selected,
-      prefs,
-    });
-
-    if (!result.ok) {
-      setLoading(false);
-      return;
-    }
-
-    const pending: PendingCourse = {
-      courseId: result.courseId,
-      place: result.place,
-      courseName: result.courseName,
-      festivals: result.festivals,
-      mapX: coords.lng,
-      mapY: coords.lat,
-      scale: selected,
-    };
-    localStorage.setItem("pendingCourse", JSON.stringify(pending));
-    router.push("/course/preview");
-  };
+  const handleStart = () => generate();
 
   return (
     <>
@@ -127,10 +158,14 @@ export function StartView() {
           <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-accent/9 border border-accent/20 mb-7">
             <MapPin size={20} className="text-accent shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[15px] font-semibold text-text-primary">{city}</p>
+              <p className="text-[15px] font-semibold text-text-primary">
+                {city}
+              </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                <span className="text-xs text-accent font-medium">위치 확인됨</span>
+                <span className="text-xs text-accent font-medium">
+                  위치 확인됨
+                </span>
               </div>
             </div>
           </div>
@@ -138,7 +173,9 @@ export function StartView() {
           <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-point/8 border border-point/20 mb-7">
             <AlertCircle size={20} className="text-point shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-semibold text-text-primary">위치를 확인할 수 없어요</p>
+              <p className="text-[14px] font-semibold text-text-primary">
+                위치를 확인할 수 없어요
+              </p>
               <button
                 onClick={() => setShowManualPicker(true)}
                 className="text-xs text-point font-medium underline-offset-2 underline"
@@ -165,19 +202,24 @@ export function StartView() {
                 onClick={() => setSelected(s.id)}
                 className={cn(
                   "w-full flex items-center gap-4 px-4 py-4 rounded-xl border text-left transition-colors active:scale-[0.98]",
-                  sel ? "bg-primary/5 border-primary" : `${s.unselBg} border-border`
+                  sel
+                    ? "bg-primary/5 border-primary"
+                    : `${s.unselBg} border-border`,
                 )}
               >
                 <div
                   className={cn(
                     "w-14 h-14 rounded-xl flex items-center justify-center shrink-0",
-                    s.iconBg, s.iconColor
+                    s.iconBg,
+                    s.iconColor,
                   )}
                 >
                   <s.icon size={28} strokeWidth={1.75} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[16px] font-bold text-text-primary">{s.title}</p>
+                  <p className="text-[16px] font-bold text-text-primary">
+                    {s.title}
+                  </p>
                 </div>
                 {sel && (
                   <div className="w-5.5 h-5.5 rounded-full bg-primary flex items-center justify-center shrink-0">

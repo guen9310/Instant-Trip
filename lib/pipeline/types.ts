@@ -22,6 +22,9 @@ export interface UserProfile {
   festivalAffinity: number;   // 0.0 ~ 1.0, 온보딩에서 파생 — 축제 섹션 정렬에만 사용
   location: { mapX: number; mapY: number };
   scale: TravelScale;
+  // 검색 반경(m) 오버라이드 — 미지정 시 규모별 기본값(SCALE_CONFIG) 사용.
+  // NoNearbyView의 "반경 넓혀서 다시 찾기" 재시도에서 설정된다.
+  radiusOverrideM?: number;
   // KorService2 지역 코드
   areaCode: string;
   sigunguCode: string;
@@ -72,6 +75,11 @@ export const SCALE_CONFIG: Record<TravelScale, { radius: number }> = {
   적당히:   { radius: 10000 },
   여유롭게: { radius: 20000 },
 };
+
+// 실제 사용할 검색 반경(m) — 반경 확장 재시도(radiusOverrideM)가 규모별 기본값보다 우선
+export function getSearchRadiusM(profile: UserProfile): number {
+  return profile.radiusOverrideM ?? SCALE_CONFIG[profile.scale].radius;
+}
 
 // DB에서 조회한 장소 (tag_scores 사전 계산 포함)
 export type PlaceWithTags = TourItem & { tagScores: Record<TagKey, number>; availabilityUncertain?: boolean };

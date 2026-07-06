@@ -3,7 +3,7 @@ import { readCache, writeCache } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
 import type { TourItem } from "@/lib/tour/types";
 import type { UserProfile } from "@/lib/pipeline/types";
-import { SCALE_CONFIG } from "@/lib/pipeline/types";
+import { getSearchRadiusM } from "@/lib/pipeline/types";
 
 // 같은 위치+반경+타입 조합의 결과를 1시간 동안 재사용한다.
 // API 호출 횟수를 줄이기 위함이며, 1시간 이내 같은 요청이 들어오면 캐시에서 즉시 반환한다.
@@ -28,7 +28,7 @@ const TARGET_CONTENT_TYPES = ["12", "14", "28"];
 // - 여러 타입에 중복 등록된 장소가 있을 수 있어서, contentid 기준으로 중복을 제거한다.
 // - 반환값: 중복 제거된 TourItem 배열 (이후 stage2로 전달됨)
 export async function collectCandidates(profile: UserProfile): Promise<TourItem[]> {
-  const { radius } = SCALE_CONFIG[profile.scale];
+  const radius = getSearchRadiusM(profile);
   const { mapX, mapY } = profile.location;
 
   console.log(`[stage1] 반경 ${(radius/1000).toFixed(0)}km · 위치 (${mapY}, ${mapX})`);

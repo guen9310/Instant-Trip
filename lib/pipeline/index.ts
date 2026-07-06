@@ -4,7 +4,7 @@ import type {
   PipelineResult,
   PlaceWithTags,
 } from "@/lib/pipeline/types";
-import { SCALE_CONFIG } from "@/lib/pipeline/types";
+import { getSearchRadiusM } from "@/lib/pipeline/types";
 import { collectCandidates } from "@/lib/pipeline/collect";
 import { filterByAvailability } from "@/lib/pipeline/availability";
 import type { TourItem } from "@/lib/tour/types";
@@ -26,7 +26,7 @@ export type {
   TagWeights,
   OnboardingAnswers,
 } from "@/lib/pipeline/types";
-export { onboardingToProfile, applyFeedback } from "@/lib/pipeline/types";
+export { onboardingToProfile, applyFeedback, getSearchRadiusM } from "@/lib/pipeline/types";
 
 function elapsed(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
@@ -44,7 +44,7 @@ export async function generateCourse(
 
   // stage1: Tour API 직접 호출 (매 요청마다)
   let ts = Date.now();
-  const radiusKm = SCALE_CONFIG[profile.scale].radius / 1000;
+  const radiusKm = getSearchRadiusM(profile) / 1000;
   const { mapY: lat, mapX: lng } = profile.location;
 
   // 축제 조회를 파이프라인과 병렬로 미리 시작 (캐시 없으면 ~10s 소요되므로)
@@ -114,7 +114,7 @@ export async function generateCourse(
         available,
         lat,
         lng,
-        SCALE_CONFIG[profile.scale].radius,
+        getSearchRadiusM(profile),
       );
       console.log(
         `[pipeline] stage3.5 보충 완료 — ${available.length} → ${availablePool.length}건 | ${elapsed(Date.now() - ts)}`,
