@@ -268,14 +268,16 @@ function PlaceDetailContent({
                       영업시간·휴무는 변동될 수 있어요. 방문 전 확인을 권장합니다.
                     </p>
                   </div>
-                  <a
-                    href={`https://map.kakao.com/?q=${encodeURIComponent(place.name)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg bg-amber-100 text-amber-800 text-[13px] font-medium"
-                  >
-                    <ExternalLink size={13} /> 영업시간 확인
-                  </a>
+                  {place.name?.trim() && (
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(`${place.name} 운영시간`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg bg-amber-100 text-amber-800 text-[13px] font-medium"
+                    >
+                      <ExternalLink size={13} /> 영업시간 확인
+                    </a>
+                  )}
                 </div>
               )}
             </div>
