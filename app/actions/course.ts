@@ -1,5 +1,6 @@
 "use server";
 
+import { nanoid } from "nanoid";
 import { generateCourse } from "@/lib/pipeline";
 import {
   prefsToProfile,
@@ -34,6 +35,7 @@ interface GenerateCoursePayload {
 type GenerateCourseResult =
   | {
       ok: true;
+      courseId: string;
       place: JourneyPlace;
       courseName: string;
       festivals: FestivalSummary[];
@@ -107,11 +109,12 @@ export async function generateCourseAction(
       return { ok: false, error: "주변에 적합한 장소를 찾지 못했습니다." };
     }
 
+    const courseId = nanoid();
     const place = coursePlaceToJourneyPlace(course.mainPlace);
     const courseName = course.mainPlace.title + COURSE_SUFFIX[scale];
     const festivals = courseResultToFestivalSummaries(course);
 
-    return { ok: true, place, courseName, festivals };
+    return { ok: true, courseId, place, courseName, festivals };
   } catch (err) {
     const message = err instanceof Error ? err.message : "코스 생성 중 오류가 발생했습니다.";
     return { ok: false, error: message };

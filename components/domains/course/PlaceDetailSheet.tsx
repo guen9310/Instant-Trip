@@ -191,10 +191,22 @@ function PlaceDetailContent({
             <div className="px-5 pt-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <Badge variant={place.badge.variant}>{place.cat}</Badge>
+                  <Badge variant="secondary">{place.cat}</Badge>
                   <h2 className="text-[22px] font-bold text-text-primary tracking-tight mt-2">
                     {place.name}
                   </h2>
+                  {place.tags.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap mt-2">
+                      {place.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2.5 py-1 rounded-full bg-card border border-border text-[11px] font-medium text-text-secondary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

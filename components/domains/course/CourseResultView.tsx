@@ -51,6 +51,7 @@ export function CourseResultView({
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
   const [rerolling, setRerolling] = useState(false);
+  const [currentCourseId, setCurrentCourseId] = useState(courseId);
   const [currentPlace, setCurrentPlace] = useState<JourneyPlace>(place);
   const [currentCourseName, setCurrentCourseName] = useState(courseName);
   const [currentFestivals, setCurrentFestivals] = useState(festivals);
@@ -88,6 +89,7 @@ export function CourseResultView({
       return;
     }
 
+    setCurrentCourseId(result.courseId);
     setCurrentPlace(result.place);
     setCurrentCourseName(result.courseName);
     setCurrentFestivals(result.festivals);
@@ -98,6 +100,7 @@ export function CourseResultView({
     }
 
     const pending: PendingCourse = {
+      courseId: result.courseId,
       place: result.place,
       courseName: result.courseName,
       festivals: result.festivals,
@@ -115,8 +118,8 @@ export function CourseResultView({
   };
 
   const handleStart = () => {
-    startCourse(courseId);
-    router.push(`/course/${courseId}/active`);
+    startCourse(currentCourseId);
+    router.push(`/course/${currentCourseId}/active`);
   };
 
   if (isLoading) {
@@ -125,7 +128,7 @@ export function CourseResultView({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pt-5 pb-2">
         {/* 헤더 */}
         <h1 className="text-[22px] font-bold text-text-primary tracking-tight mb-1">
           {currentCourseName}
@@ -160,7 +163,7 @@ export function CourseResultView({
 
         {/* 예상 체류 카드 */}
         {currentPlace.dur && (
-          <div className="mt-6 p-4 rounded-xl bg-card flex items-center gap-3">
+          <div className="mt-3 p-4 rounded-xl bg-card flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
               <Clock size={18} />
             </div>
@@ -254,11 +257,18 @@ function PlaceCardTimeline({
       )}
     >
       <div className="flex-1 flex flex-col gap-1.5 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[11px] font-semibold text-text-secondary">
             {place.cat}
           </span>
-          <Badge variant={place.badge.variant}>{place.badge.text}</Badge>
+          {(place.tags.length > 0 ? place.tags.slice(0, 2) : [place.badge.text]).map((tag) => (
+            <span
+              key={tag}
+              className="px-1.5 py-0.5 rounded-full bg-primary/8 text-primary text-[10px] font-semibold"
+            >
+              {tag}
+            </span>
+          ))}
           {isNew && (
             <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
               새 장소

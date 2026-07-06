@@ -9,13 +9,13 @@ export type JourneyPlace = {
   hours: string;
   time: string;
   dur: string;
-  travel: string;
   badge: { text: string; variant: BadgeVariant };
   desc: string;
   coord: { lat: number; lng: number } | null;
   imageUrl: string | null;
   availabilityUncertain: boolean;
   estimatedDurationMin: number;
+  tags: string[];
 };
 
 // 코스 결과의 보조 정보 — 진행중/예정 축제 (product-plan.md 4번 "부가" 참조)
@@ -43,6 +43,7 @@ export type NearbyPoi = {
 
 // localStorage "pendingCourse" — 생성된 추천을 프리뷰/진행 화면으로 전달
 export type PendingCourse = {
+  courseId: string;
   place: JourneyPlace;
   courseName: string;
   festivals?: FestivalSummary[];

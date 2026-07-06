@@ -105,6 +105,7 @@ export function StartView() {
     }
 
     const pending: PendingCourse = {
+      courseId: result.courseId,
       place: result.place,
       courseName: result.courseName,
       festivals: result.festivals,

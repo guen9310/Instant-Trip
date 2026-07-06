@@ -78,18 +78,23 @@ export function NearbyRestaurants({ placeName, addr, coord }: Props) {
 
   return (
     <div className="rounded-xl bg-card border border-border overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 pt-3 pb-2.5">
-        <p className="flex items-center gap-1.5 text-xs text-text-secondary font-medium">
-          <UtensilsCrossed size={13} /> 근처 맛집
-        </p>
-        <a
-          href={`https://map.kakao.com/?q=${encodeURIComponent(extractRegion(addr) + " 맛집")}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-0.5 text-[11px] text-accent font-medium"
-        >
-          지도에서 보기 <ExternalLink size={10} />
-        </a>
+      <div className="px-3.5 pt-3 pb-2.5">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="flex items-center gap-1.5 text-xs text-text-secondary font-medium">
+            <UtensilsCrossed size={13} /> 근처 맛집
+          </p>
+          <a
+            href={`https://map.kakao.com/?q=${encodeURIComponent(extractRegion(addr) + " 맛집")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-0.5 text-[11px] text-accent font-medium"
+          >
+            지도에서 보기 <ExternalLink size={10} />
+          </a>
+        </div>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium">
+          '맛집 중요' 취향에 맞게 골랐어요
+        </span>
       </div>
       <div className="flex flex-col divide-y divide-border/60">
         {places.map((p, i) => {

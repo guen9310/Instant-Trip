@@ -47,7 +47,6 @@ export function toJourneyPlace(row: PlaceRow): JourneyPlace {
     hours: formatHours(row.openTime, row.closeTime, row.closedDays),
     time: row.openTime ?? "",
     dur: `${row.durationMin}분`,
-    travel: row.travelToNextMin ? `이동 ${row.travelToNextMin}분` : "",
     badge: {
       text: row.badgeText ?? row.category,
       variant:
@@ -61,6 +60,7 @@ export function toJourneyPlace(row: PlaceRow): JourneyPlace {
     imageUrl: null,
     availabilityUncertain: row.availabilityUncertain,
     estimatedDurationMin: row.durationMin ?? 60,
+    tags: [],
   };
 }
 

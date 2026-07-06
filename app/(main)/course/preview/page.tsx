@@ -10,7 +10,7 @@ function readPendingCourse(): PendingCourse | null {
     const raw = localStorage.getItem("pendingCourse");
     if (!raw) return null;
     const parsed: PendingCourse = JSON.parse(raw);
-    if (!parsed.place || !parsed.courseName) return null;
+    if (!parsed.courseId || !parsed.place || !parsed.courseName) return null;
     return parsed;
   } catch {
     return null;
@@ -36,7 +36,7 @@ export default function CoursePreviewPage() {
 
   return (
     <CourseResultView
-      courseId="preview"
+      courseId={course.courseId}
       courseName={course.courseName}
       place={course.place}
       festivals={course.festivals ?? []}

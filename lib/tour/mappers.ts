@@ -75,13 +75,13 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     hours:    "",
     time:     "",
     dur:      `보통 ${p.estimatedDurationMin}분 정도`,
-    travel:   "",
     badge,
     desc:     p.overview,
     coord:    p.coord,
     imageUrl: p.images?.[0] ?? null,
     availabilityUncertain: p.availabilityUncertain,
     estimatedDurationMin: p.estimatedDurationMin,
+    tags: p.tags,
   };
 }
 
