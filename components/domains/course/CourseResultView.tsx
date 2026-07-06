@@ -172,6 +172,9 @@ export function CourseResultView({
               <p className="text-[15px] font-semibold text-text-primary">
                 {currentPlace.dur}
               </p>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                카테고리 평균 기준
+              </p>
             </div>
           </div>
         )}

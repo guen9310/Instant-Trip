@@ -7,6 +7,7 @@ import type {
   TravelScale,
 } from "@/lib/pipeline/types";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
+import { toDurationRange, type DurationRange } from "@/shared/utils/duration";
 
 const TYPE_LABEL: Record<string, string> = {
   "12": "관광지",
@@ -35,7 +36,20 @@ const TIME_BUDGET: Record<TravelScale, number> = {
 
 // 신 분류체계(lclsSystm) prefix 기반 예상 체류시간(분).
 // 더 구체적인 코드(긴 prefix)를 먼저 검사한다.
+// 카테고리별 임의 상수이므로 반환값은 toDurationRange로 범위화한다(기존 값 = max).
 function getEstimatedDuration(
+  s1?: string,
+  s2?: string,
+  s3?: string,
+  source?: "tour" | "kakao",
+  kakaoCategory?: string,
+): DurationRange {
+  return toDurationRange(
+    getBaseDurationMin(s1, s2, s3, source, kakaoCategory),
+  );
+}
+
+function getBaseDurationMin(
   s1?: string,
   s2?: string,
   s3?: string,
@@ -240,8 +254,9 @@ export async function scoreCandidates(
       item.source,
       item.kakaoCategory,
     );
+    // 시간 예산 적합도는 범위화 이전과 동일하게 max(기존 단일 값) 기준으로 계산한다.
     const budgetFitness =
-      dur <= budget ? 1.0 : Math.max(0, 1 - (dur - budget) / budget);
+      dur.max <= budget ? 1.0 : Math.max(0, 1 - (dur.max - budget) / budget);
     const score =
       W.tag * tagScore +
       W.distance * distanceBonus +
@@ -256,14 +271,14 @@ export async function scoreCandidates(
       timeBonus < 0 ? `${timeBonus.toFixed(2)}` : `+${timeBonus.toFixed(2)}`;
     console.log(
       `[stage4] ${idx} "${item.title}" (${TYPE_LABEL[item.contenttypeid] ?? item.contenttypeid}) (${item.source === "kakao" ? "카카오" : "관광공사"})` +
-        ` lcs:${item.lclsSystm1 ?? "-"}/${item.lclsSystm2 ?? "-"}/${item.lclsSystm3 ?? "-"} dur:${dur}min` +
+        ` lcs:${item.lclsSystm1 ?? "-"}/${item.lclsSystm2 ?? "-"}/${item.lclsSystm3 ?? "-"} dur:${dur.min}~${dur.max}min` +
         ` 태그:[${tagLabel}] 태그:${tagScore.toFixed(2)} 거리:+${distanceBonus.toFixed(2)} 시간:${timeSuffix} 예산:+${budgetFitness.toFixed(2)} → 최종:${score.toFixed(3)}`,
     );
 
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDurationMin: dur };
+    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur };
   });
 
   scored.sort((a, b) => b.score - a.score);

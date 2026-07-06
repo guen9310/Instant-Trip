@@ -137,6 +137,9 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
                 권장 체류 시간
               </p>
               <p className="text-[15px] font-bold text-text-primary">{place.dur}</p>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                카테고리 평균 기준
+              </p>
             </div>
           </div>
 

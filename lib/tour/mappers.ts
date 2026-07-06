@@ -6,6 +6,7 @@ import type {
   BadgeVariant,
   FestivalSummary,
 } from "@/shared/types/course.types";
+import { formatDuration } from "@/shared/utils/duration";
 
 type EnglishScale = "light" | "moderate" | "leisurely";
 
@@ -74,13 +75,13 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     addr:     p.address,
     hours:    "",
     time:     "",
-    dur:      `보통 ${p.estimatedDurationMin}분 정도`,
+    dur:      formatDuration(p.estimatedDuration),
     badge,
     desc:     p.overview,
     coord:    p.coord,
     imageUrl: p.images?.[0] ?? null,
     availabilityUncertain: p.availabilityUncertain,
-    estimatedDurationMin: p.estimatedDurationMin,
+    estimatedDuration: p.estimatedDuration,
     tags: p.tags,
   };
 }

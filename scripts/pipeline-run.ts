@@ -27,6 +27,8 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(__dirname, "../.env.local") });
 
+import { formatDuration, type DurationRange } from "@/shared/utils/duration";
+
 type TravelScale = "가볍게" | "적당히" | "여유롭게";
 type TagKey = "도보친화" | "1인여행" | "실내" | "조용함";
 
@@ -195,13 +197,13 @@ function printPlace(
     score: number;
     contentTypeId: string;
     availabilityUncertain: boolean;
-    estimatedDurationMin: number;
+    estimatedDuration: DurationRange;
   },
 ) {
   const uncertainTag = p.availabilityUncertain ? " ⚠ uncertain=true" : "";
   console.log(`  ${prefix} [${p.score.toFixed(3)}] ${p.title}${uncertainTag}`);
   console.log(`         type=${p.contentTypeId} | ${p.address}`);
-  console.log(`         태그: ${p.tags.length ? p.tags.join(", ") : "(없음)"} | 예상 체류: ${p.estimatedDurationMin}분`);
+  console.log(`         태그: ${p.tags.length ? p.tags.join(", ") : "(없음)"} | 예상 체류: ${formatDuration(p.estimatedDuration)}`);
 }
 
 async function run() {

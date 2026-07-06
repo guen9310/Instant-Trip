@@ -1,5 +1,6 @@
 import type { TourItem } from "@/lib/tour/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { DurationRange } from "@/shared/utils/duration";
 
 export type TravelScale = "가볍게" | "적당히" | "여유롭게";
 
@@ -82,7 +83,7 @@ export interface PlaceCandidate {
   score: number;
   available: boolean;
   availabilityUncertain: boolean;
-  estimatedDurationMin: number;
+  estimatedDuration: DurationRange;
 }
 
 export interface CoursePlace {
@@ -97,7 +98,7 @@ export interface CoursePlace {
   tags: TagKey[];
   score: number;
   availabilityUncertain: boolean;
-  estimatedDurationMin: number;
+  estimatedDuration: DurationRange;
 }
 
 export interface CourseResult {

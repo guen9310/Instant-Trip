@@ -224,6 +224,7 @@ function PlaceDetailContent({
                     ]
                       .filter(Boolean)
                       .join(" 도착 · ")}
+                    sub={place.dur?.trim() ? "카테고리 평균 기준" : undefined}
                   />
                 )}
               </div>
@@ -351,11 +352,24 @@ function PlaceDetailContent({
   );
 }
 
-function DetailRow({ icon: Ico, label }: { icon: ElementType; label: string }) {
+function DetailRow({
+  icon: Ico,
+  label,
+  sub,
+}: {
+  icon: ElementType;
+  label: string;
+  sub?: string;
+}) {
   return (
     <div className="flex items-center gap-2.5">
       <Ico size={16} className="text-text-secondary shrink-0" />
-      <span className="text-[14px] text-text-primary">{label}</span>
+      <span className="text-[14px] text-text-primary">
+        {label}
+        {sub && (
+          <span className="ml-1.5 text-[11px] text-text-secondary">{sub}</span>
+        )}
+      </span>
     </div>
   );
 }

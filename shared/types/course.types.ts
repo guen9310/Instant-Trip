@@ -1,3 +1,5 @@
+import type { DurationRange } from "@/shared/utils/duration";
+
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
 
 // 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)
@@ -14,7 +16,7 @@ export type JourneyPlace = {
   coord: { lat: number; lng: number } | null;
   imageUrl: string | null;
   availabilityUncertain: boolean;
-  estimatedDurationMin: number;
+  estimatedDuration: DurationRange;
   tags: string[];
 };
 

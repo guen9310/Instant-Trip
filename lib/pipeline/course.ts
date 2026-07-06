@@ -171,7 +171,7 @@ async function buildCoursePlace(
       tags: candidate.tags,
       score: candidate.score,
       availabilityUncertain: candidate.availabilityUncertain,
-      estimatedDurationMin: candidate.estimatedDurationMin,
+      estimatedDuration: candidate.estimatedDuration,
     };
   }
 
@@ -200,7 +200,7 @@ async function buildCoursePlace(
     tags: candidate.tags,
     score: candidate.score,
     availabilityUncertain: candidate.availabilityUncertain,
-    estimatedDurationMin: candidate.estimatedDurationMin,
+    estimatedDuration: candidate.estimatedDuration,
   };
 }
 
