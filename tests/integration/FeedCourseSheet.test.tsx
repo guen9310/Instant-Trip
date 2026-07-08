@@ -101,6 +101,6 @@ describe("FeedCourseSheet", () => {
 
     await user.click(screen.getByText("나도 이 코스 가볼게요"));
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(mockPush).toHaveBeenCalledWith("/course/test-1/active");
+    expect(mockPush).toHaveBeenCalledWith("/course/active/test-1");
   });
 });
