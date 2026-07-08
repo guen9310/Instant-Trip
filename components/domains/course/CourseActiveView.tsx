@@ -78,6 +78,8 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
               src={place.imageUrl}
               alt={place.name}
               fill
+              sizes="(max-width: 430px) 100vw, 430px"
+              loading="eager"
               className="object-cover"
             />
           ) : (
