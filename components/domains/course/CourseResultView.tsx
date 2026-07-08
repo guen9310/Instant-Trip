@@ -13,13 +13,13 @@ import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
-import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import {
   useCourseProgressStore,
   MAX_REROLLS,
 } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
 import type { JourneyPlace, FestivalSummary, PendingCourse } from "@/shared/types/course.types";
+import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
 
@@ -38,6 +38,9 @@ type Props = {
   mapY?: number;
   scale?: string;
   region?: string;
+  // 생성 시점 취향 스냅샷 (PendingCourse.prefs) — 칩·맛집 섹션·재추천이 읽는다.
+  // 구버전 localStorage 페이로드엔 없을 수 있어 optional: 없으면 취향 표시를 숨긴다.
+  prefs?: Prefs;
 };
 
 export function CourseResultView({
@@ -50,6 +53,7 @@ export function CourseResultView({
   mapY,
   scale,
   region,
+  prefs,
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
   const [rerolling, setRerolling] = useState(false);
@@ -61,8 +65,6 @@ export function CourseResultView({
   const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
 
   const router = useRouter();
-  const travelPref = usePrefsStore((s) => s.prefs.travel);
-  const { prefs } = usePrefsStore();
   const startCourse = useCourseProgressStore((s) => s.start);
   const { rejectedPlaceIds, rerollCount, addRejection } =
     useCourseProgressStore();
@@ -70,7 +72,8 @@ export function CourseResultView({
   const isMaxRerolls = rerollCount >= MAX_REROLLS;
 
   const doReroll = async (excludeIds: string[]) => {
-    if (!mapX || !mapY || !scale) return;
+    // prefs 없음 = 구버전 localStorage 페이로드 — 생성 시점 취향을 모르니 재추천 불가
+    if (!mapX || !mapY || !scale || !prefs) return;
     setRerolling(true);
     setRerollExhausted(false);
 
@@ -110,6 +113,7 @@ export function CourseResultView({
       mapY,
       scale,
       region,
+      prefs,
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
   };
@@ -142,9 +146,11 @@ export function CourseResultView({
             지금 출발 가능
           </Badge>
         </div>
-        <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
-          {`'${TRAVEL_REASON[travelPref] ?? travelPref}' 취향에 맞게 골랐어요`}
-        </div>
+        {prefs && (
+          <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
+            {`'${TRAVEL_REASON[prefs.travel] ?? prefs.travel}' 취향에 맞게 골랐어요`}
+          </div>
+        )}
 
         {/* 후보 소진 안내 */}
         {rerollExhausted && (
@@ -183,9 +189,9 @@ export function CourseResultView({
         )}
 
         {/* 보조 정보 — 근처 맛집 / 진행중 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
-        {(prefs.food === "matjip" || currentFestivals.length > 0) && (
+        {(prefs?.food === "matjip" || currentFestivals.length > 0) && (
           <div className="mt-3 flex flex-col gap-2.5">
-            {prefs.food === "matjip" && (() => {
+            {prefs?.food === "matjip" && (() => {
               const coord = currentPlace.coord ?? (mapX && mapY ? { lat: mapY, lng: mapX } : null);
               return coord ? (
                 <NearbyRestaurants

@@ -7,7 +7,6 @@ import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { PREF_KEYS, PREF_META, type Prefs } from "@/shared/constants/preferences";
 import { authClient } from "@/client/auth-client";
-import { usePrefsStore } from "@/client/stores/usePrefsStore";
 
 const OPTION_TITLES: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -27,11 +26,12 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
   const queryClient = useQueryClient();
   const [prefs, setLocalPrefs] = useState(initialPrefs);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const setPrefs = usePrefsStore((s) => s.setPrefs);
 
   const handleSave = async () => {
     setSaveError(null);
     try {
+      // DB가 취향의 진실의 출처 — 화면들은 서버 컴포넌트에서 세션으로 읽으므로
+      // 클라이언트 스토어 동기화가 필요 없다
       const { error } = await authClient.updateUser({
         prefTravel: prefs.travel,
         prefParty:  prefs.party,
@@ -40,7 +40,6 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
         prefIndoor: prefs.indoor,
       });
       if (error) throw error;
-      setPrefs(prefs);
       router.push("/profile");
     } catch {
       setSaveError("저장에 실패했어요. 다시 시도해 주세요.");

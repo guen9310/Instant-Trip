@@ -17,12 +17,12 @@ import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingO
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import { NoNearbyView } from "@/components/domains/course/NoNearbyView";
 import { useLocationStore } from "@/client/stores/useLocationStore";
-import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
 import { saveCourseCompletionAction } from "@/app/actions/completion";
 import { buildCompletionPayload } from "@/shared/utils/completionPayload";
 import type { PendingCourse } from "@/shared/types/course.types";
+import type { Prefs } from "@/shared/constants/preferences";
 
 const SCALES = [
   {
@@ -77,7 +77,8 @@ function recordAbandonedIfAny() {
   }
 }
 
-export function StartView() {
+// prefs: DB에 저장된 취향 — 서버 컴포넌트(start/page.tsx)에서 세션으로 읽어 주입한다
+export function StartView({ prefs }: { prefs: Prefs }) {
   const [selected, setSelected] = useState<ScaleId>("moderate");
   const [loading, setLoading] = useState(false);
   const [noNearby, setNoNearby] = useState(false);
@@ -86,7 +87,6 @@ export function StartView() {
   const [showManualPicker, setShowManualPicker] = useState(false);
   const router = useRouter();
   const { state, setCity } = useLocationStore();
-  const { prefs } = usePrefsStore();
 
   const generate = async (radiusM?: number) => {
     if (state.status !== "granted" || !state.lat || !state.lng) {
@@ -127,6 +127,8 @@ export function StartView() {
       mapY: coords.lat,
       scale: selected,
       region: state.city ?? undefined,
+      // 생성 시점 취향 스냅샷 — 결과 화면의 칩·맛집 섹션·재추천이 이 값을 읽는다
+      prefs,
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
     router.push("/course/preview");

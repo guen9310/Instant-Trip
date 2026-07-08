@@ -9,20 +9,21 @@ import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
 import { StarRating } from "@/components/domains/profile/StarRating";
 import { CompletedCourseDetailModal } from "@/components/domains/profile/CompletedCourseDetailModal";
-import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { buildReexplorationText } from "@/shared/utils/prefsText";
 import type { User } from "@/shared/types/auth.types";
 import type { CourseProgress, CompletedCourse } from "@/shared/types/course.types";
+import type { Prefs } from "@/shared/constants/preferences";
 
 type Props = {
   user: User;
+  // DB에 저장된 취향 — 서버 컴포넌트(profile/page.tsx)에서 세션으로 읽어 주입한다
+  prefs: Prefs;
   inProgress: CourseProgress | null;
   completed: CompletedCourse[];
 };
 
-export function ProfileView({ user, inProgress, completed }: Props) {
+export function ProfileView({ user, prefs, inProgress, completed }: Props) {
   const [selected, setSelected] = useState<CompletedCourse | null>(null);
-  const prefs = usePrefsStore((s) => s.prefs);
   const reexploration = buildReexplorationText(prefs);
 
   const totalRegions = new Set(completed.map((c) => c.region)).size;
