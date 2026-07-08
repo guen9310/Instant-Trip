@@ -93,7 +93,7 @@ export function NearbyRestaurants({ placeName, addr, coord }: Props) {
           </a>
         </div>
         <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/8 text-primary text-[11px] font-medium">
-          '맛집 중요' 취향에 맞게 골랐어요
+          {"'맛집 중요' 취향에 맞게 골랐어요"}
         </span>
       </div>
       <div className="flex flex-col divide-y divide-border/60">

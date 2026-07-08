@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { Badge } from "@/components/commons/Badge";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
+import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { MOCK_PLACES } from "@/shared/constants/courseMock";
 import { saveCourseCompletionAction } from "@/app/actions/completion";
 import { buildCompletionPayload } from "@/shared/utils/completionPayload";
-import type { JourneyPlace, PendingCourse } from "@/shared/types/course.types";
+import type { PendingCourse } from "@/shared/types/course.types";
 
 // TODO: 실제 데이터 연결 시 제거
 const MOCK_START = Date.now() - 92 * 60 * 1000; // 92분 전
@@ -50,11 +51,10 @@ export function CourseDoneView() {
   const { startedAt, completedAt, stamps, reset } = useCourseProgressStore();
   const [stars, setStars] = useState(0);
   const [reactions, setReactions] = useState<string[]>([]);
-  const [place, setPlace] = useState<JourneyPlace | null>(null);
 
-  useEffect(() => {
-    setPlace(readPendingCourse()?.place ?? MOCK_PLACES[0]);
-  }, []);
+  // 저장소 읽기 결과에서 직접 도출 — 하이드레이션 중엔 null(기존 초기 상태와 동일 렌더)
+  const pending = useClientRead(readPendingCourse);
+  const place = pending === HYDRATING ? null : (pending?.place ?? MOCK_PLACES[0]);
 
   const durationMs = (completedAt ?? MOCK_END) - (startedAt ?? MOCK_START);
 

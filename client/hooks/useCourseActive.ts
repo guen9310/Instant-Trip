@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { fetchNearbyPoisAction } from "@/app/actions/course";
 import { haversineM } from "@/shared/utils/geo";
@@ -78,24 +79,19 @@ export function useCourseActive(courseId: string): CourseActiveState {
   const router = useRouter();
   const complete = useCourseProgressStore((s) => s.complete);
 
-  const [place, setPlace] = useState<JourneyPlace | null | "loading">("loading");
-  const [searchCoord, setSearchCoord] = useState<{ lat: number; lng: number } | null>(null);
+  const session = useClientRead(readSession);
   const [cat, setCat] = useState<NearbyCategory>("all");
   const [pois, setPois] = useState<NearbyPoi[]>([]);
   const [fetchedKey, setFetchedKey] = useState<string | null>(null);
   const [selectedPoiId, selectPoi] = useState<string | null>(null);
 
-  useEffect(() => {
-    const session = readSession();
-    setPlace(session?.place ?? null);
-    setSearchCoord(session?.searchCoord ?? null);
-  }, []);
+  // 세션 읽기 결과에서 직접 도출 — 효과로 상태에 복제하지 않는다
+  const current = session === HYDRATING ? undefined : session?.place;
+  const searchCoord = session === HYDRATING ? null : (session?.searchCoord ?? null);
 
   useEffect(() => {
-    if (place === null) router.push("/start");
-  }, [place, router]);
-
-  const current = place !== "loading" && place !== null ? place : undefined;
+    if (session === null) router.push("/start");
+  }, [session, router]);
 
   // 좌표를 문자열 키로 변환해 객체 참조 문제 없이 의존성 비교
   const coordKey = searchCoord ? `${searchCoord.lat},${searchCoord.lng}` : null;

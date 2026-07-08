@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CourseResultView } from "@/components/domains/course/CourseResultView";
+import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
 import type { PendingCourse } from "@/shared/types/course.types";
 
 function readPendingCourse(): PendingCourse | null {
@@ -19,20 +20,14 @@ function readPendingCourse(): PendingCourse | null {
 
 export default function CoursePreviewPage() {
   const router = useRouter();
-  const [course, setCourse] = useState<PendingCourse | null | "loading">(
-    "loading",
-  );
+  const course = useClientRead(readPendingCourse);
 
+  // 저장된 코스가 없으면 시작 화면으로 — 라우팅은 렌더가 아닌 효과에서 수행
   useEffect(() => {
-    const loaded = readPendingCourse();
-    if (!loaded) {
-      router.push("/start");
-      return;
-    }
-    setCourse(loaded);
-  }, [router]);
+    if (course === null) router.push("/start");
+  }, [course, router]);
 
-  if (course === "loading" || course === null) return null;
+  if (course === HYDRATING || course === null) return null;
 
   return (
     <CourseResultView
