@@ -26,7 +26,7 @@ export type {
   TagWeights,
   OnboardingAnswers,
 } from "@/lib/pipeline/types";
-export { onboardingToProfile, applyFeedback, getSearchRadiusM } from "@/lib/pipeline/types";
+export { onboardingToProfile, getSearchRadiusM } from "@/lib/pipeline/types";
 
 function elapsed(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;

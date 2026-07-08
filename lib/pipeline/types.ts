@@ -53,22 +53,6 @@ export function onboardingToProfile(
   };
 }
 
-// 코스 완료 후 별점 피드백으로 태그 가중치 보정
-export function applyFeedback(
-  profile: UserProfile,
-  tags: TagKey[],
-  rating: number,
-): UserProfile {
-  const delta = rating >= 4 ? 0.5 : rating <= 2 ? -0.5 : 0;
-  if (delta === 0) return profile;
-
-  const updated = { ...profile.tagWeights };
-  for (const tag of tags) {
-    updated[tag] = Math.max(0, (updated[tag] ?? 0) + delta);
-  }
-  return { ...profile, tagWeights: updated };
-}
-
 // 여행 규모별 설정 — radius: 수집 반경(m)
 export const SCALE_CONFIG: Record<TravelScale, { radius: number }> = {
   가볍게:   { radius: 5000 },
