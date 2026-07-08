@@ -18,7 +18,10 @@ import { LocationDeniedView } from "@/components/domains/location/LocationDenied
 import { NoNearbyView } from "@/components/domains/course/NoNearbyView";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
+import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
+import { saveCourseCompletionAction } from "@/app/actions/completion";
+import { buildCompletionPayload } from "@/shared/utils/completionPayload";
 import type { PendingCourse } from "@/shared/types/course.types";
 
 const SCALES = [
@@ -49,6 +52,30 @@ const SCALES = [
 ];
 
 type ScaleId = (typeof SCALES)[number]["id"];
+
+// 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체될 때 abandoned로 기록한다.
+// 조건: 진행 스토어의 courseId가 덮어써질 pendingCourse와 일치할 때만 — 중복 기록 방지.
+function recordAbandonedIfAny() {
+  try {
+    const raw = localStorage.getItem("pendingCourse");
+    if (!raw) return;
+    const prev = JSON.parse(raw) as Partial<PendingCourse>;
+    const { courseId, startedAt, completedAt, stamps } =
+      useCourseProgressStore.getState();
+    if (!startedAt || completedAt || !courseId || courseId !== prev.courseId)
+      return;
+    const payload = buildCompletionPayload({
+      pending: prev,
+      status: "abandoned",
+      startedAt,
+      completedAt: null,
+      stamps,
+    });
+    if (payload) void saveCourseCompletionAction(payload).catch(() => {});
+  } catch {
+    // 텔레메트리 — 실패해도 코스 생성 흐름은 그대로 진행
+  }
+}
 
 export function StartView() {
   const [selected, setSelected] = useState<ScaleId>("moderate");
@@ -87,6 +114,10 @@ export function StartView() {
       return;
     }
 
+    // 암묵 abandoned — 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체되는 순간,
+    // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
+    recordAbandonedIfAny();
+
     const pending: PendingCourse = {
       courseId: result.courseId,
       place: result.place,
@@ -95,6 +126,7 @@ export function StartView() {
       mapX: coords.lng,
       mapY: coords.lat,
       scale: selected,
+      region: state.city ?? undefined,
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
     router.push("/course/preview");

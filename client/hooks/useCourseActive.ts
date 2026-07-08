@@ -4,7 +4,37 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { fetchNearbyPoisAction } from "@/app/actions/course";
+import { haversineM } from "@/shared/utils/geo";
 import type { JourneyPlace, NearbyCategory, NearbyPoi, PendingCourse } from "@/shared/types/course.types";
+
+// 위치 도장 최소 간격(ms) — 같은 체류 안에서 과도한 중복 기록 방지
+const STAMP_MIN_INTERVAL_MS = 60_000;
+
+// 위치 도장 1샷 — 기존 이벤트(화면 진입/재개, 완료 버튼)에 편승해 장소와의 거리를 기록한다.
+// 측정 전용 UI 없음: 팝업·대기 없이 조용히 시도하고, 실패하면 아무 일도 없다.
+// 저장하는 값은 좌표 원본이 아니라 장소와의 거리(m) 하나다.
+function captureStamp(
+  placeCoord: { lat: number; lng: number } | null,
+  opts?: { force?: boolean },
+) {
+  if (!placeCoord || typeof navigator === "undefined" || !navigator.geolocation) return;
+  const { stamps } = useCourseProgressStore.getState();
+  const last = stamps[stamps.length - 1];
+  if (!opts?.force && last && Date.now() - last.t < STAMP_MIN_INTERVAL_MS) return;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const distM = haversineM(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        placeCoord.lat,
+        placeCoord.lng,
+      );
+      useCourseProgressStore.getState().addStamp({ t: Date.now(), distM });
+    },
+    () => {}, // 권한 없음/타임아웃 — 조용히 무시
+    { timeout: 3000, maximumAge: 60_000, enableHighAccuracy: false },
+  );
+}
 
 type SessionData = {
   place: JourneyPlace;
@@ -84,6 +114,22 @@ export function useCourseActive(courseId: string): CourseActiveState {
     });
   }, [coordKey]);
 
+  // 위치 도장: 진행 화면 진입 시 1회 + 화면 재개(백그라운드→포그라운드)마다 1회.
+  // "장소에서 처음/마지막으로 목격된 시각"이 체류시간 실측의 근거가 된다.
+  const placeCoord = current?.coord ?? null;
+  const placeCoordKey = placeCoord ? `${placeCoord.lat},${placeCoord.lng}` : null;
+  useEffect(() => {
+    if (!placeCoordKey) return;
+    const [lat, lng] = placeCoordKey.split(",").map(Number);
+    const coord = { lat, lng };
+    captureStamp(coord);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") captureStamp(coord);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [placeCoordKey]);
+
   if (!current) {
     return { status: "loading" };
   }
@@ -91,6 +137,10 @@ export function useCourseActive(courseId: string): CourseActiveState {
   const filteredPois = cat === "all" ? pois : pois.filter((p) => p.category === cat);
 
   const handleComplete = () => {
+    // 완료 순간 도장 — "장소 안에서 눌렀는가"가 기록의 신뢰 라벨이 된다.
+    // 가장 가치 있는 도장이므로 스로틀을 무시하고 항상 시도한다.
+    // 응답을 기다리지 않고 즉시 이동; 콜백은 done 화면에서 저장되기 전에 도착한다.
+    captureStamp(placeCoord, { force: true });
     complete();
     router.push(`/course/done/${courseId}`);
   };

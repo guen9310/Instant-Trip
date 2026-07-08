@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:diagnostic": "vitest run --config vitest.diagnostic.config.ts",
-    "pipeline": "tsx --tsconfig tsconfig.json scripts/pipeline-run.ts"
+    "pipeline": "tsx --tsconfig tsconfig.json scripts/pipeline-run.ts",
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

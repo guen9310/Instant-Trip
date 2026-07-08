@@ -76,6 +76,8 @@ export interface PlaceCandidate {
   available: boolean;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
+  // 매칭된 체류시간 규칙의 key — 완료 기록에 저장되어 실측 집계의 조인 키가 된다
+  stayDurationKey: string;
 }
 
 export interface CoursePlace {
@@ -91,6 +93,7 @@ export interface CoursePlace {
   score: number;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
+  stayDurationKey: string;
 }
 
 export interface CourseResult {

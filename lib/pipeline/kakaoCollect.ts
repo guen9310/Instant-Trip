@@ -1,7 +1,7 @@
 import type { TourItem } from "@/lib/tour/types";
 import { fetchCourseKakao } from "@/lib/clients/kakao-local";
 import type { KakaoPlaceTagged } from "@/lib/clients/kakao-local";
-import { haversineKm } from "@/lib/pipeline/scoring";
+import { haversineKm } from "@/shared/utils/geo";
 
 // 가용 TourAPI 후보가 이 값 미만일 때만 카카오 보충 발동 (scale='가볍게' 조건과 AND)
 export const KAKAO_SUPPLEMENT_MIN = 5;

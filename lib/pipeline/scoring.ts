@@ -7,7 +7,9 @@ import type {
   TravelScale,
 } from "@/lib/pipeline/types";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
-import { toDurationRange, type DurationRange } from "@/shared/utils/duration";
+import type { DurationRange } from "@/shared/utils/duration";
+import { haversineKm } from "@/shared/utils/geo";
+import { matchStayDurationRule } from "@/lib/pipeline/stayDuration";
 
 const TYPE_LABEL: Record<string, string> = {
   "12": "관광지",
@@ -34,52 +36,14 @@ const TIME_BUDGET: Record<TravelScale, number> = {
   여유롭게: 240,
 };
 
-// 신 분류체계(lclsSystm) prefix 기반 예상 체류시간(분).
-// 더 구체적인 코드(긴 prefix)를 먼저 검사한다.
-// 카테고리별 임의 상수이므로 반환값은 toDurationRange로 범위화한다(기존 값 = max).
-function getEstimatedDuration(
-  s1?: string,
-  s2?: string,
-  s3?: string,
-  source?: "tour" | "kakao",
-  kakaoCategory?: string,
-): DurationRange {
-  return toDurationRange(
-    getBaseDurationMin(s1, s2, s3, source, kakaoCategory),
-  );
-}
-
-function getBaseDurationMin(
-  s1?: string,
-  s2?: string,
-  s3?: string,
-  source?: "tour" | "kakao",
-  kakaoCategory?: string,
+// 시간 예산 적합도. 범위 중앙값이 예산 이내면 1.0, 초과분만큼 선형 감쇠(바닥 0).
+// max(최악값) 기준은 범위의 부정확함을 한쪽 끝만 믿는 셈이라 중앙값을 쓴다.
+export function calcBudgetFitness(
+  dur: DurationRange,
+  budgetMin: number,
 ): number {
-  // kakao 출처 기본값 — lclsSystm 규칙보다 먼저 평가
-  if (source === "kakao") {
-    if (kakaoCategory === "AT4") return 40;
-    if (kakaoCategory === "CT1") return 120;
-  }
-
-  // 40분 — 짧게 둘러보는 야외/경관
-  if (s3 === "VE010200") return 40; // 타워/전망대
-  if (s3 === "VE040300" || s3 === "VE040100") return 40; // 둘레길, 골목길/문화거리
-  if (s2 === "VE03") return 40; // 도시공원
-
-  // 캠핑·자연관광 — 도시공원보다 머무는 시간이 길다(휴식·물놀이 등 활동 포함)
-  if (s2 === "AC05") return 90; // 캠핑 — 당일 방문 야외 공간
-  if (s1 === "NA") return 60; // 자연관광 전체(해수욕장·산·강 등, 위 세부 분류 제외 나머지)
-
-  // 120분 — 오래 머무는 실내/체험
-  if (s2 === "VE07") return 120; // 전시시설(박물관/미술관 등)
-  if (s1 === "EX") return 120; // 체험관광 전체
-
-  // 테마공원 — 박물관형 체류가 아니라 반나절 단위 위락시설 체류가 일반적
-  if (s2 === "VE02") return 200; // 테마공원
-
-  // 그 외(역사유적·랜드마크 등) → 90분
-  return 90;
+  const mid = (dur.min + dur.max) / 2;
+  return mid <= budgetMin ? 1.0 : Math.max(0, 1 - (mid - budgetMin) / budgetMin);
 }
 
 interface TagMappingRule {
@@ -165,24 +129,6 @@ export function calcTagScore(
   );
 }
 
-// 두 좌표 사이의 거리를 킬로미터로 계산한다 (Haversine 공식).
-export function haversineKm(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 // 거리 보너스: 모든 scale 공통 — 가까울수록 1.0, 반경 끝에서 0.0.
 // scale은 SCALE_CONFIG의 반경(radius)만 결정하며, 점수 방향은 바뀌지 않는다.
 function calcDistanceBonus(item: TourItem, profile: UserProfile): number {
@@ -247,16 +193,14 @@ export async function scoreCandidates(
     const distanceBonus = calcDistanceBonus(item, profile);
     const timeBonus = calcTimeBonus(item);
     const budget = TIME_BUDGET[profile.scale];
-    const dur = getEstimatedDuration(
-      item.lclsSystm1,
-      item.lclsSystm2,
-      item.lclsSystm3,
-      item.source,
-      item.kakaoCategory,
-    );
-    // 시간 예산 적합도는 범위화 이전과 동일하게 max(기존 단일 값) 기준으로 계산한다.
-    const budgetFitness =
-      dur.max <= budget ? 1.0 : Math.max(0, 1 - (dur.max - budget) / budget);
+    const { key: stayDurationKey, range: dur } = matchStayDurationRule({
+      lclsSystm1: item.lclsSystm1,
+      lclsSystm2: item.lclsSystm2,
+      lclsSystm3: item.lclsSystm3,
+      source: item.source,
+      kakaoCategory: item.kakaoCategory,
+    });
+    const budgetFitness = calcBudgetFitness(dur, budget);
     const score =
       W.tag * tagScore +
       W.distance * distanceBonus +
@@ -278,7 +222,7 @@ export async function scoreCandidates(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur };
+    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur, stayDurationKey };
   });
 
   scored.sort((a, b) => b.score - a.score);

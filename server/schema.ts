@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   smallint,
@@ -115,7 +116,10 @@ export const coursePlaces = pgTable(
     openTime: text("open_time"),    // '09:00'
     closeTime: text("close_time"),  // '22:00'
     closedDays: text("closed_days").array(), // ['월', '화']
-    durationMin: smallint("duration_min").notNull(),
+    stayMin: smallint("stay_min").notNull(), // 예상 체류 하한(분)
+    stayMax: smallint("stay_max").notNull(), // 예상 체류 상한(분)
+    // 체류시간 규칙 조인 키 (lib/pipeline/stayDuration.ts의 rule.key). 실측 집계용
+    stayDurationKey: text("stay_duration_key"),
     travelToNextMin: smallint("travel_to_next_min"), // 마지막 장소는 NULL
     // 휴무 데이터 불확실 플래그(stage2). 실시간 경로(lib/tour/mappers.ts)와 동일하게 보존한다.
     availabilityUncertain: boolean("availability_uncertain").notNull().default(false),
@@ -145,6 +149,10 @@ export const courseCompletions = pgTable(
     review: text("review"),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     completedAt: timestamp("completed_at"),
+    // 출발지→장소 직선거리(m). 이동시간 추정용 — 좌표 원본은 저장하지 않는다
+    travelDistM: integer("travel_dist_m"),
+    // 위치 도장: [{t: epoch ms, distM: 장소와의 거리 m}]. 진행 화면 재개/제스처/완료 시 기록
+    locationStamps: jsonb("location_stamps").$type<{ t: number; distM: number }[]>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

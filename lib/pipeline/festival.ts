@@ -1,6 +1,6 @@
 import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
-import { haversineKm } from "@/lib/pipeline/scoring";
+import { haversineKm } from "@/shared/utils/geo";
 
 // 원본 데이터를 1시간 메모리 캐시 — 같은 프로세스 내 호출(파이프라인·REST 엔드포인트
 // 모두)이 이 캐시 하나를 공유한다. 별도 캐시를 또 두면 API가 중복 호출된다.

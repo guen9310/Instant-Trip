@@ -37,6 +37,7 @@ type Props = {
   mapX?: number;
   mapY?: number;
   scale?: string;
+  region?: string;
 };
 
 export function CourseResultView({
@@ -48,6 +49,7 @@ export function CourseResultView({
   mapX,
   mapY,
   scale,
+  region,
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
   const [rerolling, setRerolling] = useState(false);
@@ -107,6 +109,7 @@ export function CourseResultView({
       mapX,
       mapY,
       scale,
+      region,
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
   };

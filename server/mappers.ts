@@ -5,7 +5,7 @@ import type {
   CourseProgress,
   CompletedCourse,
 } from "@/shared/types/course.types";
-import { toDurationRange, formatDuration } from "@/shared/utils/duration";
+import { formatDuration } from "@/shared/utils/duration";
 
 // DB row 타입 — schema에서 직접 추론
 type CourseRow = typeof courses.$inferSelect;
@@ -40,8 +40,7 @@ export function toFeedCourse(row: CourseRow, places: PlaceRow[]): FeedCourse {
 // ─── Journey ─────────────────────────────────────────────────────────────────
 
 export function toJourneyPlace(row: PlaceRow): JourneyPlace {
-  // DB에는 단일 durationMin만 저장 — 표시 시점에 카테고리 상수와 동일 규칙으로 범위화
-  const duration = toDurationRange(row.durationMin ?? 60);
+  const duration = { min: row.stayMin, max: row.stayMax };
   return {
     id: row.id,
     cat: row.category,
@@ -63,6 +62,7 @@ export function toJourneyPlace(row: PlaceRow): JourneyPlace {
     imageUrl: null,
     availabilityUncertain: row.availabilityUncertain,
     estimatedDuration: duration,
+    stayDurationKey: row.stayDurationKey ?? undefined,
     tags: [],
   };
 }

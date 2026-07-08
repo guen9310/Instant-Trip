@@ -134,7 +134,7 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
             </div>
             <div>
               <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide mb-0.5">
-                권장 체류 시간
+                예상 체류
               </p>
               <p className="text-[15px] font-bold text-text-primary">{place.dur}</p>
               <p className="text-[11px] text-text-secondary mt-0.5">

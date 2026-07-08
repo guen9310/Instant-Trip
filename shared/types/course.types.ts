@@ -17,6 +17,8 @@ export type JourneyPlace = {
   imageUrl: string | null;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
+  // 매칭된 체류시간 규칙 key — 완료 기록의 실측 집계 조인 키 (구버전 localStorage엔 없을 수 있음)
+  stayDurationKey?: string;
   tags: string[];
 };
 
@@ -52,6 +54,7 @@ export type PendingCourse = {
   mapX?: number;
   mapY?: number;
   scale?: string;
+  region?: string; // 출발 지역 표시명 (예: '서울 마포구') — 완료 기록 저장용
 };
 
 // 프로필 — 진행 중인 코스 상태

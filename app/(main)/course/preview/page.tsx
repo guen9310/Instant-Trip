@@ -43,6 +43,7 @@ export default function CoursePreviewPage() {
       mapX={course.mapX}
       mapY={course.mapY}
       scale={course.scale}
+      region={course.region}
     />
   );
 }

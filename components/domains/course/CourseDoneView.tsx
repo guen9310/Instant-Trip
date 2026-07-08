@@ -9,6 +9,8 @@ import { Badge } from "@/components/commons/Badge";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { MOCK_PLACES } from "@/shared/constants/courseMock";
+import { saveCourseCompletionAction } from "@/app/actions/completion";
+import { buildCompletionPayload } from "@/shared/utils/completionPayload";
 import type { JourneyPlace, PendingCourse } from "@/shared/types/course.types";
 
 // TODO: 실제 데이터 연결 시 제거
@@ -33,12 +35,11 @@ function formatDuration(ms: number): string {
 }
 
 
-function readPlace(): JourneyPlace | null {
+function readPendingCourse(): Partial<PendingCourse> | null {
   try {
     const raw = localStorage.getItem("pendingCourse");
     if (!raw) return null;
-    const data = JSON.parse(raw) as Partial<PendingCourse>;
-    return data.place ?? null;
+    return JSON.parse(raw) as Partial<PendingCourse>;
   } catch {
     return null;
   }
@@ -46,13 +47,13 @@ function readPlace(): JourneyPlace | null {
 
 export function CourseDoneView() {
   const router = useRouter();
-  const { startedAt, completedAt, reset } = useCourseProgressStore();
+  const { startedAt, completedAt, stamps, reset } = useCourseProgressStore();
   const [stars, setStars] = useState(0);
   const [reactions, setReactions] = useState<string[]>([]);
   const [place, setPlace] = useState<JourneyPlace | null>(null);
 
   useEffect(() => {
-    setPlace(readPlace() ?? MOCK_PLACES[0]);
+    setPlace(readPendingCourse()?.place ?? MOCK_PLACES[0]);
   }, []);
 
   const durationMs = (completedAt ?? MOCK_END) - (startedAt ?? MOCK_START);
@@ -64,6 +65,21 @@ export function CourseDoneView() {
   };
 
   const handleDone = () => {
+    // 완료 기록 저장 — reset()이 타임스탬프를 지우므로 그 전에 페이로드를 만든다.
+    // 실제 pendingCourse가 있을 때만 저장(MOCK fallback 데이터는 기록하지 않음).
+    const payload = buildCompletionPayload({
+      pending: readPendingCourse(),
+      status: "completed",
+      startedAt,
+      completedAt,
+      rating: stars > 0 ? stars : null,
+      reactions,
+      stamps,
+    });
+    if (payload) {
+      // 텔레메트리 — 실패해도 완료 흐름은 그대로 진행
+      void saveCourseCompletionAction(payload).catch(() => {});
+    }
     reset();
     localStorage.removeItem("pendingCourse");
     router.push("/feed");
