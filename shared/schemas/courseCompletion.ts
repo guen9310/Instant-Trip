@@ -8,6 +8,9 @@ export const courseCompletionSchema = z.object({
   scale: z.enum(["light", "moderate", "leisurely"]).default("moderate"),
   // completed = 완료 버튼, abandoned = 새 코스 시작으로 이전 코스 포기가 확정된 경우
   status: z.enum(["completed", "abandoned"]).default("completed"),
+  // startCourseAction이 생성한 DB row ID — 있으면 UPDATE, 없으면 INSERT fallback
+  completionId: z.string().optional(),
+  dbCourseId: z.string().optional(),
   place: z
     .object({
       name: z.string().min(1),

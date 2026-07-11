@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   MapPin,
@@ -10,6 +10,7 @@ import {
   Check,
   Shuffle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
@@ -86,7 +87,12 @@ export function StartView({ prefs }: { prefs: Prefs }) {
   const [searchRadiusM, setSearchRadiusM] = useState<number | null>(null);
   const [showManualPicker, setShowManualPicker] = useState(false);
   const router = useRouter();
-  const { state, setCity } = useLocationStore();
+  const { state, setCity, requestPermission } = useLocationStore();
+
+  useEffect(() => {
+    if (state.status === "idle") requestPermission();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const generate = async (radiusM?: number) => {
     if (state.status !== "granted" || !state.lat || !state.lng) {
@@ -201,6 +207,15 @@ export function StartView({ prefs }: { prefs: Prefs }) {
                   위치 확인됨
                 </span>
               </div>
+            </div>
+          </div>
+        ) : state.status === "idle" || state.status === "requesting" ? (
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-point/8 border border-point/20 mb-7">
+            <Loader2 size={20} className="text-point shrink-0 animate-spin" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[14px] font-semibold text-text-primary">
+                위치 확인 중...
+              </p>
             </div>
           </div>
         ) : (

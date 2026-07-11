@@ -59,6 +59,9 @@ export type PendingCourse = {
   // 생성 시점 취향 스냅샷 — 결과 화면 표시·재추천용. "이 코스가 어떤 취향으로
   // 만들어졌나"를 보존한다 (구버전 localStorage 페이로드엔 없을 수 있음)
   prefs?: Prefs;
+  // startCourseAction이 반환한 DB row ID — 완료 시 INSERT 대신 UPDATE에 사용
+  completionId?: string;
+  dbCourseId?: string;
 };
 
 // 프로필 — 진행 중인 코스 상태

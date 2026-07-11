@@ -14,10 +14,6 @@ import { saveCourseCompletionAction } from "@/app/actions/completion";
 import { buildCompletionPayload } from "@/shared/utils/completionPayload";
 import type { PendingCourse } from "@/shared/types/course.types";
 
-// TODO: 실제 데이터 연결 시 제거
-const MOCK_START = Date.now() - 92 * 60 * 1000; // 92분 전
-const MOCK_END   = Date.now();
-
 const REACTION_TAGS = [
   "분위기 좋아요",
   "혼자 오기 좋아요",
@@ -56,7 +52,8 @@ export function CourseDoneView() {
   const pending = useClientRead(readPendingCourse);
   const place = pending === HYDRATING ? null : (pending?.place ?? MOCK_PLACES[0]);
 
-  const durationMs = (completedAt ?? MOCK_END) - (startedAt ?? MOCK_START);
+  const durationMs =
+    startedAt != null && completedAt != null ? completedAt - startedAt : null;
 
   const toggleReaction = (tag: string) => {
     setReactions((prev) =>
@@ -122,12 +119,14 @@ export function CourseDoneView() {
         )}
 
         {/* 소요 시간 카드 */}
-        <div className="rounded-xl bg-card border border-border px-4 py-3.5 mb-6">
-          <p className="text-[11px] text-text-secondary mb-1">총 소요 시간</p>
-          <p className="text-[24px] font-bold text-text-primary">
-            {formatDuration(durationMs)}
-          </p>
-        </div>
+        {durationMs != null && (
+          <div className="rounded-xl bg-card border border-border px-4 py-3.5 mb-6">
+            <p className="text-[11px] text-text-secondary mb-1">총 소요 시간</p>
+            <p className="text-[24px] font-bold text-text-primary">
+              {formatDuration(durationMs)}
+            </p>
+          </div>
+        )}
 
         {/* 별점 */}
         <div className="mb-5">

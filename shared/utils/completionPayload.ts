@@ -32,6 +32,8 @@ export function buildCompletionPayload(args: {
     region: args.pending.region,
     scale,
     status: args.status,
+    completionId: args.pending.completionId,
+    dbCourseId: args.pending.dbCourseId,
     place: {
       name: p.name,
       category: p.cat,
