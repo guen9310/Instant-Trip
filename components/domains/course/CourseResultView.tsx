@@ -13,12 +13,18 @@ import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { PlaceDetailSheet } from "@/components/domains/course/PlaceDetailSheet";
+import { FestivalDetailSheet } from "@/components/domains/course/FestivalDetailSheet";
 import {
   useCourseProgressStore,
   MAX_REROLLS,
 } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
-import type { JourneyPlace, FestivalSummary, PendingCourse } from "@/shared/types/course.types";
+import { startCourseAction } from "@/app/actions/completion";
+import type {
+  JourneyPlace,
+  FestivalSummary,
+  PendingCourse,
+} from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
@@ -56,6 +62,8 @@ export function CourseResultView({
   prefs,
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
+  const [selectedFestival, setSelectedFestival] =
+    useState<FestivalSummary | null>(null);
   const [rerolling, setRerolling] = useState(false);
   const [currentCourseId, setCurrentCourseId] = useState(courseId);
   const [currentPlace, setCurrentPlace] = useState<JourneyPlace>(place);
@@ -98,6 +106,10 @@ export function CourseResultView({
     setCurrentPlace(result.place);
     setCurrentCourseName(result.courseName);
     setCurrentFestivals(result.festivals);
+    console.log(
+      `[festival] 재추천 후 수신 — ${result.festivals.length}건`,
+      result.festivals,
+    );
 
     if (result.place.id !== prevId) {
       setNewPlaceId(result.place.id);
@@ -118,7 +130,10 @@ export function CourseResultView({
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
   };
 
-  const handleReject = async (placeId: string, reason: string): Promise<void> => {
+  const handleReject = async (
+    placeId: string,
+    reason: string,
+  ): Promise<void> => {
     console.log(`[reroll] 거절 — placeId: ${placeId}, reason: ${reason}`);
     addRejection(placeId);
     await doReroll([...rejectedPlaceIds, placeId]);
@@ -127,6 +142,30 @@ export function CourseResultView({
   const handleStart = () => {
     startCourse(currentCourseId);
     router.push(`/course/active/${currentCourseId}`);
+    // DB 저장을 백그라운드로 실행 — 탐색을 블로킹하지 않는다.
+    // 완료 시 completionId·dbCourseId를 localStorage에 기록해두면
+    // CourseDoneView가 INSERT 대신 UPDATE를 사용할 수 있다.
+    startCourseAction({
+      courseName: currentCourseName,
+      scale: scale ?? "moderate",
+      region,
+      place: currentPlace,
+    }).then((result) => {
+      if (!result.ok) return;
+      try {
+        const raw = localStorage.getItem("pendingCourse");
+        if (!raw) return;
+        const pending = JSON.parse(raw) as PendingCourse;
+        localStorage.setItem(
+          "pendingCourse",
+          JSON.stringify({
+            ...pending,
+            completionId: result.completionId,
+            dbCourseId: result.dbCourseId,
+          }),
+        );
+      } catch {}
+    });
   };
 
   if (isLoading) {
@@ -170,6 +209,11 @@ export function CourseResultView({
           isNew={currentPlace.id === newPlaceId}
         />
 
+        {/* 영업시간 안내 카드 — 파싱 실패 장소에만 노출 */}
+        {currentPlace.availabilityUncertain && currentPlace.name?.trim() && (
+          <HoursInfoCard placeName={currentPlace.name} />
+        )}
+
         {/* 예상 체류 카드 */}
         {currentPlace.dur && (
           <div className="mt-3 p-4 rounded-xl bg-card flex items-center gap-3">
@@ -191,16 +235,19 @@ export function CourseResultView({
         {/* 보조 정보 — 근처 맛집 / 진행중 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
         {(prefs?.food === "matjip" || currentFestivals.length > 0) && (
           <div className="mt-3 flex flex-col gap-2.5">
-            {prefs?.food === "matjip" && (() => {
-              const coord = currentPlace.coord ?? (mapX && mapY ? { lat: mapY, lng: mapX } : null);
-              return coord ? (
-                <NearbyRestaurants
-                  placeName={currentPlace.name}
-                  addr={currentPlace.addr}
-                  coord={coord}
-                />
-              ) : null;
-            })()}
+            {prefs?.food === "matjip" &&
+              (() => {
+                const coord =
+                  currentPlace.coord ??
+                  (mapX && mapY ? { lat: mapY, lng: mapX } : null);
+                return coord ? (
+                  <NearbyRestaurants
+                    placeName={currentPlace.name}
+                    addr={currentPlace.addr}
+                    coord={coord}
+                  />
+                ) : null;
+              })()}
 
             {currentFestivals.length > 0 && (
               <div className="p-3.5 rounded-xl bg-card border border-border">
@@ -209,17 +256,25 @@ export function CourseResultView({
                 </p>
                 <div className="flex flex-col gap-2.5">
                   {currentFestivals.slice(0, 3).map((f) => (
-                    <div key={f.id} className="flex items-center justify-between gap-2">
+                    <button
+                      key={f.id}
+                      onClick={() => setSelectedFestival(f)}
+                      className="w-full flex items-center justify-between gap-2 text-left active:scale-[0.98] transition-transform duration-150"
+                    >
                       <div className="min-w-0">
                         <p className="text-[13px] font-medium text-text-primary truncate">
                           {f.name}
                         </p>
-                        <p className="text-[11px] text-text-secondary">{f.period}</p>
+                        <p className="text-[11px] text-text-secondary">
+                          {f.period}
+                        </p>
                       </div>
-                      <Badge variant={f.status === "ongoing" ? "accent" : "outline"}>
+                      <Badge
+                        variant={f.status === "ongoing" ? "accent" : "outline"}
+                      >
                         {f.status === "ongoing" ? "진행중" : "예정"}
                       </Badge>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -247,6 +302,10 @@ export function CourseResultView({
         onReject={handleReject}
         rejectDisabled={isMaxRerolls || rerolling}
       />
+      <FestivalDetailSheet
+        festival={selectedFestival}
+        onClose={() => setSelectedFestival(null)}
+      />
     </>
   );
 }
@@ -273,7 +332,10 @@ function PlaceCardTimeline({
           <span className="text-[11px] font-semibold text-text-secondary">
             {place.cat}
           </span>
-          {(place.tags.length > 0 ? place.tags.slice(0, 2) : [place.badge.text]).map((tag) => (
+          {(place.tags.length > 0
+            ? place.tags.slice(0, 2)
+            : [place.badge.text]
+          ).map((tag) => (
             <span
               key={tag}
               className="px-1.5 py-0.5 rounded-full bg-primary/8 text-primary text-[10px] font-semibold"
@@ -301,6 +363,30 @@ function PlaceCardTimeline({
         <ChevronRight size={14} className="text-text-secondary" />
       </div>
     </button>
+  );
+}
+
+function HoursInfoCard({ placeName }: { placeName: string }) {
+  return (
+    <a
+      href={`https://www.google.com/search?q=${encodeURIComponent(`${placeName} 운영시간`)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-3 flex items-center gap-3.5 py-3.5 px-4 rounded-xl bg-card active:scale-[0.98] transition-transform duration-200"
+    >
+      <div className="w-9.5 h-9.5 rounded-full bg-[#1e2b40] flex items-center justify-center shrink-0">
+        <Clock size={18} className="text-[#8b9ab3]" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[12px] text-[#8b96a8] leading-none mb-0.5">
+          영업시간 정보
+        </p>
+        <p className="text-[14px] font-semibold text-[#b7c2d6] leading-snug">
+          방문 전 영업시간을 확인해보세요
+        </p>
+      </div>
+      <ChevronRight size={16} className="text-[#5c6b83] shrink-0" />
+    </a>
   );
 }
 

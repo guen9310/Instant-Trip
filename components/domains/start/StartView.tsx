@@ -120,6 +120,8 @@ export function StartView({ prefs }: { prefs: Prefs }) {
       return;
     }
 
+    console.log(`[festival] 클라이언트 수신 — ${result.festivals.length}건`, result.festivals);
+
     // 암묵 abandoned — 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체되는 순간,
     // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
     recordAbandonedIfAny();

@@ -6,11 +6,7 @@
  */
 
 const BASE_URL = "https://api.data.go.kr/openapi/tn_pubr_public_cltur_fstvl_api";
-// TourAPI(KorService2)와 같은 계정 키를 1차로 쓰지만, 이 API는 data.go.kr에서 별도
-// 활용신청이 필요해 1차 키가 거부될 수 있다(2026-06-29 확인: "30 SERVICE KEY IS NOT
-// REGISTERED ERROR"). 그 경우 대체 키로 1회 재시도한다 — 둘 중 하나만 살아있어도 동작한다.
-const PRIMARY_KEY = process.env.TOUR_API_KEY ?? "";
-const FALLBACK_KEY = process.env.CULTURAL_FESTIVAL_API_KEY_FALLBACK ?? "";
+const API_KEY = process.env.TOUR_API_KEY ?? "";
 
 export interface CulturalFestival {
   fstvlNm: string;         // 축제명
@@ -76,21 +72,10 @@ export async function fetchCulturalFestivals(params: {
   pageNo?: number;
   numOfRows?: number;
 } = {}): Promise<CulturalFestival[]> {
-  if (!PRIMARY_KEY && !FALLBACK_KEY) {
-    throw new Error("TOUR_API_KEY 환경변수가 설정되지 않았습니다.");
-  }
+  if (!API_KEY) throw new Error("TOUR_API_KEY 환경변수가 설정되지 않았습니다.");
 
   const { pageNo = 1, numOfRows = 100 } = params;
-
-  let data: GovApiResponse;
-  try {
-    if (!PRIMARY_KEY) throw new Error("TOUR_API_KEY 미설정");
-    data = await requestFestivals(PRIMARY_KEY, pageNo, numOfRows);
-  } catch (err) {
-    if (!FALLBACK_KEY) throw err;
-    console.warn(`[festival] 기본 키 거부 — 대체 키로 재시도 (${err})`);
-    data = await requestFestivals(FALLBACK_KEY, pageNo, numOfRows);
-  }
+  const data = await requestFestivals(API_KEY, pageNo, numOfRows);
 
   const raw = data.response.body.items;
   if (!raw) return [];

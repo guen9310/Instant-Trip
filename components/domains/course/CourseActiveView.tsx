@@ -87,12 +87,7 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
               <span className="text-[11px] text-text-secondary/40">장소 이미지</span>
             </div>
           )}
-          <div className="absolute top-3 left-3">
-            <div className="flex items-center gap-1.5 bg-background/80 backdrop-blur-sm rounded-full px-3 py-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              <span className="text-[12px] font-semibold text-text-primary">지금 여기</span>
-            </div>
-          </div>
+
         </div>
 
         {/* 장소 정보 */}

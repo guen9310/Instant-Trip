@@ -4,9 +4,12 @@ import { haversineKm } from "@/shared/utils/geo";
 
 // 원본 데이터를 1시간 메모리 캐시 — 같은 프로세스 내 호출(파이프라인·REST 엔드포인트
 // 모두)이 이 캐시 하나를 공유한다. 별도 캐시를 또 두면 API가 중복 호출된다.
-let _festivalCache: { data: CulturalFestival[]; cachedAt: number } | null =
-  null;
+let _festivalCache: { data: CulturalFestival[]; cachedAt: number } | null = null;
 const FESTIVAL_CACHE_TTL = 60 * 60 * 1000; // 1시간
+
+// 캐시 만료 직후 동시 요청이 몰릴 때 페이지 순회가 중복 실행되지 않도록 진행 중인
+// Promise를 공유한다. 완료(성공·실패 모두)되면 null로 초기화한다.
+let _inflight: Promise<CulturalFestival[]> | null = null;
 
 // 한 번에 최대 1000건까지만 허용되는 API라(2026-06-29 확인: 1290건↑ 시도 시
 // INVALID_REQUEST_PARAMETER_ERROR), 전체를 받으려면 페이지를 순회해야 한다.
@@ -15,25 +18,27 @@ const FESTIVAL_PAGE_SIZE = 1000;
 const FESTIVAL_MAX_PAGES = 5; // 안전판 — 최대 5000건까지
 
 export async function getAllFestivals(): Promise<CulturalFestival[]> {
-  if (
-    _festivalCache &&
-    Date.now() - _festivalCache.cachedAt < FESTIVAL_CACHE_TTL
-  ) {
+  if (_festivalCache && Date.now() - _festivalCache.cachedAt < FESTIVAL_CACHE_TTL) {
+    console.log(`[festival] 캐시 히트 — ${_festivalCache.data.length}건`);
     return _festivalCache.data;
   }
 
-  const all: CulturalFestival[] = [];
-  for (let pageNo = 1; pageNo <= FESTIVAL_MAX_PAGES; pageNo++) {
-    const page = await fetchCulturalFestivals({
-      pageNo,
-      numOfRows: FESTIVAL_PAGE_SIZE,
-    });
-    all.push(...page);
-    if (page.length < FESTIVAL_PAGE_SIZE) break;
-  }
+  if (_inflight) return _inflight;
 
-  _festivalCache = { data: all, cachedAt: Date.now() };
-  return all;
+  _inflight = (async () => {
+    const all: CulturalFestival[] = [];
+    for (let pageNo = 1; pageNo <= FESTIVAL_MAX_PAGES; pageNo++) {
+      const page = await fetchCulturalFestivals({ pageNo, numOfRows: FESTIVAL_PAGE_SIZE });
+      console.log(`[festival] API 페이지 ${pageNo} — ${page.length}건`);
+      all.push(...page);
+      if (page.length < FESTIVAL_PAGE_SIZE) break;
+    }
+    console.log(`[festival] 전체 로드 완료 — ${all.length}건`);
+    _festivalCache = { data: all, cachedAt: Date.now() };
+    return all;
+  })().finally(() => { _inflight = null; });
+
+  return _inflight;
 }
 
 type SplitOptions = {
@@ -91,10 +96,11 @@ export async function fetchNearbyFestivals(
 ): Promise<{ ongoing: CulturalFestival[]; upcoming: CulturalFestival[] }> {
   try {
     const all = await getAllFestivals();
-    return splitOngoingUpcoming(all, {
-      ...options,
-      location: { lat, lng, radiusKm },
-    });
+    const result = splitOngoingUpcoming(all, { ...options, location: { lat, lng, radiusKm } });
+    console.log(
+      `[festival] 반경 필터 — 중심: (${lat.toFixed(4)}, ${lng.toFixed(4)}), 반경: ${radiusKm}km | 전체 ${all.length}건 → 진행중 ${result.ongoing.length}건, 예정 ${result.upcoming.length}건`,
+    );
+    return result;
   } catch (err) {
     console.warn(`[festival] 문화축제 조회 실패 — ${err}`);
     return { ongoing: [], upcoming: [] };

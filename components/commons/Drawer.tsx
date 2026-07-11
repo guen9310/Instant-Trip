@@ -4,7 +4,13 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 import { cn } from "@/shared/utils";
 
-const Drawer = DrawerPrimitive.Root;
+function Drawer({ onOpenChange, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
+  const handleOpenChange = (open: boolean) => {
+    if (open) (document.activeElement as HTMLElement)?.blur();
+    onOpenChange?.(open);
+  };
+  return <DrawerPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
+}
 const DrawerTrigger = DrawerPrimitive.Trigger;
 const DrawerClose = DrawerPrimitive.Close;
 

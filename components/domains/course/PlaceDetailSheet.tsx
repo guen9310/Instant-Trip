@@ -7,7 +7,6 @@ import {
   Calendar,
   ThumbsDown,
   ChevronLeft,
-  AlertCircle,
   ExternalLink,
 } from "lucide-react";
 import type { ElementType } from "react";
@@ -118,6 +117,21 @@ function PlaceDetailContent({
     });
   }, [viewMode, place.coord]);
 
+  // vaul의 onPress(pointerdown)는 data-vaul-no-drag를 확인하지 않고 즉시
+  // setPointerCapture를 호출한다. 이로 인해 Kakao SDK의 드래그 추적이 깨진다.
+  // React 루트에 이벤트가 위임되기 전에 native 버블 단계에서 차단한다.
+  useEffect(() => {
+    const el = roadviewRef.current;
+    if (!el) return;
+    const stop = (e: Event) => e.stopPropagation();
+    el.addEventListener("pointerdown", stop);
+    el.addEventListener("touchstart", stop);
+    return () => {
+      el.removeEventListener("pointerdown", stop);
+      el.removeEventListener("touchstart", stop);
+    };
+  }, [viewMode]);
+
   const handleToggleDesc = () => {
     if (isDescExpanded && descRef.current) {
       descRef.current.scrollTop = 0;
@@ -212,9 +226,19 @@ function PlaceDetailContent({
 
               <div className="flex flex-col gap-2.5 mt-4">
                 <DetailRow icon={MapPin} label={place.addr} />
-                {place.hours?.trim() && (
+                {place.hours?.trim() ? (
                   <DetailRow icon={Clock} label={`영업시간 ${place.hours}`} />
-                )}
+                ) : place.availabilityUncertain && place.name?.trim() ? (
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(`${place.name} 운영시간`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5"
+                  >
+                    <ExternalLink size={16} className="text-text-secondary shrink-0" />
+                    <span className="text-[14px] text-text-secondary">영업시간 확인하기</span>
+                  </a>
+                ) : null}
                 {(place.time?.trim() || place.dur?.trim()) && (
                   <DetailRow
                     icon={Calendar}
@@ -257,29 +281,6 @@ function PlaceDetailContent({
                 </>
               )}
 
-              {place.availabilityUncertain && (
-                <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex flex-col gap-2.5">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle
-                      size={15}
-                      className="text-amber-500 shrink-0 mt-0.5"
-                    />
-                    <p className="text-[13px] text-amber-800 leading-snug">
-                      영업시간·휴무는 변동될 수 있어요. 방문 전 확인을 권장합니다.
-                    </p>
-                  </div>
-                  {place.name?.trim() && (
-                    <a
-                      href={`https://www.google.com/search?q=${encodeURIComponent(`${place.name} 운영시간`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg bg-amber-100 text-amber-800 text-[13px] font-medium"
-                    >
-                      <ExternalLink size={13} /> 영업시간 확인
-                    </a>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
