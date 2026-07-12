@@ -4,10 +4,8 @@ import { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import {
   toCourseProgress,
   toCompletedCourse,
-  toFeedCourse,
 } from "@/server/mappers";
 import type { CourseProgress, CompletedCourse } from "@/shared/types/course.types";
-import type { FeedCourse } from "@/shared/types/feed.types";
 
 function formatDuration(ms: number): string {
   const totalMin = Math.max(0, Math.floor(ms / 60000));
@@ -85,57 +83,3 @@ export async function getCompletedCourses(
   });
 }
 
-// ─── TODO 2: 피드 코스 목록 ───────────────────────────────────────────────────
-// isActive=true 행만 피드에 노출. 코스를 reviewCount 내림차순으로 정렬 후
-// featured(1) / mid(2) / small(3) / list(나머지) 로 분배한다.
-
-export type FeedSections = {
-  featured: FeedCourse | null;
-  midCourses: FeedCourse[];
-  smallCourses: FeedCourse[];
-  listCourses: FeedCourse[];
-};
-
-export async function getFeedCourses(): Promise<FeedSections> {
-  const empty: FeedSections = {
-    featured: null,
-    midCourses: [],
-    smallCourses: [],
-    listCourses: [],
-  };
-
-  const courseRows = await db
-    .select()
-    .from(courses)
-    .where(eq(courses.isActive, true))
-    .orderBy(desc(courses.reviewCount))
-    .limit(50);
-
-  if (courseRows.length === 0) return empty;
-
-  const courseIds = courseRows.map((c) => c.id);
-  const placeRows = await db
-    .select()
-    .from(coursePlaces)
-    .where(inArray(coursePlaces.courseId, courseIds))
-    .orderBy(coursePlaces.orderIndex);
-
-  const placesByCourseId = placeRows.reduce<
-    Record<string, typeof placeRows>
-  >((acc, p) => {
-    (acc[p.courseId] ??= []).push(p);
-    return acc;
-  }, {});
-
-  const feedCourses = courseRows.map((course) =>
-    toFeedCourse(course, placesByCourseId[course.id] ?? []),
-  );
-
-  const [featured = null, ...rest] = feedCourses;
-  return {
-    featured,
-    midCourses: rest.slice(0, 2),
-    smallCourses: rest.slice(2, 5),
-    listCourses: rest.slice(5),
-  };
-}

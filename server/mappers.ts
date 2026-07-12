@@ -1,5 +1,4 @@
 import type { courses, coursePlaces, courseCompletions } from "@/server/schema";
-import type { FeedCourse, FeedPlace } from "@/shared/types/feed.types";
 import type {
   JourneyPlace,
   CourseProgress,
@@ -11,31 +10,6 @@ import { formatDuration } from "@/shared/utils/duration";
 type CourseRow = typeof courses.$inferSelect;
 type PlaceRow = typeof coursePlaces.$inferSelect;
 type CompletionRow = typeof courseCompletions.$inferSelect;
-
-// ─── Feed ────────────────────────────────────────────────────────────────────
-
-export function toFeedPlace(row: PlaceRow): FeedPlace {
-  return {
-    name: row.name,
-    category: row.category,
-    status: isPlaceOpen(row) ? "open" : "closed",
-    description: row.description ?? undefined,
-  };
-}
-
-export function toFeedCourse(row: CourseRow, places: PlaceRow[]): FeedCourse {
-  return {
-    id: row.id,
-    name: row.name,
-    region: row.region,
-    rating: Number(row.ratingAvg),
-    count: row.reviewCount,
-    availability: deriveAvailability(places),
-    festival: row.isFestival,
-    imageSeed: row.imageSeed ?? undefined,
-    places: places.map(toFeedPlace),
-  };
-}
 
 // ─── Journey ─────────────────────────────────────────────────────────────────
 
@@ -97,22 +71,6 @@ export function toCompletedCourse(
 }
 
 // ─── 내부 유틸 ────────────────────────────────────────────────────────────────
-
-function isPlaceOpen(row: PlaceRow): boolean {
-  if (!row.openTime || !row.closeTime) return true;
-  const now = new Date();
-  const [oh, om] = row.openTime.split(":").map(Number);
-  const [ch, cm] = row.closeTime.split(":").map(Number);
-  const cur = now.getHours() * 60 + now.getMinutes();
-  return cur >= oh * 60 + om && cur <= ch * 60 + cm;
-}
-
-function deriveAvailability(places: PlaceRow[]): FeedCourse["availability"] {
-  const closedCount = places.filter((p) => !isPlaceOpen(p)).length;
-  if (closedCount === 0) return "available";
-  if (closedCount === places.length) return "unavailable";
-  return "partial";
-}
 
 function formatHours(
   open: string | null,

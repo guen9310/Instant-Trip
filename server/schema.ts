@@ -101,7 +101,6 @@ export const courses = pgTable(
     // 집계 (리뷰 제출 시 트랜잭션으로 갱신)
     ratingAvg: numeric("rating_avg", { precision: 3, scale: 2 }).notNull().default("0"),
     reviewCount: integer("review_count").notNull().default(0),
-    isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

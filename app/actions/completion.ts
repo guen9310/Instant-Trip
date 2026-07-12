@@ -44,7 +44,6 @@ export async function startCourseAction(
         region: payload.region ?? "알 수 없음",
         regionCode: payload.region ?? "unknown",
         scale: payload.scale,
-        isActive: false,
       }),
       db.insert(coursePlaces).values({
         courseId: dbCourseId,
@@ -140,7 +139,6 @@ export async function saveCourseCompletionAction(
         region: d.region ?? "알 수 없음",
         regionCode: d.region ?? "unknown",
         scale: d.scale,
-        isActive: false,
       }),
       db.insert(coursePlaces).values({
         courseId,
