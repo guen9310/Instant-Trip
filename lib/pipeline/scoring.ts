@@ -8,6 +8,7 @@ import type {
 } from "@/lib/pipeline/types";
 import { SCALE_CONFIG } from "@/lib/pipeline/types";
 import type { DurationRange } from "@/shared/utils/duration";
+import { getKstHour } from "@/shared/utils/kst";
 import { haversineKm } from "@/shared/utils/geo";
 import { matchStayDurationRule } from "@/lib/pipeline/stayDuration";
 
@@ -151,7 +152,7 @@ function calcDistanceBonus(item: TourItem, profile: UserProfile): number {
 // (음식점 type=39 분기는 음식점이 후보 수집 단계(2번)에서 이미 제외되어 도달 불가능한
 // 코드였으므로 제거했다 — 2026-06-28)
 function calcTimeBonus(item: TourItem): number {
-  const hour = new Date().getHours();
+  const hour = getKstHour();
   const type = item.contenttypeid;
 
   if ((hour >= 9 && hour < 11) || (hour >= 13 && hour < 17)) {
