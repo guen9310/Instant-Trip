@@ -72,6 +72,15 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at"),
 })
 
+// ─── Cache tables ─────────────────────────────────────────────────────────────
+
+export const apiCache = pgTable("api_cache", {
+  cacheKey: text("cache_key").primaryKey(),
+  payload:  jsonb("payload").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
 // ─── Domain tables ────────────────────────────────────────────────────────────
 
 export const courses = pgTable(

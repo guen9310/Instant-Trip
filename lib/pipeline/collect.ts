@@ -1,13 +1,10 @@
 import { tourFetch, extractItems } from "@/lib/tour/client";
-import { readCache, writeCache } from "@/lib/tour/cache";
+import { readCache, writeCache, CACHE_EMPTY } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
 import type { TourItem } from "@/lib/tour/types";
 import type { UserProfile } from "@/lib/pipeline/types";
 import { getSearchRadiusM } from "@/lib/pipeline/types";
-
-// 같은 위치+반경+타입 조합의 결과를 1시간 동안 재사용한다.
-// API 호출 횟수를 줄이기 위함이며, 1시간 이내 같은 요청이 들어오면 캐시에서 즉시 반환한다.
-const STAGE1_TTL = 60 * 60 * 1000; // 1시간
+import { TTL } from "@/lib/cache/ttl";
 
 const TYPE_LABEL: Record<string, string> = {
   "12": "관광지", "14": "문화시설", "15": "행사",
@@ -42,12 +39,13 @@ export async function collectCandidates(profile: UserProfile): Promise<TourItem[
   const fetches = TARGET_CONTENT_TYPES.map(async (contentTypeId) => {
     const label = TYPE_LABEL[contentTypeId];
 
-    // 캐시 키: 위치(소수점 2자리)+ 반경 + 타입으로 조합한다.
-    // 같은 위치에서 같은 타입을 요청하면 캐시를 히트한다.
-    const cacheKey = `stage1_${Math.round(mapX * 100)}_${Math.round(mapY * 100)}_${radius}_${contentTypeId}`;
-    const cached = readCache<TourItem[]>(cacheKey, STAGE1_TTL);
-    if (cached) {
-      console.log(`[stage1] ${label}(${contentTypeId}) → 캐시 hit (${cached.length}건)`);
+    // 캐시 키: 위경도 소수점 3자리(≈110m 격자) + 반경 + 타입
+    const lng3 = mapX.toFixed(3);
+    const lat3 = mapY.toFixed(3);
+    const cacheKey = `tour:locationBasedList2:${lng3}:${lat3}:${radius}:${contentTypeId}`;
+    const cached = await readCache<TourItem[]>(cacheKey);
+    if (cached !== null && cached !== CACHE_EMPTY) {
+      console.log(`[stage1] ${label}(${contentTypeId}) → 캐시 HIT (${cached.length}건)`);
       return cached;
     }
 
@@ -60,7 +58,8 @@ export async function collectCandidates(profile: UserProfile): Promise<TourItem[
       const items = extractItems(data);
       const total = data.response.body.totalCount;
       console.log(`[stage1] ${label}(${contentTypeId}) → ${items.length}건 수집 / 전체 ${total}건 (${Date.now() - ts}ms)`);
-      writeCache(cacheKey, items);
+      const ttl = items.length === 0 ? TTL.EMPTY_RESULT : TTL.LOCATION_BASED_LIST;
+      await writeCache(cacheKey, items, ttl);
       return items;
     } catch (err) {
       // 특정 타입 수집 실패 시 해당 타입만 빈 배열로 처리하고 나머지는 계속 진행한다.

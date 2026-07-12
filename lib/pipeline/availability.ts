@@ -1,5 +1,5 @@
 import { tourFetch, extractItems } from "@/lib/tour/client";
-import { readCache, writeCache } from "@/lib/tour/cache";
+import { readCache, writeCache, writeCacheEmpty, CACHE_EMPTY } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
 import type {
   TourItem,
@@ -8,11 +8,10 @@ import type {
   TourDetailIntroLeports,
   TourDetailIntroRestaurant,
 } from "@/lib/tour/types";
+import { TTL } from "@/lib/cache/ttl";
+import { getKstHour, getKstMinute, getKstDay } from "@/shared/utils/kst";
 
 export type AvailableItem = TourItem & { availabilityUncertain: boolean };
-
-// 운영시간·휴무일 정보는 자주 바뀌지 않으므로 24시간 캐시해도 무방하다.
-const INTRO_TTL = 24 * 60 * 60 * 1000; // 24시간
 const BATCH_SIZE = 10;
 
 type IntroItem =
@@ -72,7 +71,7 @@ const DAY_PATTERNS: RegExp[] = [
 // dayIndex: 0=일, 1=월, ..., 6=토 (테스트 시 주입 가능)
 export function isRestDay(
   restdate: string,
-  dayIndex: number = new Date().getDay(),
+  dayIndex: number = getKstDay(),
 ): boolean {
   if (!restdate) return false;
   return DAY_PATTERNS[dayIndex].test(restdate);
@@ -127,8 +126,10 @@ function checkAvailability(usetime: string, restdate: string): OpenResult {
     };
   }
   const now = new Date();
-  const cur = now.getHours() * 60 + now.getMinutes();
-  const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const kstHour = getKstHour(now);
+  const kstMin = getKstMinute(now);
+  const cur = kstHour * 60 + kstMin;
+  const timeStr = `${String(kstHour).padStart(2, "0")}:${String(kstMin).padStart(2, "0")}`;
   const openStr = `${String(Math.floor(range.open / 60)).padStart(2, "0")}:${String(range.open % 60).padStart(2, "0")}`;
   const closeStr = `${String(Math.floor(range.close / 60)).padStart(2, "0")}:${String(range.close % 60).padStart(2, "0")}`;
 
@@ -174,14 +175,22 @@ export async function filterByAvailability(
     const idx = `[${globalIdx + 1}/${items.length}]`;
     const prefix = `[stage2] ${idx} "${item.title}" type=${item.contenttypeid} src=${item.source ?? "tour"}`;
 
-    const cacheKey = `intro_${item.contentid}`;
-    const cachedIntro = readCache<IntroItem>(cacheKey, INTRO_TTL);
+    const cacheKey = `tour:detailIntro2:${item.contentid}`;
+    const cachedIntro = await readCache<IntroItem>(cacheKey);
+
+    // 이전 API 호출에서 데이터가 없었던 장소 — 재호출 없이 통과(uncertain)
+    if (cachedIntro === CACHE_EMPTY) {
+      passed++;
+      console.log(`${prefix} → 캐시 HIT (빈 응답) → uncertain=true`);
+      return { ...item, availabilityUncertain: true };
+    }
 
     const ts = Date.now();
     let intro: IntroItem | undefined;
 
-    if (cachedIntro) {
+    if (cachedIntro !== null) {
       intro = cachedIntro;
+      console.log(`${prefix} → 캐시 HIT`);
     } else {
       try {
         const data = await tourFetch<IntroItem>(ENDPOINTS.DETAIL_INTRO, {
@@ -189,7 +198,11 @@ export async function filterByAvailability(
           contentTypeId: item.contenttypeid,
         });
         intro = extractItems(data)[0];
-        if (intro) writeCache(cacheKey, intro);
+        if (intro) {
+          await writeCache(cacheKey, intro, TTL.DETAIL_INTRO);
+        } else {
+          await writeCacheEmpty(cacheKey, TTL.EMPTY_RESULT);
+        }
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         errCount++;
