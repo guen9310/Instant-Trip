@@ -96,25 +96,38 @@ function formatFestivalDate(dateStr: string): string {
   return dateStr;
 }
 
-// CulturalFestival → 화면 표시용 FestivalSummary. festivals.ongoing[0]에는
-// pipeline/index.ts가 미리 로드한 images가 덮어써져 있을 수 있다(있으면 사용).
-export function courseResultToFestivalSummaries(
-  result: CourseResult,
-): FestivalSummary[] {
-  const toSummary = (
-    f: CulturalFestival,
-    status: "ongoing" | "upcoming",
-  ): FestivalSummary => ({
+function toFestivalSummary(
+  f: CulturalFestival,
+  status: "ongoing" | "upcoming",
+): FestivalSummary {
+  return {
     id: `${f.fstvlStartDate}_${f.fstvlNm}`,
     name: f.fstvlNm,
     status,
     period: `${formatFestivalDate(f.fstvlStartDate)} ~ ${formatFestivalDate(f.fstvlEndDate)}`,
     address: f.rdnmadr || f.lnmadr || "",
     imageUrl: (f as CulturalFestival & { images?: string[] }).images?.[0] ?? null,
-  });
+  };
+}
 
+// CulturalFestival → 화면 표시용 FestivalSummary. festivals.ongoing[0]에는
+// pipeline/index.ts가 미리 로드한 images가 덮어써져 있을 수 있다(있으면 사용).
+export function courseResultToFestivalSummaries(
+  result: CourseResult,
+): FestivalSummary[] {
   // upcoming은 코스 결과 화면에 표시하지 않는다 — "지금 갈 곳"을 결정하는 맥락에서
   // 예정 축제는 즉시 활용 불가한 정보라 혼란만 준다. 피드 기능에서 별도 활용 예정.
-  return result.festivals.ongoing.map((f) => toSummary(f, "ongoing"));
+  return result.festivals.ongoing.map((f) => toFestivalSummary(f, "ongoing"));
+}
+
+// 홈 화면용 — ongoing + upcoming 모두 변환
+export function festivalsToSummaries(festivals: {
+  ongoing: CulturalFestival[];
+  upcoming: CulturalFestival[];
+}): { ongoing: FestivalSummary[]; upcoming: FestivalSummary[] } {
+  return {
+    ongoing: festivals.ongoing.map((f) => toFestivalSummary(f, "ongoing")),
+    upcoming: festivals.upcoming.map((f) => toFestivalSummary(f, "upcoming")),
+  };
 }
 
