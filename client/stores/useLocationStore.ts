@@ -6,7 +6,7 @@ import { fetchCityAction } from "@/app/actions/geocode";
 type LocationStore = {
   state: LocationState;
   requestPermission: () => void;
-  setCity: (city: string) => void;
+  setCity: (city: string, sidoName?: string | null) => void;
   reset: () => void;
 };
 
@@ -23,11 +23,20 @@ export const useLocationStore = create<LocationStore>()(
         set({ state: { status: "requesting" } });
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
-            const city = await fetchCityAction(
+            const { displayName, sidoName } = await fetchCityAction(
               pos.coords.latitude,
               pos.coords.longitude
             );
-            set({ state: { status: "granted", city, source: "geo", lat: pos.coords.latitude, lng: pos.coords.longitude } });
+            set({
+              state: {
+                status: "granted",
+                city: displayName,
+                sidoName,
+                source: "geo",
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+              },
+            });
           },
           (err) => {
             set({ state: { status: err.code === err.TIMEOUT ? "timeout" : "denied" } });
@@ -36,8 +45,8 @@ export const useLocationStore = create<LocationStore>()(
         );
       },
 
-      setCity: (city: string) => {
-        set({ state: { status: "granted", city, source: "manual" } });
+      setCity: (city: string, sidoName?: string | null) => {
+        set({ state: { status: "granted", city, sidoName: sidoName ?? null, source: "manual" } });
       },
 
       reset: () => {

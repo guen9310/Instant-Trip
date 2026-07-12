@@ -62,7 +62,7 @@ const KEYFRAMES = `
 `;
 
 interface LocationDeniedViewProps {
-  onCitySelect: (city: string) => void;
+  onCitySelect: (city: string, sidoName: string | null) => void;
   /** denied: 권한 거부/불가 배너 표시. manual: 배너 없이 단순 선택 UI */
   variant?: "denied" | "manual";
 }
@@ -127,7 +127,10 @@ export function LocationDeniedView({
         <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
           {city ? (
             <button
-              onClick={() => onCitySelect(city)}
+              onClick={() => {
+                const cityData = REGION_CITIES[region!]?.find((c) => c.name === city);
+                onCitySelect(city, cityData?.prov ?? null);
+              }}
               className="w-full h-12.5 rounded-[10px] bg-accent text-white text-[15px] font-bold tracking-tight"
             >
               이 도시로 코스 뽑기

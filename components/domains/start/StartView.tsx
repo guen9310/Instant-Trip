@@ -153,8 +153,8 @@ export function StartView({ prefs }: { prefs: Prefs }) {
     return (
       <LocationDeniedView
         variant={isDenied ? "denied" : "manual"}
-        onCitySelect={(selectedCity) => {
-          setCity(selectedCity);
+        onCitySelect={(selectedCity, sidoName) => {
+          setCity(selectedCity, sidoName);
           setShowManualPicker(false);
           setNoNearby(false);
         }}
