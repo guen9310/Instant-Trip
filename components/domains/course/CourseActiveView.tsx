@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import {
   ChevronUp,
   Coffee,
@@ -17,6 +16,7 @@ import {
   Clock,
   AlertTriangle,
 } from "lucide-react";
+import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
@@ -73,21 +73,12 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
       <div className="flex-1 overflow-y-auto">
         {/* 장소 이미지 */}
         <div className="relative h-52 bg-card overflow-hidden shrink-0">
-          {place.imageUrl ? (
-            <Image
-              src={place.imageUrl}
-              alt={place.name}
-              fill
-              sizes="(max-width: 430px) 100vw, 430px"
-              loading="eager"
-              className="object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-end justify-end p-3">
-              <span className="text-[11px] text-text-secondary/40">장소 이미지</span>
-            </div>
-          )}
-
+          <PlaceThumbnail
+            imageUrl={place.imageUrl}
+            cat={place.cat}
+            className="w-full h-full"
+            sizes="(max-width: 430px) 100vw, 430px"
+          />
         </div>
 
         {/* 장소 정보 */}

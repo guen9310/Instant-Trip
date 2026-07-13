@@ -2,21 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, PartyPopper, Trees, Landmark, Bike, MapPin } from "lucide-react";
+import type { ElementType } from "react";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { getHomeDataAction, getHomeDataByRegionAction } from "@/app/actions/home";
 import { HomeLocationCard } from "@/components/domains/home/HomeLocationCard";
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
+import { ImagePlaceholder } from "@/components/commons/ImagePlaceholder";
 import type { HomeData } from "@/lib/home/core";
 import type { FestivalSummary } from "@/shared/types/course.types";
 import type { TourItem } from "@/lib/tour/types";
-import { cn } from "@/shared/utils";
+import { cn, isBlank } from "@/shared/utils";
 
 // 콘텐츠 타입 → 표시 라벨
 const TYPE_LABEL: Record<string, string> = {
   "12": "관광지",
   "14": "문화시설",
   "28": "레포츠",
+};
+
+const TYPE_ICON: Record<string, ElementType> = {
+  "12": Trees,
+  "14": Landmark,
+  "28": Bike,
 };
 const FILTER_CHIPS = ["전체", "관광지", "문화시설", "레포츠"] as const;
 type FilterChip = (typeof FILTER_CHIPS)[number];
@@ -186,15 +194,15 @@ function FestivalSection({ festivals }: { festivals: FestivalSummary[] }) {
             key={f.id}
             className="flex-shrink-0 w-48 rounded-xl overflow-hidden border border-border bg-card"
           >
-            {f.imageUrl ? (
+            {!isBlank(f.imageUrl) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={f.imageUrl}
+                src={f.imageUrl!}
                 alt={f.name}
                 className="w-full aspect-video object-cover"
               />
             ) : (
-              <div className="w-full aspect-video bg-muted" />
+              <ImagePlaceholder icon={PartyPopper} className="w-full aspect-video" />
             )}
             <div className="px-3 pt-2 pb-3">
               <div className="mb-1.5">
@@ -276,7 +284,7 @@ function PlaceCard({ place }: { place: TourItem }) {
 
   return (
     <div className="rounded-xl overflow-hidden border border-border bg-card">
-      {place.firstimage ? (
+      {!isBlank(place.firstimage) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={place.firstimage}
@@ -284,7 +292,10 @@ function PlaceCard({ place }: { place: TourItem }) {
           className="w-full aspect-video object-cover"
         />
       ) : (
-        <div className="w-full aspect-video bg-muted" />
+        <ImagePlaceholder
+          icon={TYPE_ICON[place.contenttypeid] ?? MapPin}
+          className="w-full aspect-video"
+        />
       )}
       <div className="px-2.5 py-2">
         <p className="text-[13px] font-semibold text-text-primary leading-snug line-clamp-2">
