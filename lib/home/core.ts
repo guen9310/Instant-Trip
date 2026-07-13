@@ -8,8 +8,10 @@ import type { FestivalSummary } from "@/shared/types/course.types";
 const TARGET_CONTENT_TYPES = ["12", "14", "28"] as const;
 // 화면 미확정이므로 타입당 10건으로 시작 — UI 완성 후 조정
 export const PLACES_PER_TYPE = 10;
-// 좌표 기준 축제 탐색 반경 (km)
-export const FESTIVAL_RADIUS_KM = 50;
+// 좌표 기준 축제 탐색 반경 (km) — 즉흥 나들이 앱 맥락상 20km 이내로 한정
+export const FESTIVAL_RADIUS_KM = 20;
+// 홈 축제 섹션 최대 카드 수 (진행중 먼저, 나머지 예정으로 채움)
+export const FESTIVAL_MAX_CARDS = 6;
 
 export type HomeData = {
   region: Region | null;
@@ -62,8 +64,10 @@ export async function fetchHomeCore(
   try {
     const raw = await fetchNearbyFestivals(lat, lng, FESTIVAL_RADIUS_KM);
     const summaries = festivalsToSummaries(raw);
-    ongoingFestivals = summaries.ongoing;
-    upcomingFestivals = summaries.upcoming;
+    // 진행중 먼저, 나머지 슬롯을 예정으로 채워 최대 FESTIVAL_MAX_CARDS장
+    ongoingFestivals = summaries.ongoing.slice(0, FESTIVAL_MAX_CARDS);
+    const remainingSlots = FESTIVAL_MAX_CARDS - ongoingFestivals.length;
+    upcomingFestivals = summaries.upcoming.slice(0, remainingSlots);
   } catch (err) {
     console.warn(`[home] 축제 조회 실패 — ${err}`);
     errors.push("festivals");

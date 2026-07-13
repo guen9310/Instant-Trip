@@ -70,6 +70,11 @@ export async function getAllFestivals(): Promise<CulturalFestival[]> {
   return festivals;
 }
 
+// 시작~종료가 이 일수를 초과하면 상설 프로그램으로 간주하고 축제 섹션에서 제외
+export const FESTIVAL_MAX_DURATION_DAYS = 90;
+// 예정 축제 노출 창: 오늘 기준 이 일수 이내 시작하는 축제만 표시
+export const FESTIVAL_UPCOMING_WINDOW_DAYS = 14;
+
 type SplitOptions = {
   simulationDate?: string;
   affinity?: number;
@@ -84,37 +89,61 @@ function splitOngoingUpcoming(
     ? new Date(options.simulationDate)
     : new Date();
   const today = getKstDateString(base);
-  const oneMonthLater = new Date(base);
-  oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
-  const limitDate = getKstDateString(oneMonthLater);
+  const upcomingLimitDate = new Date(base);
+  upcomingLimitDate.setDate(upcomingLimitDate.getDate() + FESTIVAL_UPCOMING_WINDOW_DAYS);
+  const limitDate = getKstDateString(upcomingLimitDate);
 
+  // 1단계: 기간 필터 — 90일 초과는 상설 프로그램으로 간주하고 제외
+  const MAX_DURATION_MS = FESTIVAL_MAX_DURATION_DAYS * 24 * 60 * 60 * 1000;
+  const durationPassed = all.filter((f) => {
+    const durationMs =
+      new Date(f.fstvlEndDate).getTime() - new Date(f.fstvlStartDate).getTime();
+    return durationMs <= MAX_DURATION_MS;
+  });
+  if (durationPassed.length < all.length) {
+    console.log(
+      `[festival:filter] 기간(>${FESTIVAL_MAX_DURATION_DAYS}일) 제외 — ${all.length - durationPassed.length}건 제외, ${durationPassed.length}건 통과`,
+    );
+  }
+
+  // 2단계: 반경 필터
   const { location } = options;
   const distKm = (f: CulturalFestival) =>
     location ? haversineKm(location.lat, location.lng, f.latitude, f.longitude) : 0;
-  const inRadius = (f: CulturalFestival) => {
-    if (!location) return true; // 위치 미지정 — 반경 필터링 없이 전국 대상
-    if (isNaN(f.latitude) || isNaN(f.longitude)) return false;
-    return distKm(f) <= location.radiusKm;
-  };
+  const radiusPassed = location
+    ? durationPassed.filter((f) => {
+        if (isNaN(f.latitude) || isNaN(f.longitude)) return false;
+        return distKm(f) <= location.radiusKm;
+      })
+    : durationPassed;
+  if (location && radiusPassed.length < durationPassed.length) {
+    console.log(
+      `[festival:filter] 반경(>${location.radiusKm}km) 제외 — ${durationPassed.length - radiusPassed.length}건 제외, ${radiusPassed.length}건 통과`,
+    );
+  }
 
-  const ongoing = all.filter(
-    (f) => f.fstvlStartDate <= today && f.fstvlEndDate >= today && inRadius(f),
+  // 3단계: 진행중/예정 분류
+  const ongoing = radiusPassed.filter(
+    (f) => f.fstvlStartDate <= today && f.fstvlEndDate >= today,
   );
-  const upcoming = all.filter(
-    (f) =>
-      f.fstvlStartDate > today &&
-      f.fstvlStartDate <= limitDate &&
-      inRadius(f),
+  const upcomingAll = radiusPassed.filter((f) => f.fstvlStartDate > today);
+  const upcoming = upcomingAll.filter((f) => f.fstvlStartDate <= limitDate);
+  const windowExcluded = upcomingAll.length - upcoming.length;
+  if (windowExcluded > 0) {
+    console.log(
+      `[festival:filter] 예정창(${FESTIVAL_UPCOMING_WINDOW_DAYS}일 초과) 제외 — ${windowExcluded}건 제외, ${upcoming.length}건 통과`,
+    );
+  }
+
+  // 진행중은 거리 오름차순, 예정은 시작일 오름차순
+  const sortedOngoing = location
+    ? [...ongoing].sort((a, b) => distKm(a) - distKm(b))
+    : [...ongoing].sort((a, b) => a.fstvlStartDate.localeCompare(b.fstvlStartDate));
+  const sortedUpcoming = [...upcoming].sort((a, b) =>
+    a.fstvlStartDate.localeCompare(b.fstvlStartDate),
   );
 
-  // 실외 친화(affinity >= 0.6) + 위치가 있으면 거리순, 그 외엔 시작일순
-  const affinity = options.affinity ?? 0;
-  const sort = (list: CulturalFestival[]) =>
-    affinity >= 0.6 && location
-      ? [...list].sort((a, b) => distKm(a) - distKm(b))
-      : [...list].sort((a, b) => a.fstvlStartDate.localeCompare(b.fstvlStartDate));
-
-  return { ongoing: sort(ongoing), upcoming: sort(upcoming) };
+  return { ongoing: sortedOngoing, upcoming: sortedUpcoming };
 }
 
 export async function fetchNearbyFestivals(
