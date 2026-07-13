@@ -1,11 +1,14 @@
 import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import { getAllTourFestivals } from "@/lib/tour/searchFestival";
+import { mergeFestivals } from "@/lib/pipeline/festivalMerge";
 import { haversineKm } from "@/shared/utils/geo";
 import { getKstDateString } from "@/shared/utils/kst";
 import { getCached, setCached, CACHE_EMPTY } from "@/lib/cache/dbCache";
 import { TTL } from "@/lib/cache/ttl";
 
-const FESTIVAL_CACHE_KEY = "tour:festival:all";
+// 공공데이터포털 전용 캐시 키 (병합 전 원본)
+const PUBLIC_CACHE_KEY = "tour:festival:public:all";
 
 // 한 번에 최대 1000건까지만 허용되는 API라(2026-06-29 확인: 1290건↑ 시도 시
 // INVALID_REQUEST_PARAMETER_ERROR), 전체를 받으려면 페이지를 순회해야 한다.
@@ -15,33 +18,56 @@ const FESTIVAL_MAX_PAGES = 5; // 안전판 — 최대 5000건까지
 
 // 캐시 만료 직후 동시 요청이 몰릴 때 페이지 순회가 중복 실행되지 않도록 진행 중인
 // Promise를 공유한다. 완료(성공·실패 모두)되면 null로 초기화한다.
-let _inflight: Promise<CulturalFestival[]> | null = null;
+let _publicInflight: Promise<CulturalFestival[]> | null = null;
 
-export async function getAllFestivals(): Promise<CulturalFestival[]> {
-  const cached = await getCached<CulturalFestival[]>(FESTIVAL_CACHE_KEY);
-  // 축제 API는 빈 배열([])로 캐시하므로 CACHE_EMPTY는 도달하지 않지만 타입 정합 처리
+async function getAllPublicFestivals(): Promise<CulturalFestival[]> {
+  const cached = await getCached<CulturalFestival[]>(PUBLIC_CACHE_KEY);
   if (cached !== null && cached !== CACHE_EMPTY) {
-    console.log(`[festival] 캐시 HIT — ${cached.length}건`);
+    console.log(`[festival:public] 캐시 HIT — ${cached.length}건`);
     return cached;
   }
 
-  if (_inflight) return _inflight;
+  if (_publicInflight) return _publicInflight;
 
-  _inflight = (async () => {
+  _publicInflight = (async () => {
     const all: CulturalFestival[] = [];
     for (let pageNo = 1; pageNo <= FESTIVAL_MAX_PAGES; pageNo++) {
       const page = await fetchCulturalFestivals({ pageNo, numOfRows: FESTIVAL_PAGE_SIZE });
-      console.log(`[festival] API 페이지 ${pageNo} — ${page.length}건`);
+      console.log(`[festival:public] API 페이지 ${pageNo} — ${page.length}건`);
       all.push(...page);
       if (page.length < FESTIVAL_PAGE_SIZE) break;
     }
-    console.log(`[festival] 전체 로드 완료 — ${all.length}건`);
+    console.log(`[festival:public] 전체 로드 완료 — ${all.length}건`);
     const ttl = all.length === 0 ? TTL.EMPTY_RESULT : TTL.FESTIVAL;
-    await setCached(FESTIVAL_CACHE_KEY, all, ttl);
+    await setCached(PUBLIC_CACHE_KEY, all, ttl);
     return all;
-  })().finally(() => { _inflight = null; });
+  })().finally(() => { _publicInflight = null; });
 
-  return _inflight;
+  return _publicInflight;
+}
+
+// 두 소스를 병렬 수신 후 병합. 한쪽 실패 시 나머지 단독으로 진행.
+export async function getAllFestivals(): Promise<CulturalFestival[]> {
+  const [publicResult, tourResult] = await Promise.allSettled([
+    getAllPublicFestivals(),
+    getAllTourFestivals(),
+  ]);
+
+  const publicFestivals = publicResult.status === "fulfilled" ? publicResult.value : [];
+  const tourFestivals = tourResult.status === "fulfilled" ? tourResult.value : [];
+
+  if (publicResult.status === "rejected") {
+    console.warn(`[festival] 공공데이터포털 조회 실패 — ${publicResult.reason}`);
+  }
+  if (tourResult.status === "rejected") {
+    console.warn(`[festival] searchFestival2 조회 실패 — ${tourResult.reason}`);
+  }
+
+  const { festivals, stats } = mergeFestivals(publicFestivals, tourFestivals);
+  console.log(
+    `[festival] 병합 완료 — 공공 ${stats.publicCount}건 / Tour ${stats.tourCount}건 / 매칭 ${stats.matchedCount}쌍 / 이미지 ${stats.imageCount}건 / 총 ${festivals.length}건`,
+  );
+  return festivals;
 }
 
 type SplitOptions = {

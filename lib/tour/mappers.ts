@@ -106,7 +106,9 @@ function toFestivalSummary(
     status,
     period: `${formatFestivalDate(f.fstvlStartDate)} ~ ${formatFestivalDate(f.fstvlEndDate)}`,
     address: f.rdnmadr || f.lnmadr || "",
-    imageUrl: (f as CulturalFestival & { images?: string[] }).images?.[0] ?? null,
+    // pipeline/index.ts가 nearest 축제에 images[]를 직접 설정하는 경우 우선 사용,
+    // 그 외엔 병합 단계에서 채운 imageUrl(searchFestival2 firstimage)을 사용.
+    imageUrl: (f as CulturalFestival & { images?: string[] }).images?.[0] ?? f.imageUrl ?? null,
   };
 }
 

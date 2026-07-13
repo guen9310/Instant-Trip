@@ -27,9 +27,13 @@ export interface CulturalFestival {
   referenceDate: string;   // 기준일자
   insttCode: string;
   insttNm: string;
+  // 병합 확장 필드 (festivalMerge.ts에서 설정)
+  imageUrl?: string;                      // searchFestival2 firstimage
+  sources?: ("public" | "tour")[];        // 데이터 출처 태그
+  coordMissMatch?: boolean;               // 좌표 없이 이름만으로 매칭된 경우
 }
 
-type RawFestival = Omit<CulturalFestival, "latitude" | "longitude"> & {
+type RawFestival = Omit<CulturalFestival, "latitude" | "longitude" | "imageUrl" | "sources" | "coordMissMatch"> & {
   latitude: string;
   longitude: string;
 };
