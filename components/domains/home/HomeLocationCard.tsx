@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertCircle, Loader2, MapPin, Zap } from "lucide-react";
-import Link from "next/link";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { useWeatherQuery } from "@/client/hooks/useWeatherQuery";
 import {
@@ -9,10 +8,7 @@ import {
   type WeatherCondition,
 } from "@/shared/utils/feedContext";
 
-const CONDITION_META: Record<
-  WeatherCondition,
-  { label: string; icon: string }
-> = {
+const CONDITION_META: Record<WeatherCondition, { label: string; icon: string }> = {
   clear: { label: "맑음", icon: "🌤️" },
   cloudy: { label: "흐림", icon: "☁️" },
   rain: { label: "비", icon: "🌧️" },
@@ -26,14 +22,23 @@ const WEATHER_MESSAGE: Record<WeatherCondition, string> = {
   snow: "따뜻한 실내 코스 어때요",
 };
 
-export function FeedLocationCard() {
+interface Props {
+  // 수동 지역 선택 시 스토어에 좌표가 없으므로 홈 데이터의 region 대표 좌표를 외부에서 주입
+  regionLat?: number;
+  regionLng?: number;
+}
+
+export function HomeLocationCard({ regionLat, regionLng }: Props) {
   const { state, requestPermission } = useLocationStore();
 
-  const lat = state.status === "granted" ? (state.lat ?? null) : null;
-  const lng = state.status === "granted" ? (state.lng ?? null) : null;
+  const storeLat = state.status === "granted" ? (state.lat ?? null) : null;
+  const storeLng = state.status === "granted" ? (state.lng ?? null) : null;
+  const weatherLat = storeLat ?? regionLat ?? null;
+  const weatherLng = storeLng ?? regionLng ?? null;
+
   const { data: weather, isPending: weatherPending } = useWeatherQuery(
-    lat,
-    lng,
+    weatherLat,
+    weatherLng,
   );
 
   if (state.status === "granted") {
@@ -55,9 +60,7 @@ export function FeedLocationCard() {
           <MapPin size={13} className="text-text-secondary shrink-0" />
           <span className="text-[12px] text-text-secondary">{city}</span>
           <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
-          <span className="text-[11px] text-accent font-semibold">
-            위치 확인됨
-          </span>
+          <span className="text-[11px] text-accent font-semibold">위치 확인됨</span>
         </div>
         <div className="flex items-end justify-between gap-3">
           <div>
@@ -72,55 +75,21 @@ export function FeedLocationCard() {
                   {label}
                   {tempStr ? ` ${tempStr}` : ""} {icon}
                 </p>
-                <p className="text-[12px] text-text-secondary mt-1">
-                  {message}
-                </p>
+                <p className="text-[12px] text-text-secondary mt-1">{message}</p>
               </>
             )}
           </div>
           <span className="shrink-0 flex items-center gap-1.5 bg-primary text-primary-foreground text-[13px] font-bold px-3.5 py-2 rounded-xl whitespace-nowrap">
             <Zap size={13} strokeWidth={2.5} />
-            코스 뽑기
+            출발하기
           </span>
         </div>
       </a>
     );
   }
 
-  if (
-    state.status === "denied" ||
-    state.status === "timeout" ||
-    state.status === "unavailable"
-  ) {
-    return (
-      <Link
-        href="/start"
-        className="block rounded-2xl bg-card border border-point/20 px-5 py-4 mb-5"
-      >
-        <div className="flex items-center gap-1.5 mb-2">
-          <AlertCircle size={13} className="text-point shrink-0" />
-          <span className="text-[12px] text-point font-medium">
-            위치 권한 거부됨
-          </span>
-        </div>
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[19px] font-extrabold text-text-primary tracking-[-0.02em] leading-tight">
-              지역을 직접 선택해주세요
-            </p>
-            <p className="text-[12px] text-text-secondary mt-1">
-              탭하면 지역 선택 화면으로 이동해요
-            </p>
-          </div>
-          <span className="shrink-0 bg-point/10 text-point text-[13px] font-bold px-3.5 py-2 rounded-xl whitespace-nowrap">
-            지역 선택
-          </span>
-        </div>
-      </Link>
-    );
-  }
-
-  const requesting = state.status === "requesting";
+  const requesting =
+    state.status === "requesting" || state.status === "idle";
 
   return (
     <button

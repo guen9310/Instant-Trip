@@ -103,7 +103,7 @@ export function SignInForm() {
       setCode("");
       return;
     }
-    router.push(data?.user?.onboardingDone ? "/feed" : "/onboarding");
+    router.push(data?.user?.onboardingDone ? "/" : "/onboarding");
   };
 
   const goBack = () => {

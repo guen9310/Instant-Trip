@@ -216,7 +216,7 @@ export function OnboardingForm() {
         )}
         <button
           type="button"
-          onClick={() => router.push("/feed")}
+          onClick={() => router.push("/")}
           className="py-2 px-4 text-[13px] text-text-secondary"
         >
           건너뛰기

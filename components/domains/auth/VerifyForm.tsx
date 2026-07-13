@@ -56,7 +56,7 @@ export function VerifyForm() {
     }
     const user = result?.user;
     if (user?.onboardingDone) {
-      router.push("/feed");
+      router.push("/");
     } else {
       router.push("/onboarding");
     }

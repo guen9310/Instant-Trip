@@ -67,7 +67,7 @@ describe("VerifyForm", () => {
     expect(screen.getByRole("button", { name: "확인" })).toBeDisabled();
   });
 
-  it("OTP 인증 성공 후 onboardingDone=true면 /feed로 이동한다", async () => {
+  it("OTP 인증 성공 후 onboardingDone=true면 /로 이동한다", async () => {
     mockSignInEmailOtp.mockResolvedValue({
       data: { user: { onboardingDone: true } },
       error: null,
@@ -80,7 +80,7 @@ describe("VerifyForm", () => {
     await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/feed");
+      expect(mockPush).toHaveBeenCalledWith("/");
     });
   });
 

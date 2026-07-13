@@ -1,5 +1,5 @@
-import { LandingHero } from "@/components/domains/landing/LandingHero";
+import { HomeView } from "@/components/domains/home/HomeView";
 
-export default function LandingPage() {
-  return <LandingHero />;
+export default function HomePage() {
+  return <HomeView />;
 }

@@ -79,7 +79,7 @@ export function CourseDoneView() {
     }
     reset();
     localStorage.removeItem("pendingCourse");
-    router.push("/feed");
+    router.push("/");
   };
 
   return (
