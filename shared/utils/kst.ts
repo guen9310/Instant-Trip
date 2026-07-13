@@ -28,3 +28,8 @@ export function getKstDateString(now: Date = new Date()): string {
   const d = parts.find((p) => p.type === "day")!.value;
   return `${y}-${m}-${d}`;
 }
+
+// Returns "YYYYMMDD" in KST — Tour API eventStartDate 파라미터 전용
+export function getKstDateYYYYMMDD(now: Date = new Date()): string {
+  return getKstDateString(now).replace(/-/g, "");
+}
