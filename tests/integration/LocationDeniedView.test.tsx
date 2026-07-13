@@ -6,17 +6,20 @@ import { LocationDeniedView } from "@/components/domains/location/LocationDenied
 // useLocationStore mock
 const mockRequestPermission = vi.fn();
 const mockSetCity = vi.fn();
+let mockLocationState: { status: string } = { status: "denied" };
 
 vi.mock("@/client/stores/useLocationStore", () => ({
   useLocationStore: () => ({
     requestPermission: mockRequestPermission,
     setCity: mockSetCity,
+    state: mockLocationState,
   }),
 }));
 
 beforeEach(() => {
   mockRequestPermission.mockReset();
   mockSetCity.mockReset();
+  mockLocationState = { status: "denied" };
 });
 
 describe("LocationDeniedView", () => {
@@ -30,9 +33,21 @@ describe("LocationDeniedView", () => {
     expect(screen.queryByText("위치 권한이 거부되었어요")).not.toBeInTheDocument();
   });
 
-  it("[권한 다시 요청] 버튼이 표시된다", () => {
+  it("[권한 다시 요청] 버튼이 표시된다 (denied 상태)", () => {
     render(<LocationDeniedView />);
     expect(screen.getByRole("button", { name: /권한 다시 요청/ })).toBeInTheDocument();
+  });
+
+  it("system-denied 상태에서 [권한 다시 요청] 버튼이 표시되지 않는다", () => {
+    mockLocationState = { status: "system-denied" };
+    render(<LocationDeniedView variant="denied" />);
+    expect(screen.queryByRole("button", { name: /권한 다시 요청/ })).not.toBeInTheDocument();
+  });
+
+  it("system-denied 상태에서 브라우저 설정 안내 문구가 표시된다", () => {
+    mockLocationState = { status: "system-denied" };
+    render(<LocationDeniedView variant="denied" />);
+    expect(screen.getByText(/브라우저 설정에서 이 사이트의 위치 권한을 허용/)).toBeInTheDocument();
   });
 
   it("[지역 선택] 버튼이 표시된다", () => {

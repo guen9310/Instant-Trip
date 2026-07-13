@@ -66,6 +66,7 @@ export function HomeView() {
 
   const isDenied =
     state.status === "denied" ||
+    state.status === "system-denied" ||
     state.status === "timeout" ||
     state.status === "unavailable";
 

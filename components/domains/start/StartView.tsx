@@ -144,6 +144,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
 
   const isDenied =
     state.status === "denied" ||
+    state.status === "system-denied" ||
     state.status === "timeout" ||
     state.status === "unavailable";
   const city = state.status === "granted" ? state.city : null;
