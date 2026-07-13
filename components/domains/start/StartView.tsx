@@ -87,7 +87,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
   const [searchRadiusM, setSearchRadiusM] = useState<number | null>(null);
   const [showManualPicker, setShowManualPicker] = useState(false);
   const router = useRouter();
-  const { state, setCity, requestPermission } = useLocationStore();
+  const { state, requestPermission } = useLocationStore();
 
   useEffect(() => {
     if (state.status === "idle") requestPermission();
@@ -153,8 +153,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
     return (
       <LocationDeniedView
         variant={isDenied ? "denied" : "manual"}
-        onCitySelect={(selectedCity, sidoName) => {
-          setCity(selectedCity, sidoName);
+        onCitySelect={() => {
           setShowManualPicker(false);
           setNoNearby(false);
         }}

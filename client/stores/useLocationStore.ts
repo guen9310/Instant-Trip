@@ -6,7 +6,7 @@ import { fetchCityAction } from "@/app/actions/geocode";
 type LocationStore = {
   state: LocationState;
   requestPermission: () => void;
-  setCity: (city: string, sidoName?: string | null) => void;
+  setCity: (city: string, sidoName?: string | null, lat?: number, lng?: number) => void;
   reset: () => void;
 };
 
@@ -45,8 +45,8 @@ export const useLocationStore = create<LocationStore>()(
         );
       },
 
-      setCity: (city: string, sidoName?: string | null) => {
-        set({ state: { status: "granted", city, sidoName: sidoName ?? null, source: "manual" } });
+      setCity: (city: string, sidoName?: string | null, lat?: number, lng?: number) => {
+        set({ state: { status: "granted", city, sidoName: sidoName ?? null, source: "manual", lat, lng } });
       },
 
       reset: () => {
