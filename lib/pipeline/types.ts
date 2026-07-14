@@ -19,7 +19,6 @@ export interface OnboardingAnswers {
 export interface UserProfile {
   tagWeights: TagWeights;
   preferFood: boolean;        // 맛집 선호 — 코스 이후 Kakao 식당 1곳 추천에 사용
-  festivalAffinity: number;   // 0.0 ~ 1.0, 온보딩에서 파생 — 축제 섹션 정렬에만 사용
   location: { mapX: number; mapY: number };
   scale: TravelScale;
   // 검색 반경(m) 오버라이드 — 미지정 시 규모별 기본값(SCALE_CONFIG) 사용.
@@ -45,7 +44,6 @@ export function onboardingToProfile(
       조용함: answers.조용한곳좋아요 ? 1 : 0,
     },
     preferFood: answers.먹는게중요해요,
-    festivalAffinity: (answers.실내선호해요 ? 0 : 0.6) + (answers.조용한곳좋아요 ? 0 : 0.4),
     location,
     scale,
     areaCode,

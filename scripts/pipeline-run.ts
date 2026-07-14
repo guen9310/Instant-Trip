@@ -106,9 +106,6 @@ function prefsToProfile(prefs: Prefs) {
       조용함: prefs.vibe === "quiet" ? 1 : 0,
     } as Record<TagKey, number>,
     preferFood: prefs.food === "matjip",
-    festivalAffinity:
-      (prefs.indoor === "outdoor" ? 0.6 : 0) +
-      (prefs.vibe === "lively" ? 0.4 : 0),
   };
 }
 
@@ -208,7 +205,7 @@ function printPlace(
 
 async function run() {
   const { scale, prefs } = await resolveOptions();
-  const { tagWeights, preferFood, festivalAffinity } = prefsToProfile(prefs);
+  const { tagWeights, preferFood } = prefsToProfile(prefs);
 
   const quiet = hasArg("--quiet");
 
@@ -266,7 +263,7 @@ async function run() {
     `  취향: travel=${prefs.travel} party=${prefs.party} vibe=${prefs.vibe} food=${prefs.food} indoor=${prefs.indoor}`,
   );
   console.log(
-    `  태그 가중치: ${JSON.stringify(tagWeights)} | preferFood=${preferFood} festivalAffinity=${festivalAffinity}`,
+    `  태그 가중치: ${JSON.stringify(tagWeights)} | preferFood=${preferFood}`,
   );
   console.log(`${"━".repeat(60)}\n`);
 
@@ -274,7 +271,6 @@ async function run() {
     {
       tagWeights,
       preferFood,
-      festivalAffinity,
       location: LOCATION,
       scale,
       areaCode: "",

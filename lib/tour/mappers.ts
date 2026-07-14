@@ -50,10 +50,6 @@ export function prefsToProfile(
       조용함:   prefs.vibe   === "quiet"  ? 1 : 0,
     },
     preferFood: prefs.food === "matjip",
-    // 실외 선호(0.6) + 활기참 선호(0.4) 합산 — 둘 다면 1.0, 둘 다 아니면 0
-    festivalAffinity:
-      (prefs.indoor === "outdoor" ? 0.6 : 0) +
-      (prefs.vibe === "lively" ? 0.4 : 0),
     location,
     scale: SCALE_MAP[scale],
     areaCode: "",
@@ -106,14 +102,11 @@ function toFestivalSummary(
     status,
     period: `${formatFestivalDate(f.fstvlStartDate)} ~ ${formatFestivalDate(f.fstvlEndDate)}`,
     address: f.rdnmadr || f.lnmadr || "",
-    // pipeline/index.ts가 nearest 축제에 images[]를 직접 설정하는 경우 우선 사용,
-    // 그 외엔 병합 단계에서 채운 imageUrl(searchFestival2 firstimage)을 사용.
-    imageUrl: (f as CulturalFestival & { images?: string[] }).images?.[0] ?? f.imageUrl ?? null,
+    imageUrl: f.imageUrl ?? null,
   };
 }
 
-// CulturalFestival → 화면 표시용 FestivalSummary. festivals.ongoing[0]에는
-// pipeline/index.ts가 미리 로드한 images가 덮어써져 있을 수 있다(있으면 사용).
+// CulturalFestival → 화면 표시용 FestivalSummary.
 export function courseResultToFestivalSummaries(
   result: CourseResult,
 ): FestivalSummary[] {

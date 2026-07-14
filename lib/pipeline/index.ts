@@ -9,13 +9,12 @@ import { collectCandidates } from "@/lib/pipeline/collect";
 import { filterByAvailability } from "@/lib/pipeline/availability";
 import type { TourItem } from "@/lib/tour/types";
 import { scoreCandidates, applyMappingRules } from "@/lib/pipeline/scoring";
-import { assembleCourse, fetchFestivalImage } from "@/lib/pipeline/course";
+import { assembleCourse } from "@/lib/pipeline/course";
 import {
   supplementWithKakao,
   KAKAO_SUPPLEMENT_MIN,
 } from "@/lib/pipeline/kakaoCollect";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 
 export type {
   UserProfile,
@@ -50,7 +49,6 @@ export async function generateCourse(
   // 축제 조회를 파이프라인과 병렬로 미리 시작 (SWR 적용 후에도 미스 시엔 시간이 걸리므로)
   const festivalPromise = fetchNearbyFestivals(lat, lng, radiusKm, {
     simulationDate: options.simulationDate,
-    affinity: profile.festivalAffinity,
   });
 
   const items = await collectCandidates(profile);
@@ -179,20 +177,6 @@ export async function generateCourse(
   console.log(
     `[pipeline] 문화축제 — 진행중 ${festivalsOngoing.length}건 / 예정 ${festivalsUpcoming.length}건 | ${elapsed(Date.now() - ts)}`,
   );
-
-  // festivalAffinity >= 0.6(실외 선호)이면 가장 가까운 축제 이미지를 미리 로드해둔다.
-  // festivals 필드로 반환되며 코스 장소와는 분리된다.
-  if (profile.festivalAffinity >= 0.6 && festivalsOngoing.length > 0) {
-    const nearest = festivalsOngoing[0];
-    const fiStart = Date.now();
-    const festivalImages = await fetchFestivalImage(nearest.fstvlNm);
-    // festivalsOngoing[0]에 이미지를 덮어써서 클라이언트가 바로 사용할 수 있게 한다.
-    (nearest as CulturalFestival & { images?: string[] }).images =
-      festivalImages;
-    console.log(
-      `[pipeline] 축제 이미지 로드 — "${nearest.fstvlNm}" (${festivalImages.length}장) | ${elapsed(Date.now() - fiStart)}`,
-    );
-  }
 
   const course: CourseResult = {
     ...courseBase,

@@ -98,7 +98,6 @@ export const FESTIVAL_UPCOMING_WINDOW_DAYS = 14;
 
 type SplitOptions = {
   simulationDate?: string;
-  affinity?: number;
   location?: { lat: number; lng: number; radiusKm: number };
 };
 
@@ -171,7 +170,7 @@ export async function fetchNearbyFestivals(
   lat: number,
   lng: number,
   radiusKm: number,
-  options: { simulationDate?: string; affinity?: number } = {},
+  options: { simulationDate?: string } = {},
 ): Promise<{ ongoing: CulturalFestival[]; upcoming: CulturalFestival[] }> {
   try {
     const all = await getAllFestivals();
