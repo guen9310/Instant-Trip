@@ -26,6 +26,14 @@ export type JourneyPlace = {
   origin?: "recommended" | "selected";
 };
 
+// 선택 진입(origin="selected") 코스의 가용성 스냅샷 — generateCourseFromPlaceAction이
+// 반환하는 형태와 동일하게 유지한다. isOpenNow가 null이면 판단 불가(경고 대상 아님).
+export type PlaceAvailabilitySnapshot = {
+  isOpenNow: boolean | null;
+  hours: string | null;
+  restDayNote: string | null;
+};
+
 // 코스 결과의 보조 정보 — 진행중/예정 축제 (product-plan.md 4번 "부가" 참조)
 export type FestivalSummary = {
   id: string;
@@ -65,6 +73,8 @@ export type PendingCourse = {
   // startCourseAction이 반환한 DB row ID — 완료 시 INSERT 대신 UPDATE에 사용
   completionId?: string;
   dbCourseId?: string;
+  // 선택 진입(place.origin==="selected")에서만 채워진다 — 추천 진입은 이 필드를 모른다.
+  availability?: PlaceAvailabilitySnapshot;
 };
 
 // 프로필 — 진행 중인 코스 상태

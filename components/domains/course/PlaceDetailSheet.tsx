@@ -31,6 +31,9 @@ type Props = {
   onReject?: (placeId: string, reason: string) => Promise<void>;
   /** true이면 거절 기능 비활성화 (maxRerolls 도달 시) */
   rejectDisabled?: boolean;
+  /** true이면 거절(재추천) 버튼 자체를 숨긴다 — 선택 진입(origin="selected") 코스처럼
+   *  재추천 개념이 없는 경우. rejectDisabled(회색 처리)와 달리 아예 렌더하지 않는다. */
+  hideReject?: boolean;
 };
 
 export function PlaceDetailSheet({
@@ -38,6 +41,7 @@ export function PlaceDetailSheet({
   onClose,
   onReject,
   rejectDisabled,
+  hideReject,
 }: Props) {
   return (
     <Drawer open={!!place} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -50,6 +54,7 @@ export function PlaceDetailSheet({
             onClose={onClose}
             onReject={onReject}
             rejectDisabled={rejectDisabled}
+            hideReject={hideReject}
           />
         )}
       </DrawerContent>
@@ -62,11 +67,13 @@ function PlaceDetailContent({
   onClose,
   onReject,
   rejectDisabled,
+  hideReject,
 }: {
   place: JourneyPlace;
   onClose: () => void;
   onReject?: (placeId: string, reason: string) => void;
   rejectDisabled?: boolean;
+  hideReject?: boolean;
 }) {
   const [phase, setPhase] = useState<"default" | "rejecting" | "submitting">("default");
   const [reason, setReason] = useState<string | null>(null);
@@ -325,16 +332,18 @@ function PlaceDetailContent({
       <div className="shrink-0 border-t border-border px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
         {phase === "default" && (
           <>
-            <button
-              onClick={() => !rejectDisabled && setPhase("rejecting")}
-              disabled={rejectDisabled}
-              className={cn(
-                "w-full h-12 rounded-lg border border-border text-point text-[14px] font-medium flex items-center justify-center gap-1.5",
-                rejectDisabled && "opacity-40 cursor-not-allowed",
-              )}
-            >
-              <ThumbsDown size={15} /> 이런 곳은 싫어요
-            </button>
+            {!hideReject && (
+              <button
+                onClick={() => !rejectDisabled && setPhase("rejecting")}
+                disabled={rejectDisabled}
+                className={cn(
+                  "w-full h-12 rounded-lg border border-border text-point text-[14px] font-medium flex items-center justify-center gap-1.5",
+                  rejectDisabled && "opacity-40 cursor-not-allowed",
+                )}
+              >
+                <ThumbsDown size={15} /> 이런 곳은 싫어요
+              </button>
+            )}
             <Button size="cta" onClick={onClose}>
               확인
             </Button>

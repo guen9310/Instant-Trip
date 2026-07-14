@@ -24,6 +24,7 @@ import type {
   JourneyPlace,
   FestivalSummary,
   PendingCourse,
+  PlaceAvailabilitySnapshot,
 } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
@@ -47,6 +48,8 @@ type Props = {
   // 생성 시점 취향 스냅샷 (PendingCourse.prefs) — 칩·맛집 섹션·재추천이 읽는다.
   // 구버전 localStorage 페이로드엔 없을 수 있어 optional: 없으면 취향 표시를 숨긴다.
   prefs?: Prefs;
+  // 선택 진입(place.origin==="selected")에서만 채워진다 — 운영시간 경고 배너에 사용.
+  availability?: PlaceAvailabilitySnapshot;
 };
 
 export function CourseResultView({
@@ -60,6 +63,7 @@ export function CourseResultView({
   scale,
   region,
   prefs,
+  availability,
 }: Props) {
   const [selectedPlace, setSelectedPlace] = useState<JourneyPlace | null>(null);
   const [selectedFestival, setSelectedFestival] =
@@ -209,6 +213,22 @@ export function CourseResultView({
           isNew={currentPlace.id === newPlaceId}
         />
 
+        {/* 선택 진입(직접 고른 장소) 운영시간 경고 — isOpenNow가 확실히 false일 때만.
+            null(판단 불가)은 불확실을 경고로 포장하지 않고 배너를 띄우지 않는다.
+            이 경우는 availabilityUncertain=true라 아래 HoursInfoCard로 대체 노출된다. */}
+        {currentPlace.origin === "selected" &&
+          availability?.isOpenNow === false && (
+            <div className="mt-3 flex items-start gap-2.5 px-4 py-3 rounded-xl bg-point/8 border border-point/20">
+              <AlertCircle size={16} className="text-point shrink-0 mt-0.5" />
+              <div className="text-[13px] text-point leading-snug">
+                <p>지금은 운영시간이 아닐 수 있어요.</p>
+                {availability.hours && (
+                  <p className="text-text-secondary mt-0.5">{availability.hours}</p>
+                )}
+              </div>
+            </div>
+          )}
+
         {/* 영업시간 안내 카드 — 파싱 실패 장소에만 노출 */}
         {currentPlace.availabilityUncertain && currentPlace.name?.trim() && (
           <HoursInfoCard placeName={currentPlace.name} />
@@ -301,6 +321,7 @@ export function CourseResultView({
         onClose={() => setSelectedPlace(null)}
         onReject={handleReject}
         rejectDisabled={isMaxRerolls || rerolling}
+        hideReject={currentPlace.origin === "selected"}
       />
       <FestivalDetailSheet
         festival={selectedFestival}

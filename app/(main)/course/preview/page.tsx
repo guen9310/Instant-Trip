@@ -40,6 +40,7 @@ export default function CoursePreviewPage() {
       scale={course.scale}
       region={course.region}
       prefs={course.prefs}
+      availability={course.availability}
     />
   );
 }

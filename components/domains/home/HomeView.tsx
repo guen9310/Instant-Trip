@@ -7,6 +7,7 @@ import type { ElementType } from "react";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { getHomeDataAction, getHomeDataByRegionAction } from "@/app/actions/home";
 import { HomeLocationCard } from "@/components/domains/home/HomeLocationCard";
+import { HomePlaceDetailSheet } from "@/components/domains/home/HomePlaceDetailSheet";
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import { ImagePlaceholder } from "@/components/commons/ImagePlaceholder";
 import type { HomeData } from "@/lib/home/core";
@@ -37,6 +38,7 @@ const CHIP_TO_TYPE: Partial<Record<FilterChip, string>> = {
 export function HomeView() {
   const { state, requestPermission } = useLocationStore();
   const [filter, setFilter] = useState<FilterChip>("전체");
+  const [selectedPlace, setSelectedPlace] = useState<TourItem | null>(null);
 
   useEffect(() => {
     if (state.status === "idle") requestPermission();
@@ -140,10 +142,16 @@ export function HomeView() {
               hasPlaces={(homeData?.places ?? []).length > 0}
               filter={filter}
               onFilter={setFilter}
+              onSelectPlace={setSelectedPlace}
             />
           )}
         </>
       )}
+
+      <HomePlaceDetailSheet
+        place={selectedPlace}
+        onClose={() => setSelectedPlace(null)}
+      />
     </div>
   );
 }
@@ -236,11 +244,13 @@ function PlacesSection({
   hasPlaces,
   filter,
   onFilter,
+  onSelectPlace,
 }: {
   places: TourItem[];
   hasPlaces: boolean;
   filter: FilterChip;
   onFilter: (chip: FilterChip) => void;
+  onSelectPlace: (place: TourItem) => void;
 }) {
   if (!hasPlaces) return null;
 
@@ -271,7 +281,11 @@ function PlacesSection({
       {places.length === 0 ? null : (
         <div className="grid grid-cols-2 gap-3">
           {places.map((place) => (
-            <PlaceCard key={place.contentid} place={place} />
+            <PlaceCard
+              key={place.contentid}
+              place={place}
+              onClick={() => onSelectPlace(place)}
+            />
           ))}
         </div>
       )}
@@ -279,11 +293,20 @@ function PlacesSection({
   );
 }
 
-function PlaceCard({ place }: { place: TourItem }) {
+function PlaceCard({
+  place,
+  onClick,
+}: {
+  place: TourItem;
+  onClick: () => void;
+}) {
   const typeLabel = TYPE_LABEL[place.contenttypeid] ?? "";
 
   return (
-    <div className="rounded-xl overflow-hidden border border-border bg-card">
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-xl overflow-hidden border border-border bg-card active:scale-[0.98] transition-transform duration-150"
+    >
       {!isBlank(place.firstimage) ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -305,6 +328,6 @@ function PlaceCard({ place }: { place: TourItem }) {
           <p className="text-[11px] text-text-secondary mt-0.5">{typeLabel}</p>
         )}
       </div>
-    </div>
+    </button>
   );
 }
