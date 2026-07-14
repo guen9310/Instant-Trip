@@ -8,6 +8,7 @@ import type {
   CoursePlace,
   CourseResult,
   UserProfile,
+  PlaceOrigin,
 } from "@/lib/pipeline/types";
 import { TTL } from "@/lib/cache/ttl";
 
@@ -120,9 +121,13 @@ export async function fetchDetail(
 }
 
 // 선택된 후보의 상세 정보(이미지·소개글)를 가져와 CoursePlace로 변환한다.
-async function buildCoursePlace(
+// profile/stage1~4 산출물에 의존하지 않고 candidate(+label) 하나로 완결되므로,
+// 추천 파이프라인(assembleCourse)과 장소 선택 진입(generateCourseFromPlace) 양쪽이
+// 이 함수 하나를 공유한다 — origin으로 호출부를 구분한다(기본값은 기존 동작과 동일한 "recommended").
+export async function buildCoursePlace(
   candidate: PlaceCandidate,
   label: string,
+  origin: PlaceOrigin = "recommended",
 ): Promise<CoursePlace> {
   const { item } = candidate;
   const ts = Date.now();
@@ -146,6 +151,7 @@ async function buildCoursePlace(
       availabilityUncertain: candidate.availabilityUncertain,
       estimatedDuration: candidate.estimatedDuration,
       stayDurationKey: candidate.stayDurationKey,
+      origin,
     };
   }
 
@@ -176,6 +182,7 @@ async function buildCoursePlace(
     availabilityUncertain: candidate.availabilityUncertain,
     estimatedDuration: candidate.estimatedDuration,
     stayDurationKey: candidate.stayDurationKey,
+    origin,
   };
 }
 

@@ -24,8 +24,15 @@ export type {
   TagKey,
   TagWeights,
   OnboardingAnswers,
+  PlaceOrigin,
 } from "@/lib/pipeline/types";
 export { onboardingToProfile, getSearchRadiusM } from "@/lib/pipeline/types";
+export { generateCourseFromPlace } from "@/lib/pipeline/selectPlace";
+export type {
+  GenerateCourseFromPlaceInput,
+  GenerateCourseFromPlaceResult,
+  PlaceAvailability,
+} from "@/lib/pipeline/selectPlace";
 
 function elapsed(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;

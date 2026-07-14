@@ -80,6 +80,7 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     estimatedDuration: p.estimatedDuration,
     stayDurationKey: p.stayDurationKey,
     tags: p.tags,
+    origin: p.origin,
   };
 }
 
@@ -107,8 +108,10 @@ function toFestivalSummary(
 }
 
 // CulturalFestival → 화면 표시용 FestivalSummary.
+// CourseResult 전체가 아니라 festivals.ongoing만 읽으므로, 이를 구조적으로 만족하는
+// 어떤 결과(장소 선택 진입의 generateCourseFromPlace 결과 등)도 그대로 넘길 수 있다.
 export function courseResultToFestivalSummaries(
-  result: CourseResult,
+  result: Pick<CourseResult, "festivals">,
 ): FestivalSummary[] {
   // upcoming은 코스 결과 화면에 표시하지 않는다 — "지금 갈 곳"을 결정하는 맥락에서
   // 예정 축제는 즉시 활용 불가한 정보라 혼란만 준다. 피드 기능에서 별도 활용 예정.

@@ -147,6 +147,18 @@ export interface TourDetailCommon {
   mapy: string;
   mlevel: string; // 지도 레벨
   overview: string; // 소개글 - HTML 태그 포함 (주의!)
+
+  // 실응답에는 포함되지만(2026-07-14 실측 확인) 기존 타입 선언엔 없던 필드.
+  // TourItem과 동일한 분류 체계 — 장소 선택 진입(contentId만 아는 경우) 시
+  // 태그/체류시간 추정에 필요해 추가했다.
+  areacode?: string;
+  sigungucode?: string;
+  cat1?: string;
+  cat2?: string;
+  cat3?: string;
+  lclsSystm1?: string;
+  lclsSystm2?: string;
+  lclsSystm3?: string;
 }
 
 // ============================================================

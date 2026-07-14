@@ -78,6 +78,10 @@ export interface PlaceCandidate {
   stayDurationKey: string;
 }
 
+// 이 장소가 어떻게 코스에 들어왔는지 — 취향 기반 추천(stage4 점수화) vs
+// 홈 근처 카드에서 사용자가 직접 선택. score는 "recommended"에서만 의미가 있다.
+export type PlaceOrigin = "recommended" | "selected";
+
 export interface CoursePlace {
   contentId: string;
   contentTypeId: string;
@@ -92,6 +96,7 @@ export interface CoursePlace {
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
   stayDurationKey: string;
+  origin: PlaceOrigin;
 }
 
 export interface CourseResult {
