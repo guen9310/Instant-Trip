@@ -4,7 +4,7 @@ import { getAllTourFestivals } from "@/lib/tour/searchFestival";
 import { mergeFestivals } from "@/lib/pipeline/festivalMerge";
 import { haversineKm } from "@/shared/utils/geo";
 import { getKstDateString } from "@/shared/utils/kst";
-import { getCached, setCached, CACHE_EMPTY } from "@/lib/cache/dbCache";
+import { getCachedSWR, setCached, CACHE_EMPTY } from "@/lib/cache/dbCache";
 import { TTL } from "@/lib/cache/ttl";
 
 // 공공데이터포털 전용 캐시 키 (병합 전 원본)
@@ -18,32 +18,53 @@ const FESTIVAL_MAX_PAGES = 5; // 안전판 — 최대 5000건까지
 
 // 캐시 만료 직후 동시 요청이 몰릴 때 페이지 순회가 중복 실행되지 않도록 진행 중인
 // Promise를 공유한다. 완료(성공·실패 모두)되면 null로 초기화한다.
+// stale-while-revalidate 백그라운드 갱신과 미스 시 동기 수집이 이 Promise를 공유해서
+// 중복 실행을 막는다 (cron 강제 갱신도 동일 함수를 호출해 자연히 공유된다).
 let _publicInflight: Promise<CulturalFestival[]> | null = null;
 
-async function getAllPublicFestivals(): Promise<CulturalFestival[]> {
-  const cached = await getCached<CulturalFestival[]>(PUBLIC_CACHE_KEY);
-  if (cached !== null && cached !== CACHE_EMPTY) {
-    console.log(`[festival:public] 캐시 HIT — ${cached.length}건`);
-    return cached;
-  }
-
+// 공공데이터포털 전체 페이지를 순회 수집하고 캐시에 기록한다.
+// 호출부(getAllPublicFestivals의 miss 경로, stale 백그라운드 갱신, cron 강제 갱신)가 공유한다.
+export function fetchAndCachePublicFestivals(): Promise<CulturalFestival[]> {
   if (_publicInflight) return _publicInflight;
 
   _publicInflight = (async () => {
+    const t0 = Date.now();
     const all: CulturalFestival[] = [];
     for (let pageNo = 1; pageNo <= FESTIVAL_MAX_PAGES; pageNo++) {
       const page = await fetchCulturalFestivals({ pageNo, numOfRows: FESTIVAL_PAGE_SIZE });
-      console.log(`[festival:public] API 페이지 ${pageNo} — ${page.length}건`);
       all.push(...page);
       if (page.length < FESTIVAL_PAGE_SIZE) break;
     }
-    console.log(`[festival:public] 전체 로드 완료 — ${all.length}건`);
+    console.log(`[festival:public] 수집 완료 — ${all.length}건 (${Date.now() - t0}ms)`);
     const ttl = all.length === 0 ? TTL.EMPTY_RESULT : TTL.FESTIVAL;
     await setCached(PUBLIC_CACHE_KEY, all, ttl);
     return all;
   })().finally(() => { _publicInflight = null; });
 
   return _publicInflight;
+}
+
+async function getAllPublicFestivals(): Promise<CulturalFestival[]> {
+  const cached = await getCachedSWR<CulturalFestival[]>(PUBLIC_CACHE_KEY);
+
+  if (cached.freshness === "fresh") {
+    const value = cached.value === CACHE_EMPTY ? [] : cached.value;
+    console.log(`[festival:public] 캐시 HIT(fresh) — ${value.length}건`);
+    return value;
+  }
+
+  if (cached.freshness === "stale") {
+    const value = cached.value === CACHE_EMPTY ? [] : cached.value;
+    console.log(`[festival:public] 캐시 HIT(stale) — ${value.length}건, 즉시 반환 + 백그라운드 갱신 트리거`);
+    // 응답을 기다리지 않는다 — 실패해도 다음 요청이 다시 stale로 서빙되며 재시도된다.
+    fetchAndCachePublicFestivals().catch((err) => {
+      console.warn(`[festival:public] 백그라운드 갱신 실패 — ${err}`);
+    });
+    return value;
+  }
+
+  console.log(`[festival:public] 캐시 MISS — 동기 수집`);
+  return fetchAndCachePublicFestivals();
 }
 
 // 두 소스를 병렬 수신 후 병합. 한쪽 실패 시 나머지 단독으로 진행.

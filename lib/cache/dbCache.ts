@@ -42,6 +42,35 @@ export async function getCached<T>(key: string): Promise<T | CacheEmpty | null> 
   }
 }
 
+// SWR(stale-while-revalidate)용 읽기 결과.
+//   fresh — 만료 전, 그대로 사용 가능
+//   stale — 만료됐지만 행은 존재함 (호출부가 즉시 서빙하고 백그라운드 갱신을 트리거하는 용도)
+//   miss  — 행 자체가 없음 (최초 수집 필요)
+// value는 stale일 때도 채워진다 — stale 서빙의 원료이므로 만료 행을 여기서 지우지 않는다.
+export type CacheSWRResult<T> =
+  | { freshness: "fresh" | "stale"; value: T | CacheEmpty }
+  | { freshness: "miss"; value: null };
+
+export async function getCachedSWR<T>(key: string): Promise<CacheSWRResult<T>> {
+  try {
+    const rows = await db
+      .select()
+      .from(apiCache)
+      .where(eq(apiCache.cacheKey, key))
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) return { freshness: "miss", value: null };
+
+    const value = isEmptyPayload(row.payload) ? CACHE_EMPTY : (row.payload as T);
+    const freshness = row.expiresAt < new Date() ? "stale" : "fresh";
+    return { freshness, value };
+  } catch (err) {
+    console.warn(`[dbCache] SWR read "${key}" 실패 — ${err}`);
+    return { freshness: "miss", value: null };
+  }
+}
+
 export async function setCached(
   key: string,
   value: unknown,

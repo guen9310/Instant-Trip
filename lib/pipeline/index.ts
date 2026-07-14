@@ -47,7 +47,7 @@ export async function generateCourse(
   const radiusKm = getSearchRadiusM(profile) / 1000;
   const { mapY: lat, mapX: lng } = profile.location;
 
-  // 축제 조회를 파이프라인과 병렬로 미리 시작 (캐시 없으면 ~10s 소요되므로)
+  // 축제 조회를 파이프라인과 병렬로 미리 시작 (SWR 적용 후에도 미스 시엔 시간이 걸리므로)
   const festivalPromise = fetchNearbyFestivals(lat, lng, radiusKm, {
     simulationDate: options.simulationDate,
     affinity: profile.festivalAffinity,
@@ -184,12 +184,13 @@ export async function generateCourse(
   // festivals 필드로 반환되며 코스 장소와는 분리된다.
   if (profile.festivalAffinity >= 0.6 && festivalsOngoing.length > 0) {
     const nearest = festivalsOngoing[0];
+    const fiStart = Date.now();
     const festivalImages = await fetchFestivalImage(nearest.fstvlNm);
     // festivalsOngoing[0]에 이미지를 덮어써서 클라이언트가 바로 사용할 수 있게 한다.
     (nearest as CulturalFestival & { images?: string[] }).images =
       festivalImages;
     console.log(
-      `[pipeline] 축제 이미지 로드 — "${nearest.fstvlNm}" (${festivalImages.length}장)`,
+      `[pipeline] 축제 이미지 로드 — "${nearest.fstvlNm}" (${festivalImages.length}장) | ${elapsed(Date.now() - fiStart)}`,
     );
   }
 
