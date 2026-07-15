@@ -17,7 +17,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
-import { cn } from "@/shared/utils";
+import { cn, isBlank } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import {
@@ -57,6 +57,7 @@ const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
 export function CourseActiveView({ courseId }: { courseId: string }) {
   const state = useCourseActive(courseId);
   const [nearbyOpen, setNearbyOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
 
   if (state.status === "loading") {
     return (
@@ -111,8 +112,19 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
           )}
 
           {/* 설명 */}
-          {place.desc && (
-            <p className="text-[14px] text-text-secondary leading-relaxed">{place.desc}</p>
+          {!isBlank(place.desc) && (
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDescOpen((v) => !v)}
+                className="self-start text-primary text-[12px] font-semibold hover:underline"
+              >
+                {descOpen ? "설명 접기" : "설명 보기"}
+              </button>
+              {descOpen && (
+                <p className="text-[14px] text-text-secondary leading-relaxed">{place.desc}</p>
+              )}
+            </div>
           )}
 
           {/* 체류 시간 카드 */}
