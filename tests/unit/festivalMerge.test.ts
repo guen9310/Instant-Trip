@@ -158,7 +158,7 @@ describe("mergeFestivals", () => {
       mapx: "",
       mapy: "",
     };
-    const { festivals, stats } = mergeFestivals([basePublic], [tourNoCoord]);
+    const { stats } = mergeFestivals([basePublic], [tourNoCoord]);
     expect(stats.matchedCount).toBe(1);
     expect(stats.coordMissMatchCount).toBe(1);
   });

@@ -31,7 +31,7 @@ export async function fetchHomeCore(
   const errors: string[] = [];
 
   // 장소 목록 — areaCode가 없으면 빈 배열 반환 후 errors에 표시
-  let places: TourItem[] = [];
+  const places: TourItem[] = [];
   if (region) {
     try {
       const results = await Promise.all(

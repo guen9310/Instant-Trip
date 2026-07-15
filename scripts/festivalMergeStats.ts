@@ -24,7 +24,7 @@ function sep(title: string) {
 
 async function main() {
   const { getAllTourFestivals } = await import("@/lib/tour/searchFestival");
-  const { getAllFestivals, fetchNearbyFestivals } = await import("@/lib/pipeline/festival");
+  const { fetchNearbyFestivals } = await import("@/lib/pipeline/festival");
   // getAllPublicFestivals는 festival.ts 내부 함수이므로, 원본 데이터를 분리 수집
   const { fetchCulturalFestivals } = await import("@/lib/clients/cultural-festival");
   const { mergeFestivals } = await import("@/lib/pipeline/festivalMerge");
