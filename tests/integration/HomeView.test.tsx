@@ -16,6 +16,12 @@ vi.mock("@/client/stores/useLocationStore", () => ({
   useLocationStore: () => mockStore,
 }));
 
+/* ── mock: next/navigation ──────────────────────────────────────────── */
+const mockPush = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
 /* ── mock: server actions ────────────────────────────────────────────── */
 const { mockGetHomeDataAction, mockGetHomeDataByRegionAction } = vi.hoisted(() => ({
   mockGetHomeDataAction: vi.fn(),
@@ -24,6 +30,13 @@ const { mockGetHomeDataAction, mockGetHomeDataByRegionAction } = vi.hoisted(() =
 vi.mock("@/app/actions/home", () => ({
   getHomeDataAction: mockGetHomeDataAction,
   getHomeDataByRegionAction: mockGetHomeDataByRegionAction,
+}));
+
+const { mockGenerateCourseFromPlaceAction } = vi.hoisted(() => ({
+  mockGenerateCourseFromPlaceAction: vi.fn(),
+}));
+vi.mock("@/app/actions/course", () => ({
+  generateCourseFromPlaceAction: mockGenerateCourseFromPlaceAction,
 }));
 
 /* ── mock: weather query ─────────────────────────────────────────────── */
@@ -82,6 +95,9 @@ beforeEach(() => {
   mockStore.requestPermission.mockClear();
   mockGetHomeDataAction.mockClear();
   mockGetHomeDataByRegionAction.mockClear();
+  mockGenerateCourseFromPlaceAction.mockReset();
+  mockPush.mockClear();
+  localStorage.clear();
 });
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -246,5 +262,126 @@ describe("A3: 스토어 공유 — RegionSelectSheet → setCity(lat, lng 포함
 
     // setCity가 충남 도청 대표 좌표와 함께 호출됨 (홈, /start가 같은 store를 공유)
     expect(mockStore.setCity).toHaveBeenCalledWith("충남", "충남", 36.601, 126.661);
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+   A4: 근처 장소 카드 탭 → 시트 없이 바로 코스 생성 → 프리뷰 직행
+   ───────────────────────────────────────────────────────────────────── */
+const journeyPlaceFixture = {
+  id: "c1",
+  cat: "관광지",
+  name: "관광지 1",
+  addr: "",
+  hours: "",
+  time: "",
+  dur: "30~60분 정도",
+  badge: { text: "영업중", variant: "accent" as const },
+  desc: "",
+  coord: { lat: 35, lng: 129 },
+  imageUrl: null,
+  availabilityUncertain: false,
+  estimatedDuration: { min: 30, max: 60 },
+  tags: [],
+};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+describe("A4: 근처 장소 카드 탭 — 시트 없이 프리뷰 직행", () => {
+  it("카드 탭 → 로딩 오버레이 표시 → 성공 시 pendingCourse 저장 후 /course/preview로 이동한다", async () => {
+    mockStore.state = GEO_STATE;
+    mockGetHomeDataAction.mockResolvedValue(makeHomeData());
+    const gate = deferred<{ ok: true; courseId: string; place: typeof journeyPlaceFixture; courseName: string; festivals: never[]; availability: null }>();
+    mockGenerateCourseFromPlaceAction.mockReturnValue(gate.promise);
+
+    const user = userEvent.setup();
+    renderWithClient(<HomeView />);
+
+    await waitFor(() => expect(screen.getByText("근처 장소")).toBeInTheDocument());
+
+    const card = screen.getByText("관광지 1").closest("button")!;
+    await user.click(card);
+
+    // 로딩 중 — 카드 위 스피너 노출
+    expect(card.querySelector(".animate-spin")).not.toBeNull();
+
+    gate.resolve({
+      ok: true,
+      courseId: "course-1",
+      place: journeyPlaceFixture,
+      courseName: "관광지 1",
+      festivals: [],
+      availability: null,
+    });
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/course/preview"));
+
+    const saved = JSON.parse(localStorage.getItem("pendingCourse")!);
+    expect(saved.courseId).toBe("course-1");
+    expect(saved.place.id).toBe("c1");
+  });
+
+  it("로딩 중에는 다른 카드를 탭해도 코스 생성이 다시 호출되지 않는다", async () => {
+    mockStore.state = GEO_STATE;
+    const places = [
+      { contentid: "1", contenttypeid: "12", title: "관광지A", firstimage: "", mapx: "129", mapy: "35", addr1: "" },
+      { contentid: "2", contenttypeid: "12", title: "관광지B", firstimage: "", mapx: "129", mapy: "35", addr1: "" },
+    ];
+    mockGetHomeDataAction.mockResolvedValue(makeHomeData({ places }));
+    const gate = deferred<{ ok: true; courseId: string; place: typeof journeyPlaceFixture; courseName: string; festivals: never[]; availability: null }>();
+    mockGenerateCourseFromPlaceAction.mockReturnValue(gate.promise);
+
+    const user = userEvent.setup();
+    renderWithClient(<HomeView />);
+
+    await waitFor(() => expect(screen.getByText("관광지A")).toBeInTheDocument());
+
+    await user.click(screen.getByText("관광지A").closest("button")!);
+    await user.click(screen.getByText("관광지B").closest("button")!);
+
+    expect(mockGenerateCourseFromPlaceAction).toHaveBeenCalledTimes(1);
+
+    gate.resolve({
+      ok: true,
+      courseId: "course-1",
+      place: journeyPlaceFixture,
+      courseName: "관광지A",
+      festivals: [],
+      availability: null,
+    });
+    await waitFor(() => expect(mockPush).toHaveBeenCalled());
+  });
+
+  it("실패(NOT_FOUND) 시 화면 전환 없이 토스트가 표시되고 홈 화면에 남는다", async () => {
+    mockStore.state = GEO_STATE;
+    mockGetHomeDataAction.mockResolvedValue(makeHomeData());
+    mockGenerateCourseFromPlaceAction.mockResolvedValue({
+      ok: false,
+      code: "NOT_FOUND",
+      error: "not found",
+    });
+
+    const user = userEvent.setup();
+    renderWithClient(<HomeView />);
+
+    await waitFor(() => expect(screen.getByText("관광지 1")).toBeInTheDocument());
+    await user.click(screen.getByText("관광지 1").closest("button")!);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("장소 정보를 찾을 수 없어요. 다른 장소를 선택해주세요."),
+      ).toBeInTheDocument();
+    });
+
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(localStorage.getItem("pendingCourse")).toBeNull();
+    // 실패 후 다시 탭 가능 — 카드가 비활성 상태로 남지 않는다
+    expect(screen.getByText("관광지 1").closest("button")).not.toBeDisabled();
   });
 });

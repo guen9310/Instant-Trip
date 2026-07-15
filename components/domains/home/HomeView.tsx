@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw, PartyPopper, Trees, Landmark, Bike, MapPin } from "lucide-react";
+import { RefreshCw, PartyPopper, Trees, Landmark, Bike, MapPin, Loader2 } from "lucide-react";
 import type { ElementType } from "react";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { getHomeDataAction, getHomeDataByRegionAction } from "@/app/actions/home";
+import { generateCourseFromPlaceAction } from "@/app/actions/course";
 import { HomeLocationCard } from "@/components/domains/home/HomeLocationCard";
-import { HomePlaceDetailSheet } from "@/components/domains/home/HomePlaceDetailSheet";
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import { ImagePlaceholder } from "@/components/commons/ImagePlaceholder";
 import type { HomeData } from "@/lib/home/core";
-import type { FestivalSummary } from "@/shared/types/course.types";
+import type { FestivalSummary, PendingCourse } from "@/shared/types/course.types";
 import type { TourItem } from "@/lib/tour/types";
 import { cn, isBlank } from "@/shared/utils";
 
@@ -36,14 +37,61 @@ const CHIP_TO_TYPE: Partial<Record<FilterChip, string>> = {
 };
 
 export function HomeView() {
+  const router = useRouter();
   const { state, requestPermission } = useLocationStore();
   const [filter, setFilter] = useState<FilterChip>("전체");
-  const [selectedPlace, setSelectedPlace] = useState<TourItem | null>(null);
+  const [startingId, setStartingId] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.status === "idle") requestPermission();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 토스트 자동 소멸 — 별도 닫기 UI 없이 일정 시간 후 사라진다
+  useEffect(() => {
+    if (!toastMsg) return;
+    const timer = setTimeout(() => setToastMsg(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toastMsg]);
+
+  // 홈 근처 장소 카드 탭 → 시트 없이 바로 코스 생성 후 프리뷰로 이동
+  const handleSelectPlace = async (place: TourItem) => {
+    if (startingId) return;
+    setStartingId(place.contentid);
+
+    const lat = parseFloat(place.mapy);
+    const lng = parseFloat(place.mapx);
+
+    const result = await generateCourseFromPlaceAction({
+      contentId: place.contentid,
+      contentTypeId: place.contenttypeid,
+      lat,
+      lng,
+    });
+
+    if (!result.ok) {
+      setStartingId(null);
+      setToastMsg(
+        result.code === "NOT_FOUND"
+          ? "장소 정보를 찾을 수 없어요. 다른 장소를 선택해주세요."
+          : "코스를 만드는 중 문제가 발생했어요. 다시 시도해주세요.",
+      );
+      return;
+    }
+
+    const pending: PendingCourse = {
+      courseId: result.courseId,
+      place: result.place,
+      courseName: result.courseName,
+      festivals: result.festivals,
+      mapX: lng,
+      mapY: lat,
+      availability: result.availability,
+    };
+    localStorage.setItem("pendingCourse", JSON.stringify(pending));
+    router.push("/course/preview");
+  };
 
   const locationKey =
     state.status === "granted"
@@ -142,16 +190,18 @@ export function HomeView() {
               hasPlaces={(homeData?.places ?? []).length > 0}
               filter={filter}
               onFilter={setFilter}
-              onSelectPlace={setSelectedPlace}
+              startingId={startingId}
+              onSelectPlace={handleSelectPlace}
             />
           )}
         </>
       )}
 
-      <HomePlaceDetailSheet
-        place={selectedPlace}
-        onClose={() => setSelectedPlace(null)}
-      />
+      {toastMsg && (
+        <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,6px))] left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-foreground text-background text-[13px] font-medium shadow-lg max-w-[calc(100vw-32px)] text-center">
+          {toastMsg}
+        </div>
+      )}
     </div>
   );
 }
@@ -244,12 +294,14 @@ function PlacesSection({
   hasPlaces,
   filter,
   onFilter,
+  startingId,
   onSelectPlace,
 }: {
   places: TourItem[];
   hasPlaces: boolean;
   filter: FilterChip;
   onFilter: (chip: FilterChip) => void;
+  startingId: string | null;
   onSelectPlace: (place: TourItem) => void;
 }) {
   if (!hasPlaces) return null;
@@ -284,6 +336,8 @@ function PlacesSection({
             <PlaceCard
               key={place.contentid}
               place={place}
+              loading={startingId === place.contentid}
+              disabled={startingId !== null}
               onClick={() => onSelectPlace(place)}
             />
           ))}
@@ -295,9 +349,13 @@ function PlacesSection({
 
 function PlaceCard({
   place,
+  loading,
+  disabled,
   onClick,
 }: {
   place: TourItem;
+  loading: boolean;
+  disabled: boolean;
   onClick: () => void;
 }) {
   const typeLabel = TYPE_LABEL[place.contenttypeid] ?? "";
@@ -305,7 +363,11 @@ function PlaceCard({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-xl overflow-hidden border border-border bg-card active:scale-[0.98] transition-transform duration-150"
+      disabled={disabled}
+      className={cn(
+        "relative w-full text-left rounded-xl overflow-hidden border border-border bg-card active:scale-[0.98] transition-transform duration-150",
+        disabled && !loading && "opacity-40",
+      )}
     >
       {!isBlank(place.firstimage) ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -328,6 +390,11 @@ function PlaceCard({
           <p className="text-[11px] text-text-secondary mt-0.5">{typeLabel}</p>
         )}
       </div>
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-card/80">
+          <Loader2 size={20} className="animate-spin text-primary" />
+        </div>
+      )}
     </button>
   );
 }
