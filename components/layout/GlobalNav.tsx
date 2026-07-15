@@ -7,7 +7,7 @@ import { ChevronLeft, Monitor, Moon, Sun } from "lucide-react";
 import { useDarkModeStore } from "@/client/stores/useDarkModeStore";
 import type { User } from "@/shared/types/auth.types";
 
-const TAB_PATHS = ["/", "/feed", "/profile"];
+const TAB_PATHS = ["/", "/profile"];
 
 const PAGE_TITLES: Record<string, string> = {
   "/profile": "내 정보",

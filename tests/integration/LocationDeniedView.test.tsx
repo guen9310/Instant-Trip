@@ -1,78 +1,98 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 
-describe("LocationDeniedView", () => {
-  it("Step1: 5개 권역이 표시된다", () => {
-    render(<LocationDeniedView onCitySelect={vi.fn()} />);
-    expect(screen.getByText("수도권")).toBeInTheDocument();
-    expect(screen.getByText("중부권")).toBeInTheDocument();
-    expect(screen.getByText("영남권")).toBeInTheDocument();
-    expect(screen.getByText("호남권")).toBeInTheDocument();
-    expect(screen.getByText("제주·강원")).toBeInTheDocument();
-  });
+// useLocationStore mock
+const mockRequestPermission = vi.fn();
+const mockSetCity = vi.fn();
+let mockLocationState: { status: string } = { status: "denied" };
 
-  it("Step1: denied variant에서 위치 권한 거부 경고가 표시된다", () => {
-    render(<LocationDeniedView onCitySelect={vi.fn()} variant="denied" />);
+vi.mock("@/client/stores/useLocationStore", () => ({
+  useLocationStore: () => ({
+    requestPermission: mockRequestPermission,
+    setCity: mockSetCity,
+    state: mockLocationState,
+  }),
+}));
+
+beforeEach(() => {
+  mockRequestPermission.mockReset();
+  mockSetCity.mockReset();
+  mockLocationState = { status: "denied" };
+});
+
+describe("LocationDeniedView", () => {
+  it("denied variant에서 위치 권한 거부 알림이 표시된다", () => {
+    render(<LocationDeniedView variant="denied" />);
     expect(screen.getByText("위치 권한이 거부되었어요")).toBeInTheDocument();
   });
 
-  it("Step1: manual variant에서 경고 배너가 표시되지 않는다", () => {
-    render(<LocationDeniedView onCitySelect={vi.fn()} variant="manual" />);
+  it("manual variant에서 거부 알림이 표시되지 않는다", () => {
+    render(<LocationDeniedView variant="manual" />);
     expect(screen.queryByText("위치 권한이 거부되었어요")).not.toBeInTheDocument();
   });
 
-  it("권역 선택 시 Step2로 전환되어 도시 목록이 표시된다", async () => {
-    const user = userEvent.setup();
-    render(<LocationDeniedView onCitySelect={vi.fn()} />);
-
-    await user.click(screen.getByText("수도권"));
-
-    expect(screen.getByText("서울")).toBeInTheDocument();
-    expect(screen.getByText("인천")).toBeInTheDocument();
+  it("[권한 다시 요청] 버튼이 표시된다 (denied 상태)", () => {
+    render(<LocationDeniedView />);
+    expect(screen.getByRole("button", { name: /권한 다시 요청/ })).toBeInTheDocument();
   });
 
-  it("도시 미선택 시 CTA 버튼이 비활성 상태이다", async () => {
-    const user = userEvent.setup();
-    render(<LocationDeniedView onCitySelect={vi.fn()} />);
-
-    await user.click(screen.getByText("수도권"));
-
-    const disabledBtn = screen.getByRole("button", { name: "도시를 선택해주세요" });
-    expect(disabledBtn).toBeDisabled();
+  it("system-denied 상태에서 [권한 다시 요청] 버튼이 표시되지 않는다", () => {
+    mockLocationState = { status: "system-denied" };
+    render(<LocationDeniedView variant="denied" />);
+    expect(screen.queryByRole("button", { name: /권한 다시 요청/ })).not.toBeInTheDocument();
   });
 
-  it("도시 선택 시 CTA가 활성화된다", async () => {
-    const user = userEvent.setup();
-    render(<LocationDeniedView onCitySelect={vi.fn()} />);
-
-    await user.click(screen.getByText("수도권"));
-    await user.click(screen.getByText("서울"));
-
-    expect(screen.getByRole("button", { name: "이 도시로 코스 뽑기" })).not.toBeDisabled();
+  it("system-denied 상태에서 브라우저 설정 안내 문구가 표시된다", () => {
+    mockLocationState = { status: "system-denied" };
+    render(<LocationDeniedView variant="denied" />);
+    expect(screen.getByText(/브라우저 설정에서 이 사이트의 위치 권한을 허용/)).toBeInTheDocument();
   });
 
-  it("CTA 클릭 시 onCitySelect 콜백이 선택된 도시명으로 호출된다", async () => {
+  it("[지역 선택] 버튼이 표시된다", () => {
+    render(<LocationDeniedView />);
+    expect(screen.getByRole("button", { name: /지역 선택/ })).toBeInTheDocument();
+  });
+
+  it("[권한 다시 요청] 클릭 시 requestPermission이 호출된다", async () => {
+    const user = userEvent.setup();
+    render(<LocationDeniedView />);
+    await user.click(screen.getByRole("button", { name: /권한 다시 요청/ }));
+    expect(mockRequestPermission).toHaveBeenCalledTimes(1);
+  });
+
+  it("[지역 선택] 클릭 시 RegionSelectSheet가 열리고 17개 시·도가 표시된다", async () => {
+    const user = userEvent.setup();
+    render(<LocationDeniedView />);
+    await user.click(screen.getByRole("button", { name: /지역 선택/ }));
+
+    // RegionSelectSheet는 vaul Drawer로 렌더됨 — portal로 body에 삽입
+    await waitFor(() => {
+      expect(screen.getByText("서울")).toBeInTheDocument();
+    });
+
+    // 17개 시·도 전수 확인
+    const regions = [
+      "서울", "인천", "대전", "대구", "광주", "부산", "울산",
+      "세종", "경기", "강원", "충북", "충남", "경북", "경남",
+      "전북", "전남", "제주",
+    ];
+    for (const name of regions) {
+      expect(screen.getByRole("button", { name })).toBeInTheDocument();
+    }
+  });
+
+  it("RegionSelectSheet에서 지역 선택 시 setCity가 호출되고 onCitySelect 콜백이 실행된다", async () => {
     const onCitySelect = vi.fn();
     const user = userEvent.setup();
     render(<LocationDeniedView onCitySelect={onCitySelect} />);
 
-    await user.click(screen.getByText("수도권"));
-    await user.click(screen.getByText("서울"));
-    await user.click(screen.getByRole("button", { name: "이 도시로 코스 뽑기" }));
+    await user.click(screen.getByRole("button", { name: /지역 선택/ }));
+    await waitFor(() => expect(screen.getByText("충남")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "충남" }));
 
-    expect(onCitySelect).toHaveBeenCalledWith("서울");
-  });
-
-  it("뒤로가기 시 Step1로 돌아간다", async () => {
-    const user = userEvent.setup();
-    render(<LocationDeniedView onCitySelect={vi.fn()} />);
-
-    await user.click(screen.getByText("영남권"));
-    expect(screen.getByText("부산")).toBeInTheDocument();
-
-    await user.click(screen.getByText("권역 다시 선택"));
-    expect(screen.getByText("어느 지역에 계세요?")).toBeInTheDocument();
+    expect(mockSetCity).toHaveBeenCalledWith("충남", "충남", 36.601, 126.661);
+    expect(onCitySelect).toHaveBeenCalledWith("충남", "충남");
   });
 });

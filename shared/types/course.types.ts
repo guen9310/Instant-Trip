@@ -1,6 +1,9 @@
+import type { DurationRange } from "@/shared/utils/duration";
+import type { Prefs } from "@/shared/constants/preferences";
+
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
 
-// 코스 진행 중 한 장소의 상세 데이터 (여정 화면에서 사용)
+// 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)
 export type JourneyPlace = {
   id: string;
   cat: string;
@@ -9,14 +12,38 @@ export type JourneyPlace = {
   hours: string;
   time: string;
   dur: string;
-  travel: string;
   badge: { text: string; variant: BadgeVariant };
   desc: string;
   coord: { lat: number; lng: number } | null;
   imageUrl: string | null;
   availabilityUncertain: boolean;
-  estimatedDurationMin: number;
+  estimatedDuration: DurationRange;
+  // 매칭된 체류시간 규칙 key — 완료 기록의 실측 집계 조인 키 (구버전 localStorage엔 없을 수 있음)
+  stayDurationKey?: string;
+  tags: string[];
+  // 이 장소가 취향 추천(stage4 점수화)으로 왔는지, 홈 근처 카드에서 직접 선택했는지.
+  // 구버전 localStorage 페이로드엔 없을 수 있어 optional.
+  origin?: "recommended" | "selected";
 };
+
+// 선택 진입(origin="selected") 코스의 가용성 스냅샷 — generateCourseFromPlaceAction이
+// 반환하는 형태와 동일하게 유지한다. isOpenNow가 null이면 판단 불가(경고 대상 아님).
+export type PlaceAvailabilitySnapshot = {
+  isOpenNow: boolean | null;
+  hours: string | null;
+  restDayNote: string | null;
+};
+
+// 코스 결과의 보조 정보 — 진행중/예정 축제 (product-plan.md 4번 "부가" 참조)
+export type FestivalSummary = {
+  id: string;
+  name: string;
+  status: "ongoing" | "upcoming";
+  period: string;
+  address: string;
+  imageUrl: string | null;
+};
+
 
 export type NearbyCategory = "all" | "cafe" | "convenience" | "pharmacy" | "restaurant" | "parking" | "gas_station";
 
@@ -30,11 +57,29 @@ export type NearbyPoi = {
   placeUrl: string;
 };
 
+// localStorage "pendingCourse" — 생성된 추천을 프리뷰/진행 화면으로 전달
+export type PendingCourse = {
+  courseId: string;
+  place: JourneyPlace;
+  courseName: string;
+  festivals?: FestivalSummary[];
+  mapX?: number;
+  mapY?: number;
+  scale?: string;
+  region?: string; // 출발 지역 표시명 (예: '서울 마포구') — 완료 기록 저장용
+  // 생성 시점 취향 스냅샷 — 결과 화면 표시·재추천용. "이 코스가 어떤 취향으로
+  // 만들어졌나"를 보존한다 (구버전 localStorage 페이로드엔 없을 수 있음)
+  prefs?: Prefs;
+  // startCourseAction이 반환한 DB row ID — 완료 시 INSERT 대신 UPDATE에 사용
+  completionId?: string;
+  dbCourseId?: string;
+  // 선택 진입(place.origin==="selected")에서만 채워진다 — 추천 진입은 이 필드를 모른다.
+  availability?: PlaceAvailabilitySnapshot;
+};
+
 // 프로필 — 진행 중인 코스 상태
 export type CourseProgress = {
   name: string;
-  current: number;
-  total: number;
   region: string;
   courseId: string;
 };

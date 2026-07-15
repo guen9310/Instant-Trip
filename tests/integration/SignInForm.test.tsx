@@ -37,20 +37,18 @@ describe("SignInForm", () => {
     expect(screen.getByRole("button", { name: "인증 코드 받기" })).not.toBeDisabled();
   });
 
-  it("유효하지 않은 이메일 제출 시 에러 메시지가 표시된다", async () => {
+  it("유효하지 않은 이메일에서는 CTA가 비활성 상태라 발송되지 않는다", async () => {
     mockSendVerificationOtp.mockResolvedValue({ error: null });
     const user = userEvent.setup();
     render(<SignInForm />);
 
     await user.type(screen.getByPlaceholderText("you@email.com"), "invalid");
-    await user.click(screen.getByRole("button", { name: "인증 코드 받기" }));
 
-    await waitFor(() => {
-      expect(mockSendVerificationOtp).not.toHaveBeenCalled();
-    });
+    expect(screen.getByRole("button", { name: "인증 코드 받기" })).toBeDisabled();
+    expect(mockSendVerificationOtp).not.toHaveBeenCalled();
   });
 
-  it("유효한 이메일 제출 성공 시 /sign-in/verify로 이동한다", async () => {
+  it("유효한 이메일 제출 성공 시 같은 화면에서 인증 코드 입력 UI로 전환된다", async () => {
     mockSendVerificationOtp.mockResolvedValue({ error: null });
     const user = userEvent.setup();
     render(<SignInForm />);
@@ -59,10 +57,14 @@ describe("SignInForm", () => {
     await user.click(screen.getByRole("button", { name: "인증 코드 받기" }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith(
-        "/sign-in/verify?email=test%40email.com",
-      );
+      expect(mockSendVerificationOtp).toHaveBeenCalledWith({
+        email: "test@email.com",
+        type: "sign-in",
+      });
+      expect(screen.getByLabelText("6자리 인증 코드")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "로그인" })).toBeInTheDocument();
     });
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("API 오류 시 에러 메시지가 표시된다", async () => {

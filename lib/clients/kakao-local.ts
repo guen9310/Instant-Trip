@@ -141,10 +141,9 @@ export async function fetchNearby(
   return fetchByCode(lat, lng, categoryCode, radiusM);
 }
 
-// 코스 후보용 카카오 장소 수집:
-// (1) 카테고리 검색 AT4, CT1 각 1페이지(15건)
-// (2) 키워드 검색 "공원" — 필터링 후 AT4 버킷으로 세팅
-// 중복(id 기준)은 먼저 등록된 쪽 유지 (카테고리 결과 우선)
+// 코스 후보용 카카오 장소 수집: 공원류만 (키워드 "공원" 검색)
+// AT4(관광명소)·CT1(문화시설) 카테고리 검색은 스파·레저·상업시설 등 비관광 장소가
+// 혼입되어 코스 후보로 적합하지 않아 제외. 맛집 등 주변 연계 정보는 클라이언트에서 별도 조회.
 export async function fetchCourseKakao(
   lat: number,
   lng: number,
@@ -153,30 +152,14 @@ export async function fetchCourseKakao(
   if (!REST_KEY)
     throw new Error("KAKAO_REST_KEY 환경변수가 설정되지 않았습니다.");
 
-  const [at4, ct1, parks] = await Promise.all([
-    fetchByCode(lat, lng, "AT4", radiusM).catch(() => [] as KakaoPlace[]),
-    fetchByCode(lat, lng, "CT1", radiusM).catch(() => [] as KakaoPlace[]),
-    fetchParkKeyword(lat, lng, radiusM).catch(() => [] as KakaoPlace[]),
-  ]);
-
-  const tagged: KakaoPlaceTagged[] = [
-    ...at4.map((p) => ({ ...p, kakaoCategory: "AT4" as const })),
-    ...ct1.map((p) => ({ ...p, kakaoCategory: "CT1" as const })),
-    ...parks.map((p) => ({ ...p, kakaoCategory: "AT4" as const })),
-  ];
-
-  const seen = new Set<string>();
-  const items = tagged.filter((p) => {
-    if (seen.has(p.id)) return false;
-    seen.add(p.id);
-    return true;
-  });
+  const parks = await fetchParkKeyword(lat, lng, radiusM).catch(() => [] as KakaoPlace[]);
+  const items: KakaoPlaceTagged[] = parks.map((p) => ({ ...p, kakaoCategory: "AT4" as const }));
 
   return {
     items,
     rawCounts: {
-      at4Category: at4.length,
-      ct1Category: ct1.length,
+      at4Category: 0,
+      ct1Category: 0,
       parkKeyword: parks.length,
     },
   };

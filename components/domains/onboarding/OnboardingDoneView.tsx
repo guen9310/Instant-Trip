@@ -72,7 +72,7 @@ export function OnboardingDoneView() {
           지금 떠나보기
         </Button>
         <Link
-          href="/feed"
+          href="/"
           className="block text-center mt-3 py-2 text-[13px] text-text-secondary font-medium"
         >
           둘러보기

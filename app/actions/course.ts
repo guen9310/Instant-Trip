@@ -1,10 +1,25 @@
 "use server";
 
-import { generateCourse } from "@/lib/pipeline";
-import { prefsToProfile, courseResultToJourneyPlaces } from "@/lib/tour/mappers";
+import { nanoid } from "nanoid";
+import {
+  generateCourse,
+  getSearchRadiusM,
+  generateCourseFromPlace,
+} from "@/lib/pipeline";
+import type { PlaceAvailability } from "@/lib/pipeline";
+import {
+  prefsToProfile,
+  coursePlaceToJourneyPlace,
+  courseResultToFestivalSummaries,
+} from "@/lib/tour/mappers";
 import { fetchNearby } from "@/lib/clients/kakao-local";
 import type { NearbyCategoryCode } from "@/lib/clients/kakao-local";
-import type { JourneyPlace, NearbyCategory, NearbyPoi } from "@/shared/types/course.types";
+import type {
+  JourneyPlace,
+  NearbyCategory,
+  NearbyPoi,
+  FestivalSummary,
+} from "@/shared/types/course.types";
 
 type Scale = "light" | "moderate" | "leisurely";
 
@@ -20,11 +35,21 @@ interface GenerateCoursePayload {
     indoor: string;
   };
   excludeIds?: string[];
+  // 검색 반경(m) 오버라이드 — NoNearbyView의 반경 확장 재시도용
+  radiusM?: number;
 }
 
 type GenerateCourseResult =
-  | { ok: true; places: JourneyPlace[]; courseName: string }
-  | { ok: false; error: string };
+  | {
+      ok: true;
+      courseId: string;
+      place: JourneyPlace;
+      courseName: string;
+      festivals: FestivalSummary[];
+    }
+  // NO_PLACE: 반경 내 적합한 장소 없음 — radiusM은 실제 검색에 사용된 반경
+  | { ok: false; code: "NO_PLACE"; error: string; radiusM: number }
+  | { ok: false; code: "UNKNOWN"; error: string };
 
 const COURSE_SUFFIX: Record<Scale, string> = {
   light:     " 산책",
@@ -60,8 +85,7 @@ export async function fetchNearbyPoisAction(
           console.error(`[nearby] ${cat}(${code}) 실패:`, e);
           return [];
         });
-        console.log(`[nearby] ${cat}(${code}) raw ${places.length}건:`, places.map((p) => p.place_name));
-        const mapped = places
+        return places
           .filter((p) => p.x && p.y)
           .map((p): NearbyPoi => ({
             id:       p.id,
@@ -72,13 +96,10 @@ export async function fetchNearbyPoisAction(
             coord:    { lat: parseFloat(p.y), lng: parseFloat(p.x) },
             placeUrl: p.place_url,
           }));
-        console.log(`[nearby] ${cat} 최종 ${mapped.length}건:`, mapped.map((p) => p.name));
-        return mapped;
       }),
     );
     const pois = results.flat();
     pois.sort((a, b) => parseInt(a.dist) - parseInt(b.dist));
-    console.log(`[nearby] 전체 합계 ${pois.length}건`);
     return { ok: true, pois };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "조회 실패" };
@@ -89,20 +110,77 @@ export async function generateCourseAction(
   payload: GenerateCoursePayload,
 ): Promise<GenerateCourseResult> {
   try {
-    const { mapX, mapY, scale, prefs, excludeIds } = payload;
-    const profile = prefsToProfile(prefs, { mapX, mapY }, scale);
+    const { mapX, mapY, scale, prefs, excludeIds, radiusM } = payload;
+    const profile = {
+      ...prefsToProfile(prefs, { mapX, mapY }, scale),
+      radiusOverrideM: radiusM,
+    };
     const { course } = await generateCourse(profile, { excludeIds });
 
     if (!course.mainPlace) {
-      return { ok: false, error: "주변에 적합한 장소를 찾지 못했습니다." };
+      return {
+        ok: false,
+        code: "NO_PLACE",
+        error: "주변에 적합한 장소를 찾지 못했습니다.",
+        radiusM: getSearchRadiusM(profile),
+      };
     }
 
-    const places = courseResultToJourneyPlaces(course);
+    const courseId = nanoid();
+    const place = coursePlaceToJourneyPlace(course.mainPlace);
     const courseName = course.mainPlace.title + COURSE_SUFFIX[scale];
+    const festivals = courseResultToFestivalSummaries(course);
 
-    return { ok: true, places, courseName };
+    return { ok: true, courseId, place, courseName, festivals };
   } catch (err) {
     const message = err instanceof Error ? err.message : "코스 생성 중 오류가 발생했습니다.";
-    return { ok: false, error: message };
+    return { ok: false, code: "UNKNOWN", error: message };
   }
+}
+
+interface GenerateCourseFromPlacePayload {
+  contentId: string;
+  contentTypeId: string;
+  lat: number;
+  lng: number;
+}
+
+type GenerateCourseFromPlaceActionResult =
+  | {
+      ok: true;
+      courseId: string;
+      place: JourneyPlace;
+      courseName: string;
+      festivals: FestivalSummary[];
+      availability: PlaceAvailability;
+    }
+  | { ok: false; code: "NOT_FOUND"; error: string }
+  | { ok: false; code: "UNKNOWN"; error: string };
+
+// 홈 근처 장소 카드에서 사용자가 직접 고른 장소로 코스를 만든다 (7-A 데이터 층).
+// generateCourseAction과 동일한 반환 형태(courseId/place/courseName/festivals)를
+// 유지해 프리뷰 화면(CourseResultView)을 그대로 재사용할 수 있게 하고, availability를
+// 추가로 얹는다. place.origin="selected"로 진입 경로를 구분한다.
+export async function generateCourseFromPlaceAction(
+  payload: GenerateCourseFromPlacePayload,
+): Promise<GenerateCourseFromPlaceActionResult> {
+  const result = await generateCourseFromPlace(payload);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const courseId = nanoid();
+  const place = coursePlaceToJourneyPlace(result.mainPlace);
+  const courseName = result.mainPlace.title;
+  const festivals = courseResultToFestivalSummaries({ festivals: result.festivals });
+
+  return {
+    ok: true,
+    courseId,
+    place,
+    courseName,
+    festivals,
+    availability: result.availability,
+  };
 }

@@ -167,3 +167,72 @@ Do not use effects to cascade React state updates. If you find yourself writing 
 ### Read custom hook implementations before solving a problem they already solve
 
 Before introducing a workaround (e.g. a "latest ref" to avoid stale closures), check whether the hook you are calling already handles it internally. Duplicating a solution the hook owns makes the code harder to follow and introduces subtle bugs.
+
+---
+
+## 9. Change Summary After Code Modifications
+
+After completing code changes, provide a **file-by-file explanation of what changed and why**.
+
+### Format
+
+- Write a separate entry for each modified file.
+- Each entry must include **what changed** (before/after, or added/removed) and **why** (bug, design decision, dead code, etc.).
+- Only state facts confirmed from the actual diff. Do not fill entries with speculation or intent.
+- For new files, summarize the file's role and key design decisions instead of a diff.
+
+### Level of Detail
+
+- Trivial changes (type fixes, comment corrections) can be a single line.
+- Logic changes or structural refactors must include concrete before/after.
+- Bug fixes with a clear "why" should describe what was going wrong and under what conditions.
+
+### Timing
+
+- Provide after any task that modifies 3 or more files, or when explicitly requested.
+- Write it immediately after changes are complete so the user can review before staging or committing.
+
+---
+
+## 10. Screen Naming Reference
+
+When discussing UI screens, use the canonical names below. Both parties must use the same name to avoid ambiguity.
+
+### Auth
+
+| 정식 명칭 | 컴포넌트 | 경로 |
+|---|---|---|
+| 로그인 화면 | `SignInForm` | `/sign-in` |
+| 이메일 인증 화면 | `VerifyForm` | `/sign-in/verify` |
+
+### Onboarding
+
+| 정식 명칭 | 컴포넌트 | 경로 |
+|---|---|---|
+| 온보딩 화면 | `OnboardingForm` | `/onboarding` |
+| 온보딩 완료 화면 | `OnboardingDoneView` | `/onboarding/done` |
+
+### Main Tabs
+
+| 정식 명칭 | 컴포넌트 | 경로 |
+|---|---|---|
+| 랜딩 화면 | `LandingHero` | `/` |
+| 출발 설정 화면 | `StartView` | `/start` |
+| 피드 화면 | `FeedList` | `/feed` |
+| 프로필 화면 | `ProfileView` | `/profile` |
+| 설정 화면 | `SettingsView` | `/settings` |
+
+### Course Flow
+
+| 정식 명칭 | 컴포넌트 | 경로 |
+|---|---|---|
+| 코스 추천 화면 | `CourseResultView` | `/course/preview` |
+| 코스 진행 화면 | `CourseActiveView` | `/course/active/[id]` |
+| 코스 완료 화면 | `CourseDoneView` | `/course/done/[id]` |
+
+### Overlays / Sheets
+
+| 정식 명칭 | 컴포넌트 | 진입 경로 |
+|---|---|---|
+| 장소 상세 시트 | `PlaceDetailSheet` | 코스 추천 화면 → 장소 카드 탭 |
+| 주변 정보 시트 | `NearbyPanel` (in `CourseActiveView`) | 코스 진행 화면 → 주변 정보 보기 탭 |

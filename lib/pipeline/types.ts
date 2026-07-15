@@ -1,5 +1,6 @@
 import type { TourItem } from "@/lib/tour/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { DurationRange } from "@/shared/utils/duration";
 
 export type TravelScale = "가볍게" | "적당히" | "여유롭게";
 
@@ -18,9 +19,11 @@ export interface OnboardingAnswers {
 export interface UserProfile {
   tagWeights: TagWeights;
   preferFood: boolean;        // 맛집 선호 — 코스 이후 Kakao 식당 1곳 추천에 사용
-  festivalAffinity: number;   // 0.0 ~ 1.0, 온보딩에서 파생 — 축제 섹션 정렬에만 사용
   location: { mapX: number; mapY: number };
   scale: TravelScale;
+  // 검색 반경(m) 오버라이드 — 미지정 시 규모별 기본값(SCALE_CONFIG) 사용.
+  // NoNearbyView의 "반경 넓혀서 다시 찾기" 재시도에서 설정된다.
+  radiusOverrideM?: number;
   // KorService2 지역 코드
   areaCode: string;
   sigunguCode: string;
@@ -41,7 +44,6 @@ export function onboardingToProfile(
       조용함: answers.조용한곳좋아요 ? 1 : 0,
     },
     preferFood: answers.먹는게중요해요,
-    festivalAffinity: (answers.실내선호해요 ? 0 : 0.6) + (answers.조용한곳좋아요 ? 0 : 0.4),
     location,
     scale,
     areaCode,
@@ -49,28 +51,17 @@ export function onboardingToProfile(
   };
 }
 
-// 코스 완료 후 별점 피드백으로 태그 가중치 보정
-export function applyFeedback(
-  profile: UserProfile,
-  tags: TagKey[],
-  rating: number,
-): UserProfile {
-  const delta = rating >= 4 ? 0.5 : rating <= 2 ? -0.5 : 0;
-  if (delta === 0) return profile;
-
-  const updated = { ...profile.tagWeights };
-  for (const tag of tags) {
-    updated[tag] = Math.max(0, (updated[tag] ?? 0) + delta);
-  }
-  return { ...profile, tagWeights: updated };
-}
-
-// 여행 규모별 설정 — radius: 수집 반경(m), maxNearby: 메인 외 연계 장소 최대 수
-export const SCALE_CONFIG: Record<TravelScale, { radius: number; maxNearby: number }> = {
-  가볍게:   { radius: 5000,  maxNearby: 1 },
-  적당히:   { radius: 10000, maxNearby: 2 },
-  여유롭게: { radius: 20000, maxNearby: 4 },
+// 여행 규모별 설정 — radius: 수집 반경(m)
+export const SCALE_CONFIG: Record<TravelScale, { radius: number }> = {
+  가볍게:   { radius: 5000 },
+  적당히:   { radius: 10000 },
+  여유롭게: { radius: 20000 },
 };
+
+// 실제 사용할 검색 반경(m) — 반경 확장 재시도(radiusOverrideM)가 규모별 기본값보다 우선
+export function getSearchRadiusM(profile: UserProfile): number {
+  return profile.radiusOverrideM ?? SCALE_CONFIG[profile.scale].radius;
+}
 
 // DB에서 조회한 장소 (tag_scores 사전 계산 포함)
 export type PlaceWithTags = TourItem & { tagScores: Record<TagKey, number>; availabilityUncertain?: boolean };
@@ -82,8 +73,14 @@ export interface PlaceCandidate {
   score: number;
   available: boolean;
   availabilityUncertain: boolean;
-  estimatedDurationMin: number;
+  estimatedDuration: DurationRange;
+  // 매칭된 체류시간 규칙의 key — 완료 기록에 저장되어 실측 집계의 조인 키가 된다
+  stayDurationKey: string;
 }
+
+// 이 장소가 어떻게 코스에 들어왔는지 — 취향 기반 추천(stage4 점수화) vs
+// 홈 근처 카드에서 사용자가 직접 선택. score는 "recommended"에서만 의미가 있다.
+export type PlaceOrigin = "recommended" | "selected";
 
 export interface CoursePlace {
   contentId: string;
@@ -97,25 +94,15 @@ export interface CoursePlace {
   tags: TagKey[];
   score: number;
   availabilityUncertain: boolean;
-  estimatedDurationMin: number;
-}
-
-// Kakao 로컬 API에서 가져온 식당 요약 — preferFood=true일 때만 채워짐
-export interface RecommendedFood {
-  name: string;
-  category: string;    // 카테고리명 (예: "한식 > 해물,생선요리")
-  address: string;
-  phone: string;
-  distanceM: number;
-  url: string;
-  coord: { lat: number; lng: number };
+  estimatedDuration: DurationRange;
+  stayDurationKey: string;
+  origin: PlaceOrigin;
 }
 
 export interface CourseResult {
   mainPlace: CoursePlace | null;
   nearbyPlaces: CoursePlace[];
-  festivals: CulturalFestival[];
-  recommended_food: RecommendedFood | null;
+  festivals: { ongoing: CulturalFestival[]; upcoming: CulturalFestival[] };
   scale: TravelScale;
   generatedAt: string;
 }

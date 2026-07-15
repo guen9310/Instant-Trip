@@ -27,6 +27,8 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(__dirname, "../.env.local") });
 
+import { formatDuration, type DurationRange } from "@/shared/utils/duration";
+
 type TravelScale = "가볍게" | "적당히" | "여유롭게";
 type TagKey = "도보친화" | "1인여행" | "실내" | "조용함";
 
@@ -104,7 +106,6 @@ function prefsToProfile(prefs: Prefs) {
       조용함: prefs.vibe === "quiet" ? 1 : 0,
     } as Record<TagKey, number>,
     preferFood: prefs.food === "matjip",
-    festivalAffinity: prefs.indoor === "indoor" ? 0 : 0.6,
   };
 }
 
@@ -193,18 +194,18 @@ function printPlace(
     score: number;
     contentTypeId: string;
     availabilityUncertain: boolean;
-    estimatedDurationMin: number;
+    estimatedDuration: DurationRange;
   },
 ) {
   const uncertainTag = p.availabilityUncertain ? " ⚠ uncertain=true" : "";
   console.log(`  ${prefix} [${p.score.toFixed(3)}] ${p.title}${uncertainTag}`);
   console.log(`         type=${p.contentTypeId} | ${p.address}`);
-  console.log(`         태그: ${p.tags.length ? p.tags.join(", ") : "(없음)"} | 예상 체류: ${p.estimatedDurationMin}분`);
+  console.log(`         태그: ${p.tags.length ? p.tags.join(", ") : "(없음)"} | 예상 체류: ${formatDuration(p.estimatedDuration)}`);
 }
 
 async function run() {
   const { scale, prefs } = await resolveOptions();
-  const { tagWeights, preferFood, festivalAffinity } = prefsToProfile(prefs);
+  const { tagWeights, preferFood } = prefsToProfile(prefs);
 
   const quiet = hasArg("--quiet");
 
@@ -262,7 +263,7 @@ async function run() {
     `  취향: travel=${prefs.travel} party=${prefs.party} vibe=${prefs.vibe} food=${prefs.food} indoor=${prefs.indoor}`,
   );
   console.log(
-    `  태그 가중치: ${JSON.stringify(tagWeights)} | preferFood=${preferFood} festivalAffinity=${festivalAffinity}`,
+    `  태그 가중치: ${JSON.stringify(tagWeights)} | preferFood=${preferFood}`,
   );
   console.log(`${"━".repeat(60)}\n`);
 
@@ -270,7 +271,6 @@ async function run() {
     {
       tagWeights,
       preferFood,
-      festivalAffinity,
       location: LOCATION,
       scale,
       areaCode: "",
@@ -300,6 +300,18 @@ async function run() {
   for (const p of course.nearbyPlaces) {
     printPlace("연계 ", p);
   }
+
+  sep("축제 (ongoing/upcoming)");
+  console.log(`  진행중 ${course.festivals.ongoing.length}건, 예정 ${course.festivals.upcoming.length}건`);
+  for (const f of course.festivals.ongoing) {
+    console.log(`  [진행중] ${f.fstvlNm} (${f.fstvlStartDate}~${f.fstvlEndDate})`);
+  }
+  for (const f of course.festivals.upcoming) {
+    console.log(`  [예정]   ${f.fstvlNm} (${f.fstvlStartDate}~${f.fstvlEndDate})`);
+  }
+
+  sep("식당 추천 (preferFood)");
+  console.log(`  preferFood=${preferFood} — Kakao Map 링크 방식으로 전환, 파이프라인에서 별도 조회하지 않음`);
 
   sep("점수화 상위 10 (전체)");
   for (const c of debug.scored.slice(0, 10)) {

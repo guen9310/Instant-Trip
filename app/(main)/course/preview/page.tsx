@@ -1,24 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CourseResultView } from "@/components/domains/course/CourseResultView";
-import type { JourneyPlace } from "@/shared/types/course.types";
-
-type PendingCourse = {
-  places: JourneyPlace[];
-  courseName: string;
-  mapX?: number;
-  mapY?: number;
-  scale?: string;
-};
+import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
+import type { PendingCourse } from "@/shared/types/course.types";
 
 function readPendingCourse(): PendingCourse | null {
   try {
-    const raw = sessionStorage.getItem("pendingCourse");
+    const raw = localStorage.getItem("pendingCourse");
     if (!raw) return null;
     const parsed: PendingCourse = JSON.parse(raw);
-    if (!parsed.places || !parsed.courseName) return null;
+    if (!parsed.courseId || !parsed.place || !parsed.courseName) return null;
     return parsed;
   } catch {
     return null;
@@ -27,30 +20,27 @@ function readPendingCourse(): PendingCourse | null {
 
 export default function CoursePreviewPage() {
   const router = useRouter();
-  const [course, setCourse] = useState<PendingCourse | null | "loading">(
-    "loading",
-  );
+  const course = useClientRead(readPendingCourse);
 
-  useEffect(() => {
-    const loaded = readPendingCourse();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCourse(loaded);
-  }, []);
-
+  // 저장된 코스가 없으면 시작 화면으로 — 라우팅은 렌더가 아닌 효과에서 수행
   useEffect(() => {
     if (course === null) router.push("/start");
   }, [course, router]);
 
-  if (course === "loading" || course === null) return null;
+  if (course === HYDRATING || course === null) return null;
 
   return (
     <CourseResultView
-      courseId="preview"
+      courseId={course.courseId}
       courseName={course.courseName}
-      places={course.places}
+      place={course.place}
+      festivals={course.festivals ?? []}
       mapX={course.mapX}
       mapY={course.mapY}
       scale={course.scale}
+      region={course.region}
+      prefs={course.prefs}
+      availability={course.availability}
     />
   );
 }

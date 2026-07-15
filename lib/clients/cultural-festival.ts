@@ -6,13 +6,13 @@
  */
 
 const BASE_URL = "https://api.data.go.kr/openapi/tn_pubr_public_cltur_fstvl_api";
-const SERVICE_KEY = process.env.TOUR_API_KEY ?? "";
+const API_KEY = process.env.TOUR_API_KEY ?? "";
 
 export interface CulturalFestival {
   fstvlNm: string;         // 축제명
   opar: string;            // 주최자
-  fstvlStartDate: string;  // 시작일 (YYYYMMDD)
-  fstvlEndDate: string;    // 종료일 (YYYYMMDD)
+  fstvlStartDate: string;  // 시작일 (YYYY-MM-DD, 2026-06-29 확인 — 대시 포함)
+  fstvlEndDate: string;    // 종료일 (YYYY-MM-DD)
   fstvlCo: string;         // 축제 내용
   mnnstNm: string;         // 주최기관
   auspcInsttNm: string;    // 주관기관
@@ -25,11 +25,15 @@ export interface CulturalFestival {
   latitude: number;        // 위도
   longitude: number;       // 경도
   referenceDate: string;   // 기준일자
-  instt_code: string;
-  instt_nm: string;
+  insttCode: string;
+  insttNm: string;
+  // 병합 확장 필드 (festivalMerge.ts에서 설정)
+  imageUrl?: string;                      // searchFestival2 firstimage
+  sources?: ("public" | "tour")[];        // 데이터 출처 태그
+  coordMissMatch?: boolean;               // 좌표 없이 이름만으로 매칭된 경우
 }
 
-type RawFestival = Omit<CulturalFestival, "latitude" | "longitude"> & {
+type RawFestival = Omit<CulturalFestival, "latitude" | "longitude" | "imageUrl" | "sources" | "coordMissMatch"> & {
   latitude: string;
   longitude: string;
 };
@@ -46,19 +50,16 @@ interface GovApiResponse {
   };
 }
 
-export async function fetchCulturalFestivals(params: {
-  pageNo?: number;
-  numOfRows?: number;
-} = {}): Promise<CulturalFestival[]> {
-  if (!SERVICE_KEY) throw new Error("TOUR_API_KEY 환경변수가 설정되지 않았습니다.");
-
-  const { pageNo = 1, numOfRows = 100 } = params;
-
+async function requestFestivals(
+  serviceKey: string,
+  pageNo: number,
+  numOfRows: number,
+): Promise<GovApiResponse> {
   const query = new URLSearchParams({
-    serviceKey: SERVICE_KEY,
-    pageNo:     String(pageNo),
-    numOfRows:  String(numOfRows),
-    type:       "json",
+    serviceKey,
+    pageNo:    String(pageNo),
+    numOfRows: String(numOfRows),
+    type:      "json",
   });
 
   const res = await fetch(`${BASE_URL}?${query}`);
@@ -67,6 +68,18 @@ export async function fetchCulturalFestivals(params: {
   const data = await res.json() as GovApiResponse;
   const { resultCode, resultMsg } = data.response.header;
   if (resultCode !== "00") throw new Error(`문화축제 API 오류: ${resultCode} ${resultMsg}`);
+
+  return data;
+}
+
+export async function fetchCulturalFestivals(params: {
+  pageNo?: number;
+  numOfRows?: number;
+} = {}): Promise<CulturalFestival[]> {
+  if (!API_KEY) throw new Error("TOUR_API_KEY 환경변수가 설정되지 않았습니다.");
+
+  const { pageNo = 1, numOfRows = 100 } = params;
+  const data = await requestFestivals(API_KEY, pageNo, numOfRows);
 
   const raw = data.response.body.items;
   if (!raw) return [];
