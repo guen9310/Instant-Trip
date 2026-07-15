@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { VerifyForm } from "@/components/domains/auth/VerifyForm";
 
 const mockPush = vi.fn();
@@ -26,45 +26,44 @@ function getOtpInput() {
 
 describe("VerifyForm", () => {
   beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
     mockPush.mockClear();
     mockSignInEmailOtp.mockClear();
     mockSendVerificationOtp.mockClear();
   });
 
-  afterEach(() => {
-    vi.clearAllTimers();
-    vi.useRealTimers();
-  });
-
-  it("초기 상태에서 확인 버튼이 비활성이다", () => {
+  it("이메일이 마스킹 없이 원문으로 표시된다", () => {
     render(<VerifyForm />);
-    expect(screen.getByRole("button", { name: "확인" })).toBeDisabled();
+    expect(
+      screen.getByText(/test@example\.com 계정으로 로그인하십시오\./),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("**");
   });
 
-  it("이메일이 마스킹되어 표시된다", () => {
-    render(<VerifyForm />);
-    expect(screen.getByText(/te\*\*@example\.com/)).toBeInTheDocument();
-  });
-
-  it("6자리 입력 시 확인 버튼이 활성화된다", async () => {
+  it("6자리 입력 완료 시 자동으로 인증 요청을 보낸다", async () => {
+    mockSignInEmailOtp.mockResolvedValue({
+      data: { user: { onboardingDone: true } },
+      error: null,
+    });
     const user = userEvent.setup();
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "123456");
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "확인" })).not.toBeDisabled();
+      expect(mockSignInEmailOtp).toHaveBeenCalledWith({
+        email: "test@example.com",
+        otp: "123456",
+      });
     });
   });
 
-  it("6자리 미만 입력 시 확인 버튼이 비활성이다", async () => {
+  it("6자리 미만 입력 시에는 자동 제출되지 않는다", async () => {
     const user = userEvent.setup();
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "123");
 
-    expect(screen.getByRole("button", { name: "확인" })).toBeDisabled();
+    expect(mockSignInEmailOtp).not.toHaveBeenCalled();
   });
 
   it("OTP 인증 성공 후 onboardingDone=true면 /로 이동한다", async () => {
@@ -77,7 +76,6 @@ describe("VerifyForm", () => {
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "123456");
-    await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/");
@@ -94,7 +92,6 @@ describe("VerifyForm", () => {
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "123456");
-    await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith("/onboarding");
@@ -111,7 +108,6 @@ describe("VerifyForm", () => {
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "000000");
-    await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
       expect(screen.getByText("코드가 올바르지 않아요.")).toBeInTheDocument();
@@ -129,7 +125,6 @@ describe("VerifyForm", () => {
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "123456");
-    await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
       expect(
@@ -148,7 +143,6 @@ describe("VerifyForm", () => {
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "123456");
-    await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
       expect(
@@ -157,13 +151,13 @@ describe("VerifyForm", () => {
     });
   });
 
-  it("코드 재발송 버튼 클릭 시 sendVerificationOtp를 호출한다", async () => {
+  it("코드 재전송 버튼 클릭 시 sendVerificationOtp를 호출한다", async () => {
     mockSendVerificationOtp.mockResolvedValue({});
 
     const user = userEvent.setup();
     render(<VerifyForm />);
 
-    await user.click(screen.getByRole("button", { name: /코드 재발송/ }));
+    await user.click(screen.getByRole("button", { name: "코드 재전송" }));
 
     await waitFor(() => {
       expect(mockSendVerificationOtp).toHaveBeenCalledWith({
@@ -173,14 +167,14 @@ describe("VerifyForm", () => {
     });
   });
 
-  it("코드 재발송 실패 시 에러 메시지가 표시되어야 한다", async () => {
+  it("코드 재전송 실패 시 에러 메시지가 표시되어야 한다", async () => {
     mockSendVerificationOtp.mockResolvedValue({
       error: { message: "발송 실패" },
     });
     const user = userEvent.setup();
     render(<VerifyForm />);
 
-    await user.click(screen.getByRole("button", { name: /코드 재발송/ }));
+    await user.click(screen.getByRole("button", { name: "코드 재전송" }));
 
     await waitFor(() => {
       expect(screen.getByText(/재발송에 실패했어요/)).toBeInTheDocument();
@@ -197,7 +191,6 @@ describe("VerifyForm", () => {
     render(<VerifyForm />);
 
     await user.type(getOtpInput(), "000000");
-    await user.click(screen.getByRole("button", { name: "확인" }));
 
     await waitFor(() => {
       expect(screen.getByText("코드가 올바르지 않아요.")).toBeInTheDocument();
