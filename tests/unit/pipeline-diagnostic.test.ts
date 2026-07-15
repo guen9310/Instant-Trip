@@ -24,7 +24,6 @@ const GOCHANGN_LOC = { mapX: 126.5639528575, mapY: 35.4806033555 };
 const mkProfile = (overrides: Partial<UserProfile>): UserProfile => ({
   tagWeights: { 도보친화: 0, "1인여행": 0, 실내: 0, 조용함: 0 },
   preferFood: false,
-  festivalAffinity: 0,
   location: GOCHANGN_LOC,
   scale: "여유롭게",
   areaCode: "",

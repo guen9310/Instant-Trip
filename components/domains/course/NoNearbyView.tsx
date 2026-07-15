@@ -8,6 +8,10 @@ import { Button } from "@/components/commons/Button";
 
 interface NoNearbyViewProps {
   city: string;
+  // 마지막 검색에 사용된 반경(km) — null이면 반경을 특정할 수 없는 경우
+  radiusKm: number | null;
+  // 확장 재시도 반경(km) — null이면 이미 최대 반경이라 확장 옵션을 숨긴다
+  expandedRadiusKm: number | null;
   onExpandRadius: () => void;
   onChangeScale: () => void;
   onChangeRegion: () => void;
@@ -15,6 +19,8 @@ interface NoNearbyViewProps {
 
 export function NoNearbyView({
   city,
+  radiusKm,
+  expandedRadiusKm,
   onExpandRadius,
   onChangeScale,
   onChangeRegion,
@@ -42,7 +48,9 @@ export function NoNearbyView({
               근처 코스를 찾지 못했어요
             </p>
             <p className="text-[13px] text-text-secondary leading-[1.4]">
-              현재 반경 5km 내 영업 중인 관광지가 없어요
+              {radiusKm !== null
+                ? `현재 반경 ${radiusKm}km 내 영업 중인 관광지가 없어요`
+                : "지금 주변에 영업 중인 관광지가 없어요"}
             </p>
           </div>
         </div>
@@ -52,12 +60,14 @@ export function NoNearbyView({
           이렇게 해볼까요?
         </p>
         <div className="flex flex-col gap-2.5">
-          <OptionCard
-            icon={Search}
-            title="반경 넓혀서 다시 찾기"
-            sub="10km로 확장"
-            onClick={onExpandRadius}
-          />
+          {expandedRadiusKm !== null && (
+            <OptionCard
+              icon={Search}
+              title="반경 넓혀서 다시 찾기"
+              sub={`${expandedRadiusKm}km로 확장`}
+              onClick={onExpandRadius}
+            />
+          )}
           <OptionCard
             icon={Clock}
             title="여행 규모 변경하기"

@@ -65,12 +65,12 @@ describe("OnboardingForm", () => {
     vi.useRealTimers();
   });
 
-  it("건너뛰기 클릭 시 /feed로 이동한다", async () => {
+  it("건너뛰기 클릭 시 /로 이동한다", async () => {
     const user = userEvent.setup();
     render(<OnboardingForm />);
 
     await user.click(screen.getByText("건너뛰기"));
-    expect(mockPush).toHaveBeenCalledWith("/feed");
+    expect(mockPush).toHaveBeenCalledWith("/");
   });
 
   it("5단계 완료 시 prefs 저장 후 /onboarding/done으로 이동한다", async () => {

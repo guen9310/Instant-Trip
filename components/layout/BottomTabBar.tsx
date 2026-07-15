@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Zap, Compass, User } from "lucide-react";
+import { Zap, Home, User } from "lucide-react";
 
 const TABS = [
-  { href: "/feed", icon: Compass, label: "피드" },
+  { href: "/", icon: Home, label: "홈" },
   { href: "/start", icon: Zap, label: "시작" },
   { href: "/profile", icon: User, label: "내 정보" },
 ];
 
-const TAB_PATHS = ["/feed", "/profile"];
+const TAB_PATHS = ["/", "/profile"];
 
 export function BottomTabBar() {
   const pathname = usePathname();

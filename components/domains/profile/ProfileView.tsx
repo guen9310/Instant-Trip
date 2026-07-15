@@ -9,20 +9,21 @@ import { buttonVariants } from "@/components/commons/Button";
 import { cn } from "@/shared/utils";
 import { StarRating } from "@/components/domains/profile/StarRating";
 import { CompletedCourseDetailModal } from "@/components/domains/profile/CompletedCourseDetailModal";
-import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { buildReexplorationText } from "@/shared/utils/prefsText";
 import type { User } from "@/shared/types/auth.types";
 import type { CourseProgress, CompletedCourse } from "@/shared/types/course.types";
+import type { Prefs } from "@/shared/constants/preferences";
 
 type Props = {
   user: User;
+  // DB에 저장된 취향 — 서버 컴포넌트(profile/page.tsx)에서 세션으로 읽어 주입한다
+  prefs: Prefs;
   inProgress: CourseProgress | null;
   completed: CompletedCourse[];
 };
 
-export function ProfileView({ user, inProgress, completed }: Props) {
+export function ProfileView({ user, prefs, inProgress, completed }: Props) {
   const [selected, setSelected] = useState<CompletedCourse | null>(null);
-  const prefs = usePrefsStore((s) => s.prefs);
   const reexploration = buildReexplorationText(prefs);
 
   const totalRegions = new Set(completed.map((c) => c.region)).size;
@@ -110,21 +111,12 @@ export function ProfileView({ user, inProgress, completed }: Props) {
                   </span>
                   <Badge variant="secondary">진행 중</Badge>
                 </div>
-                <p className="text-[12px] text-text-secondary mb-2">
-                  장소 {inProgress.current} / {inProgress.total} ·{" "}
+                <p className="text-[12px] text-text-secondary">
                   {inProgress.region}
                 </p>
-                <div className="h-1.5 rounded-full bg-border">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{
-                      width: `${(inProgress.current / inProgress.total) * 100}%`,
-                    }}
-                  />
-                </div>
               </div>
               <Link
-                href={`/course/${inProgress.courseId}/active`}
+                href={`/course/active/${inProgress.courseId}`}
                 className={cn(
                   buttonVariants({ size: "default" }),
                   "shrink-0 rounded-lg px-3.5 text-[13px] font-semibold",

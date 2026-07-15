@@ -1,6 +1,12 @@
 import type { UserProfile, TravelScale } from "@/lib/pipeline/types";
-import type { CourseResult } from "@/lib/pipeline/types";
-import type { JourneyPlace, BadgeVariant } from "@/shared/types/course.types";
+import type { CourseResult, CoursePlace } from "@/lib/pipeline/types";
+import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type {
+  JourneyPlace,
+  BadgeVariant,
+  FestivalSummary,
+} from "@/shared/types/course.types";
+import { formatDuration } from "@/shared/utils/duration";
 
 type EnglishScale = "light" | "moderate" | "leisurely";
 
@@ -44,7 +50,6 @@ export function prefsToProfile(
       조용함:   prefs.vibe   === "quiet"  ? 1 : 0,
     },
     preferFood: prefs.food === "matjip",
-    festivalAffinity: prefs.indoor === "indoor" ? 0 : 0.6,
     location,
     scale: SCALE_MAP[scale],
     areaCode: "",
@@ -52,59 +57,75 @@ export function prefsToProfile(
   };
 }
 
-export function courseResultToJourneyPlaces(result: CourseResult): JourneyPlace[] {
-  const places: JourneyPlace[] = [];
+export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
+  const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
+  const firstTag = p.tags[0];
+  const badge = firstTag
+    ? (TAG_BADGE[firstTag] ?? { text: cat, variant: "secondary" as BadgeVariant })
+    : { text: cat, variant: "secondary" as BadgeVariant };
 
-  if (result.mainPlace) {
-    const p = result.mainPlace;
-    const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
-    const firstTag = p.tags[0];
-    const badge = firstTag
-      ? (TAG_BADGE[firstTag] ?? { text: cat, variant: "secondary" as BadgeVariant })
-      : { text: cat, variant: "secondary" as BadgeVariant };
-
-    places.push({
-      id:       p.contentId,
-      cat,
-      name:     p.title,
-      addr:     p.address,
-      hours:    "",
-      time:     "",
-      dur:      `보통 ${p.estimatedDurationMin}분 정도`,
-      travel:   "",
-      badge,
-      desc:     p.overview,
-      coord:    p.coord,
-      imageUrl: p.images?.[0] ?? null,
-      availabilityUncertain: p.availabilityUncertain,
-      estimatedDurationMin: p.estimatedDurationMin,
-    });
-  }
-
-  for (const p of result.nearbyPlaces) {
-    const cat = CAT_LABEL[p.contentTypeId] ?? "장소";
-    const firstTag = p.tags[0];
-    const badge = firstTag
-      ? (TAG_BADGE[firstTag] ?? { text: cat, variant: "secondary" as BadgeVariant })
-      : { text: cat, variant: "secondary" as BadgeVariant };
-
-    places.push({
-      id:       p.contentId,
-      cat,
-      name:     p.title,
-      addr:     p.address,
-      hours:    "",
-      time:     "",
-      dur:      `보통 ${p.estimatedDurationMin}분 정도`,
-      travel:   "도보 이동",
-      badge,
-      desc:     p.overview,
-      coord:    p.coord,
-      imageUrl: p.images?.[0] ?? null,
-      availabilityUncertain: p.availabilityUncertain,
-      estimatedDurationMin: p.estimatedDurationMin,
-    });
-  }
-
-  return places;
+  return {
+    id:       p.contentId,
+    cat,
+    name:     p.title,
+    addr:     p.address,
+    hours:    "",
+    time:     "",
+    dur:      formatDuration(p.estimatedDuration),
+    badge,
+    desc:     p.overview,
+    coord:    p.coord,
+    imageUrl: p.images?.[0] ?? null,
+    availabilityUncertain: p.availabilityUncertain,
+    estimatedDuration: p.estimatedDuration,
+    stayDurationKey: p.stayDurationKey,
+    tags: p.tags,
+    origin: p.origin,
+  };
 }
+
+// 공공데이터포털 응답은 "YYYY-MM-DD"(대시 포함, 2026-06-29 확인) 형식이다.
+// 혹시 대시 없는 "YYYYMMDD"가 오는 경우도 방어적으로 처리한다.
+function formatFestivalDate(dateStr: string): string {
+  const dashed = dateStr.match(/^\d{4}-(\d{2})-(\d{2})$/);
+  if (dashed) return `${dashed[1]}.${dashed[2]}`;
+  if (dateStr.length === 8) return `${dateStr.slice(4, 6)}.${dateStr.slice(6, 8)}`;
+  return dateStr;
+}
+
+function toFestivalSummary(
+  f: CulturalFestival,
+  status: "ongoing" | "upcoming",
+): FestivalSummary {
+  return {
+    id: `${f.fstvlStartDate}_${f.fstvlNm}`,
+    name: f.fstvlNm,
+    status,
+    period: `${formatFestivalDate(f.fstvlStartDate)} ~ ${formatFestivalDate(f.fstvlEndDate)}`,
+    address: f.rdnmadr || f.lnmadr || "",
+    imageUrl: f.imageUrl ?? null,
+  };
+}
+
+// CulturalFestival → 화면 표시용 FestivalSummary.
+// CourseResult 전체가 아니라 festivals.ongoing만 읽으므로, 이를 구조적으로 만족하는
+// 어떤 결과(장소 선택 진입의 generateCourseFromPlace 결과 등)도 그대로 넘길 수 있다.
+export function courseResultToFestivalSummaries(
+  result: Pick<CourseResult, "festivals">,
+): FestivalSummary[] {
+  // upcoming은 코스 결과 화면에 표시하지 않는다 — "지금 갈 곳"을 결정하는 맥락에서
+  // 예정 축제는 즉시 활용 불가한 정보라 혼란만 준다. 피드 기능에서 별도 활용 예정.
+  return result.festivals.ongoing.map((f) => toFestivalSummary(f, "ongoing"));
+}
+
+// 홈 화면용 — ongoing + upcoming 모두 변환
+export function festivalsToSummaries(festivals: {
+  ongoing: CulturalFestival[];
+  upcoming: CulturalFestival[];
+}): { ongoing: FestivalSummary[]; upcoming: FestivalSummary[] } {
+  return {
+    ongoing: festivals.ongoing.map((f) => toFestivalSummary(f, "ongoing")),
+    upcoming: festivals.upcoming.map((f) => toFestivalSummary(f, "upcoming")),
+  };
+}
+

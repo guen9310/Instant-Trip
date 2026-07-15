@@ -1,19 +1,16 @@
 import { tourFetch, extractItems } from "@/lib/tour/client";
-import { readCache, writeCache } from "@/lib/tour/cache";
+import { readCache, writeCache, writeCacheEmpty, CACHE_EMPTY } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
-import type { TourItem, TourDetailCommon, TourImage } from "@/lib/tour/types";
+import type { TourDetailCommon, TourImage } from "@/lib/tour/types";
 // PhotoGalleryService1은 키워드/위치 검색 미지원 — 장소별 이미지 fallback 불가
 import type {
   PlaceCandidate,
   CoursePlace,
   CourseResult,
   UserProfile,
+  PlaceOrigin,
 } from "@/lib/pipeline/types";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
-
-// 이미지와 상세 정보는 자주 바뀌지 않으므로 7일간 캐시한다.
-const IMAGE_TTL = 7 * 24 * 60 * 60 * 1000; // 7일
-const DETAIL_TTL = 7 * 24 * 60 * 60 * 1000; // 7일
+import { TTL } from "@/lib/cache/ttl";
 
 export function stripHtml(html: string): string {
   return html
@@ -51,11 +48,13 @@ export async function fetchImages(
     return [firstimage];
   }
 
-  const cacheKey = `img_${contentId}`;
-  const cached = readCache<string[]>(cacheKey, IMAGE_TTL);
-  if (cached) {
+  const cacheKey = `tour:detailImage2:${contentId}`;
+  const cached = await readCache<string[]>(cacheKey);
+  // detailImage2는 빈 배열([])로 캐시하므로 CACHE_EMPTY는 도달하지 않지만,
+  // 타입 안전성을 위해 명시적으로 제외한다.
+  if (cached !== null && cached !== CACHE_EMPTY) {
     console.log(
-      `[stage5]   detailImage2(${contentId}) → 캐시 hit (${cached.length}장)`,
+      `[stage5]   detailImage2(${contentId}) → 캐시 HIT (${cached.length}장)`,
     );
     return cached;
   }
@@ -67,7 +66,8 @@ export async function fetchImages(
     const imgs = extractItems(data)
       .filter((img) => img.originimgurl)
       .map((img) => img.originimgurl);
-    writeCache(cacheKey, imgs);
+    const ttl = imgs.length === 0 ? TTL.EMPTY_RESULT : TTL.DETAIL_IMAGE;
+    await writeCache(cacheKey, imgs, ttl);
     console.log(
       `[stage5]   detailImage2(${contentId}) → ${imgs.length}장 (${Date.now() - ts}ms)`,
     );
@@ -86,10 +86,14 @@ export async function fetchImages(
 export async function fetchDetail(
   contentId: string,
 ): Promise<TourDetailCommon | null> {
-  const cacheKey = `detail_${contentId}`;
-  const cached = readCache<TourDetailCommon>(cacheKey, DETAIL_TTL);
-  if (cached) {
-    console.log(`[stage5]   detailCommon2(${contentId}) → 캐시 hit`);
+  const cacheKey = `tour:detailCommon2:${contentId}`;
+  const cached = await readCache<TourDetailCommon>(cacheKey);
+  if (cached === CACHE_EMPTY) {
+    console.log(`[stage5]   detailCommon2(${contentId}) → 캐시 HIT (빈 응답)`);
+    return null;
+  }
+  if (cached !== null) {
+    console.log(`[stage5]   detailCommon2(${contentId}) → 캐시 HIT`);
     return cached;
   }
   const ts = Date.now();
@@ -98,7 +102,11 @@ export async function fetchDetail(
       contentId,
     });
     const detail = extractItems(data)[0] ?? null;
-    if (detail) writeCache(cacheKey, detail);
+    if (detail) {
+      await writeCache(cacheKey, detail, TTL.DETAIL_COMMON);
+    } else {
+      await writeCacheEmpty(cacheKey, TTL.EMPTY_RESULT);
+    }
     const hasOverview = !!detail?.overview;
     console.log(
       `[stage5]   detailCommon2(${contentId}) → overview:${hasOverview ? "있음" : "없음"} (${Date.now() - ts}ms)`,
@@ -112,65 +120,14 @@ export async function fetchDetail(
   }
 }
 
-const FESTIVAL_IMG_TTL = 24 * 60 * 60 * 1000; // 24시간
-
-// 축제명으로 searchKeyword2를 호출해 firstimage를 가져온다.
-// Tour API contenttypeid=15 데이터는 정확도가 낮지만 이미지 조회 용도로는 충분하다.
-export async function fetchFestivalImage(fstvlNm: string): Promise<string[]> {
-  const cacheKey = `festival_img_${fstvlNm.replace(/\s+/g, "_")}`;
-  const cached = readCache<string[]>(cacheKey, FESTIVAL_IMG_TTL);
-  if (cached !== null) return cached;
-
-  // 연도 접두사 제거 ("2026 태화강마두희축제" → "태화강마두희축제")
-  // 공공데이터 축제명에는 연도가 붙지만 Tour API에는 연도 없이 등록된 경우가 많다.
-  const keyword = fstvlNm.replace(/^\d{4}\s+/, "");
-
-  try {
-    const data = await tourFetch<TourItem>(ENDPOINTS.SEARCH_KEYWORD, {
-      keyword,
-      numOfRows: "5",
-    });
-    const items = extractItems(data);
-    const first = items.find((i) => i.contentid);
-    if (!first) {
-      writeCache(cacheKey, []);
-      return [];
-    }
-    // contentid로 detailImage2를 호출해 전체 이미지 목록을 가져온다.
-    const images = await fetchImages(first.contentid);
-    writeCache(cacheKey, images);
-    return images;
-  } catch {
-    return [];
-  }
-}
-
-export function festivalToPlace(
-  festival: CulturalFestival,
-  images: string[] = [],
-): CoursePlace {
-  const addr = festival.rdnmadr || festival.lnmadr || "";
-  const id = `festival_${festival.fstvlStartDate}_${festival.fstvlNm}`;
-  return {
-    contentId: id,
-    contentTypeId: "festival",
-    title: festival.fstvlNm,
-    address: addr,
-    shortAddress: toShortAddress(addr),
-    overview: festival.fstvlCo || "",
-    images,
-    coord: { lat: festival.latitude, lng: festival.longitude },
-    tags: [],
-    score: 1.0,
-    availabilityUncertain: false,
-    estimatedDurationMin: 60,
-  };
-}
-
 // 선택된 후보의 상세 정보(이미지·소개글)를 가져와 CoursePlace로 변환한다.
-async function buildCoursePlace(
+// profile/stage1~4 산출물에 의존하지 않고 candidate(+label) 하나로 완결되므로,
+// 추천 파이프라인(assembleCourse)과 장소 선택 진입(generateCourseFromPlace) 양쪽이
+// 이 함수 하나를 공유한다 — origin으로 호출부를 구분한다(기본값은 기존 동작과 동일한 "recommended").
+export async function buildCoursePlace(
   candidate: PlaceCandidate,
   label: string,
+  origin: PlaceOrigin = "recommended",
 ): Promise<CoursePlace> {
   const { item } = candidate;
   const ts = Date.now();
@@ -192,7 +149,9 @@ async function buildCoursePlace(
       tags: candidate.tags,
       score: candidate.score,
       availabilityUncertain: candidate.availabilityUncertain,
-      estimatedDurationMin: candidate.estimatedDurationMin,
+      estimatedDuration: candidate.estimatedDuration,
+      stayDurationKey: candidate.stayDurationKey,
+      origin,
     };
   }
 
@@ -221,7 +180,9 @@ async function buildCoursePlace(
     tags: candidate.tags,
     score: candidate.score,
     availabilityUncertain: candidate.availabilityUncertain,
-    estimatedDurationMin: candidate.estimatedDurationMin,
+    estimatedDuration: candidate.estimatedDuration,
+    stayDurationKey: candidate.stayDurationKey,
+    origin,
   };
 }
 

@@ -7,12 +7,11 @@ import {
   Calendar,
   ThumbsDown,
   ChevronLeft,
-  AlertCircle,
   ExternalLink,
 } from "lucide-react";
 import type { ElementType } from "react";
 import { cn } from "@/shared/utils";
-import { Sheet, SheetContent } from "@/components/commons/Sheet";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/commons/Drawer";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import type { JourneyPlace } from "@/shared/types/course.types";
@@ -28,10 +27,13 @@ const REJECT_REASONS = [
 type Props = {
   place: JourneyPlace | null;
   onClose: () => void;
-  /** 거절 이유 선택 후 "여기 말고 다른 곳으로" 클릭 시 호출 */
-  onReject?: (placeId: string, reason: string) => void;
+  /** 거절 이유 선택 후 "여기 말고 다른 곳으로" 클릭 시 호출 — await 완료 후 시트 닫힘 */
+  onReject?: (placeId: string, reason: string) => Promise<void>;
   /** true이면 거절 기능 비활성화 (maxRerolls 도달 시) */
   rejectDisabled?: boolean;
+  /** true이면 거절(재추천) 버튼 자체를 숨긴다 — 선택 진입(origin="selected") 코스처럼
+   *  재추천 개념이 없는 경우. rejectDisabled(회색 처리)와 달리 아예 렌더하지 않는다. */
+  hideReject?: boolean;
 };
 
 export function PlaceDetailSheet({
@@ -39,24 +41,12 @@ export function PlaceDetailSheet({
   onClose,
   onReject,
   rejectDisabled,
+  hideReject,
 }: Props) {
   return (
-    <Sheet
-      open={!!place}
-      onOpenChange={(open: boolean) => {
-        if (!open) onClose();
-      }}
-    >
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        className="p-0 rounded-t-[20px] max-h-[90dvh] gap-0 overflow-hidden"
-      >
-        {/* 드래그 핸들 */}
-        <div className="flex justify-center pt-2 pb-3.5">
-          <div className="w-9 h-1 rounded-full bg-border" />
-        </div>
-        {/* key를 place.id로 두어 장소 변경 시 내부 상태 자동 리셋 */}
+    <Drawer open={!!place} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DrawerContent className="h-[90dvh]">
+        <DrawerTitle className="sr-only">{place?.name ?? "장소 상세"}</DrawerTitle>
         {place && (
           <PlaceDetailContent
             key={place.id}
@@ -64,10 +54,11 @@ export function PlaceDetailSheet({
             onClose={onClose}
             onReject={onReject}
             rejectDisabled={rejectDisabled}
+            hideReject={hideReject}
           />
         )}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -76,17 +67,22 @@ function PlaceDetailContent({
   onClose,
   onReject,
   rejectDisabled,
+  hideReject,
 }: {
   place: JourneyPlace;
   onClose: () => void;
   onReject?: (placeId: string, reason: string) => void;
   rejectDisabled?: boolean;
+  hideReject?: boolean;
 }) {
-  const [isRejecting, setIsRejecting] = useState(false);
+  const [phase, setPhase] = useState<"default" | "rejecting" | "submitting">("default");
   const [reason, setReason] = useState<string | null>(null);
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [descHasMore, setDescHasMore] = useState(false);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const roadviewRef = useRef<HTMLDivElement>(null);
+  const [viewMode, setViewMode] = useState<"photo" | "roadview">("photo");
+  const [roadviewAvailable, setRoadviewAvailable] = useState(false);
 
   useEffect(() => {
     const el = descRef.current;
@@ -99,6 +95,50 @@ function PlaceDetailContent({
     }
   }, [place.desc]);
 
+  // 로드뷰 커버리지 확인 — coord 없으면 스킵
+  useEffect(() => {
+    if (!place.coord) return;
+    const win = window as unknown as { kakao?: { maps?: { load?: (cb: () => void) => void } } };
+    win.kakao?.maps?.load?.(() => {
+      const pos = new kakao.maps.LatLng(place.coord!.lat, place.coord!.lng);
+      const client = new kakao.maps.RoadviewClient();
+      client.getNearestPanoId(pos, 50, (panoId) => {
+        setRoadviewAvailable(panoId > 0);
+      });
+    });
+  }, [place.coord]);
+
+  // 거리뷰 모드 진입 시 Roadview 초기화
+  useEffect(() => {
+    if (viewMode !== "roadview" || !roadviewRef.current || !place.coord) return;
+    const win = window as unknown as { kakao?: { maps?: { load?: (cb: () => void) => void } } };
+    win.kakao?.maps?.load?.(() => {
+      if (!roadviewRef.current) return;
+      const pos = new kakao.maps.LatLng(place.coord!.lat, place.coord!.lng);
+      const rv = new kakao.maps.Roadview(roadviewRef.current);
+      const client = new kakao.maps.RoadviewClient();
+      client.getNearestPanoId(pos, 50, (panoId) => {
+        rv.setPanoId(panoId, pos);
+        requestAnimationFrame(() => rv.relayout());
+      });
+    });
+  }, [viewMode, place.coord]);
+
+  // vaul의 onPress(pointerdown)는 data-vaul-no-drag를 확인하지 않고 즉시
+  // setPointerCapture를 호출한다. 이로 인해 Kakao SDK의 드래그 추적이 깨진다.
+  // React 루트에 이벤트가 위임되기 전에 native 버블 단계에서 차단한다.
+  useEffect(() => {
+    const el = roadviewRef.current;
+    if (!el) return;
+    const stop = (e: Event) => e.stopPropagation();
+    el.addEventListener("pointerdown", stop);
+    el.addEventListener("touchstart", stop);
+    return () => {
+      el.removeEventListener("pointerdown", stop);
+      el.removeEventListener("touchstart", stop);
+    };
+  }, [viewMode]);
+
   const handleToggleDesc = () => {
     if (isDescExpanded && descRef.current) {
       descRef.current.scrollTop = 0;
@@ -106,118 +146,195 @@ function PlaceDetailContent({
     setIsDescExpanded(!isDescExpanded);
   };
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!reason) return;
-    onReject?.(place.id, reason);
+    setPhase("submitting");
+    await onReject?.(place.id, reason);
     onClose();
   };
 
+  if (phase === "submitting") {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-0">
+        <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-[14px] text-text-secondary">새로운 장소를 찾는 중...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-hidden relative">
-      <div
-        className="flex transition-transform duration-250 ease-in-out"
-        style={{
-          transform: isRejecting ? "translateX(-50%)" : "translateX(0)",
-          width: "200%",
-        }}
-      >
-        {/* 기본 패널 */}
-        <div className="w-1/2 pb-5 box-border">
-          <div className="px-5">
-            <PlaceThumbnail
-              imageUrl={place.imageUrl}
-              cat={place.cat}
-              className="w-full h-44 rounded-xl"
-              sizes="50vw"
-            />
-          </div>
-          <div className="px-5 pt-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <Badge variant={place.badge.variant}>{place.cat}</Badge>
-                <h2 className="text-[22px] font-bold text-text-primary tracking-tight mt-2">
-                  {place.name}
-                </h2>
-              </div>
-              {/* <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-text-primary shrink-0 mt-0.5"
-              >
-                <X size={18} />
-              </button> */}
-            </div>
-
-            <div className="flex flex-col gap-2.5 mt-4">
-              <DetailRow icon={MapPin} label={place.addr} />
-              {place.hours?.trim() && (
-                <DetailRow icon={Clock} label={`영업시간 ${place.hours}`} />
-              )}
-              {(place.time?.trim() || place.dur?.trim()) && (
-                <DetailRow
-                  icon={Calendar}
-                  label={[
-                    place.time?.trim(),
-                    place.dur?.trim() && `${place.dur} 머무름`,
-                  ]
-                    .filter(Boolean)
-                    .join(" 도착 · ")}
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* 슬라이딩 패널 — 스크롤 영역 */}
+      <div className="overflow-hidden relative flex-1 min-h-0">
+        <div
+          className="flex transition-transform duration-250 ease-in-out h-full"
+          style={{
+            transform: phase === "rejecting" ? "translateX(-50%)" : "translateX(0)",
+            width: "200%",
+          }}
+        >
+          {/* 기본 패널 */}
+          <div className="w-1/2 overflow-y-auto pb-4">
+            <div className="relative px-5">
+              {viewMode === "photo" ? (
+                <PlaceThumbnail
+                  imageUrl={place.imageUrl}
+                  cat={place.cat}
+                  className="w-full h-44 rounded-xl"
+                  sizes="50vw"
                 />
+              ) : (
+                <div ref={roadviewRef} data-vaul-no-drag className="w-full h-64 rounded-xl overflow-hidden" />
               )}
-            </div>
-
-            {place.desc?.trim() && (
-              <>
-                <div className="h-px bg-border my-4" />
-                <div className="flex flex-col gap-1">
-                  <p
-                    ref={descRef}
+              {roadviewAvailable && (
+                <div className="absolute top-2 right-7 flex rounded-lg overflow-hidden border border-border bg-background/90 shadow-sm backdrop-blur-sm">
+                  <button
+                    onClick={() => setViewMode("photo")}
                     className={cn(
-                      "text-[14px] text-text-primary leading-[1.55] break-all",
-                      !isDescExpanded && "line-clamp-4",
-                      isDescExpanded && "max-h-[160px] overflow-y-auto pr-1",
+                      "px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      viewMode === "photo" ? "bg-primary text-white" : "text-text-secondary",
                     )}
                   >
-                    {place.desc}
-                  </p>
-                  <div className="flex justify-end">
-                    {descHasMore && (
-                      <button
-                        onClick={handleToggleDesc}
-                        className="text-primary text-xs font-semibold hover:underline mt-1"
-                      >
-                        {isDescExpanded ? "접기" : "더 보기"}
-                      </button>
+                    사진
+                  </button>
+                  <button
+                    onClick={() => setViewMode("roadview")}
+                    className={cn(
+                      "px-2.5 py-1 text-[11px] font-medium transition-colors",
+                      viewMode === "roadview" ? "bg-primary text-white" : "text-text-secondary",
                     )}
-                  </div>
+                  >
+                    거리뷰
+                  </button>
                 </div>
-              </>
-            )}
-
-            {place.availabilityUncertain && (
-              <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex flex-col gap-2.5">
-                <div className="flex items-start gap-2">
-                  <AlertCircle
-                    size={15}
-                    className="text-amber-500 shrink-0 mt-0.5"
-                  />
-                  <p className="text-[13px] text-amber-800 leading-snug">
-                    영업시간·휴무는 변동될 수 있어요. 방문 전 확인을 권장합니다.
-                  </p>
+              )}
+            </div>
+            <div className="px-5 pt-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <Badge variant="secondary">{place.cat}</Badge>
+                  <h2 className="text-[22px] font-bold text-text-primary tracking-tight mt-2">
+                    {place.name}
+                  </h2>
+                  {place.tags.length > 0 && (
+                    <div className="flex gap-1.5 flex-wrap mt-2">
+                      {place.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2.5 py-1 rounded-full bg-card border border-border text-[11px] font-medium text-text-secondary"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <a
-                  href={`https://map.kakao.com/?q=${encodeURIComponent(place.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg bg-amber-100 text-amber-800 text-[13px] font-medium"
-                >
-                  <ExternalLink size={13} /> 영업시간 확인
-                </a>
               </div>
-            )}
 
-            <div className="flex flex-col gap-2 mt-5">
+              <div className="flex flex-col gap-2.5 mt-4">
+                <DetailRow icon={MapPin} label={place.addr} />
+                {place.hours?.trim() ? (
+                  <DetailRow icon={Clock} label={`영업시간 ${place.hours}`} />
+                ) : place.availabilityUncertain && place.name?.trim() ? (
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent(`${place.name} 운영시간`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5"
+                  >
+                    <ExternalLink size={16} className="text-text-secondary shrink-0" />
+                    <span className="text-[14px] text-text-secondary">영업시간 확인하기</span>
+                  </a>
+                ) : null}
+                {(place.time?.trim() || place.dur?.trim()) && (
+                  <DetailRow
+                    icon={Calendar}
+                    label={[
+                      place.time?.trim(),
+                      place.dur?.trim() && `${place.dur} 머무름`,
+                    ]
+                      .filter(Boolean)
+                      .join(" 도착 · ")}
+                    sub={place.dur?.trim() ? "카테고리 평균 기준" : undefined}
+                  />
+                )}
+              </div>
+
+              {place.desc?.trim() && (
+                <>
+                  <div className="h-px bg-border my-4" />
+                  <div className="flex flex-col gap-1">
+                    <p
+                      ref={descRef}
+                      className={cn(
+                        "text-[14px] text-text-primary leading-[1.55] break-all",
+                        !isDescExpanded && "line-clamp-4",
+                        isDescExpanded && "max-h-[160px] overflow-y-auto pr-1",
+                      )}
+                    >
+                      {place.desc}
+                    </p>
+                    <div className="flex justify-end">
+                      {descHasMore && (
+                        <button
+                          onClick={handleToggleDesc}
+                          className="text-primary text-xs font-semibold hover:underline mt-1"
+                        >
+                          {isDescExpanded ? "접기" : "더 보기"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+
+          {/* 거절 패널 */}
+          <div className="w-1/2 px-5 pt-3 pb-4 overflow-y-auto">
+            <button
+              onClick={() => setPhase("default")}
+              className="flex items-center gap-1 text-text-secondary text-[14px] font-medium mb-3.5"
+            >
+              <ChevronLeft size={18} /> 돌아가기
+            </button>
+            <h2 className="text-[20px] font-bold text-text-primary tracking-tight mb-1">
+              어떤 점이 마음에 안 드셨나요?
+            </h2>
+            <p className="text-[13px] text-text-secondary mb-5">{place.name}</p>
+
+            <div className="grid grid-cols-2 gap-2">
+              {REJECT_REASONS.map((r) => {
+                const sel = reason === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => setReason(r.id)}
+                    className={cn(
+                      "p-3.5 rounded-[10px] border flex flex-col items-center gap-2 transition-colors",
+                      sel
+                        ? "bg-primary/5 border-primary text-primary"
+                        : "bg-background border-border text-text-secondary",
+                    )}
+                  >
+                    <r.icon size={20} />
+                    <span className="text-[13px] font-medium">{r.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 고정 푸터 — 스크롤 여부와 무관하게 항상 표시 */}
+      <div className="shrink-0 border-t border-border px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
+        {phase === "default" && (
+          <>
+            {!hideReject && (
               <button
-                onClick={() => !rejectDisabled && setIsRejecting(true)}
+                onClick={() => !rejectDisabled && setPhase("rejecting")}
                 disabled={rejectDisabled}
                 className={cn(
                   "w-full h-12 rounded-lg border border-border text-point text-[14px] font-medium flex items-center justify-center gap-1.5",
@@ -226,67 +343,45 @@ function PlaceDetailContent({
               >
                 <ThumbsDown size={15} /> 이런 곳은 싫어요
               </button>
-              <Button size="cta" onClick={onClose}>
-                확인
-              </Button>
-            </div>
-          </div>
-          {/* /px-5 pt-3 */}
-        </div>
-
-        {/* 거절 패널 */}
-        <div className="w-1/2 px-5 pt-3 pb-5 box-border">
-          <button
-            onClick={() => setIsRejecting(false)}
-            className="flex items-center gap-1 text-text-secondary text-[14px] font-medium mb-3.5"
-          >
-            <ChevronLeft size={18} /> 돌아가기
-          </button>
-          <h2 className="text-[20px] font-bold text-text-primary tracking-tight mb-1">
-            어떤 점이 마음에 안 드셨나요?
-          </h2>
-          <p className="text-[13px] text-text-secondary mb-5">{place.name}</p>
-
-          <div className="grid grid-cols-2 gap-2">
-            {REJECT_REASONS.map((r) => {
-              const sel = reason === r.id;
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => setReason(r.id)}
-                  className={cn(
-                    "p-3.5 rounded-[10px] border flex flex-col items-center gap-2 transition-colors",
-                    sel
-                      ? "bg-primary/5 border-primary text-primary"
-                      : "bg-background border-border text-text-secondary",
-                  )}
-                >
-                  <r.icon size={20} />
-                  <span className="text-[13px] font-medium">{r.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-col gap-2 mt-5">
+            )}
+            <Button size="cta" onClick={onClose}>
+              확인
+            </Button>
+          </>
+        )}
+        {phase === "rejecting" && (
+          <>
             <p className="text-[11px] text-muted-foreground text-center">
               거절한 장소는 다음 코스에서 제외됩니다
             </p>
             <Button size="cta" disabled={!reason} onClick={handleConfirmReject}>
               여기 말고 다른 곳으로
             </Button>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function DetailRow({ icon: Ico, label }: { icon: ElementType; label: string }) {
+function DetailRow({
+  icon: Ico,
+  label,
+  sub,
+}: {
+  icon: ElementType;
+  label: string;
+  sub?: string;
+}) {
   return (
     <div className="flex items-center gap-2.5">
       <Ico size={16} className="text-text-secondary shrink-0" />
-      <span className="text-[14px] text-text-primary">{label}</span>
+      <span className="text-[14px] text-text-primary">
+        {label}
+        {sub && (
+          <span className="ml-1.5 text-[11px] text-text-secondary">{sub}</span>
+        )}
+      </span>
     </div>
   );
 }

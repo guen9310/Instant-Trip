@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 // HTTPS 배포 환경에서 better-auth는 __Secure- 접두사를 자동으로 붙임
 const SESSION_COOKIES = ["better-auth.session_token", "__Secure-better-auth.session_token"];
 
-const PROTECTED = ["/feed", "/profile", "/settings", "/start", "/course", "/onboarding"];
+const PROTECTED = ["/profile", "/settings", "/start", "/course", "/onboarding"];
 const AUTH_ONLY = ["/sign-in"];
 
 export function proxy(request: NextRequest) {
@@ -18,7 +18,7 @@ export function proxy(request: NextRequest) {
 
   if (isLoggedIn && AUTH_ONLY.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
-    url.pathname = "/feed";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

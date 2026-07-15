@@ -7,7 +7,7 @@
  *   2. 노이즈(카페/주차장 등) 걸러지는지
  *   3. source='kakao' 세팅 확인
  *   4. kakao_category 규칙으로 태그 부여 확인
- *   5. 체류시간 기본값 (AT4→40분, CT1→120분)
+ *   5. 체류시간 기본값 (STAY_DURATION_TABLE의 kakao:AT4 / kakao:CT1 규칙)
  */
 
 import { config } from "dotenv";
@@ -19,6 +19,8 @@ config({ path: path.resolve(__dirname, "../.env.local") });
 
 import { collectKakaoCandidates } from "@/lib/pipeline/kakaoCollect";
 import { applyMappingRules } from "@/lib/pipeline/scoring";
+import { estimateStayDuration } from "@/lib/pipeline/stayDuration";
+import { formatDuration } from "@/shared/utils/duration";
 
 const LAT = 35.5923;
 const LNG = 129.3651;
@@ -80,14 +82,11 @@ async function run() {
       .filter(([, v]) => v > 0)
       .map(([t, v]) => `${t}:${v}`)
       .join("  ");
-    const dur =
-      item.kakaoCategory === "AT4"
-        ? 40
-        : item.kakaoCategory === "CT1"
-          ? 120
-          : "?";
+    const dur = formatDuration(
+      estimateStayDuration({ source: "kakao", kakaoCategory: item.kakaoCategory }),
+    );
     console.log(
-      `  [${item.kakaoCategory}] ${item.title.padEnd(24)} 태그: ${tags || "(없음)"}  체류:${dur}분`,
+      `  [${item.kakaoCategory}] ${item.title.padEnd(24)} 태그: ${tags || "(없음)"}  체류:${dur}`,
     );
   }
 

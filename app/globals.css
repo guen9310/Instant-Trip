@@ -152,6 +152,38 @@
   --surface: #1a2a38;
   --text-primary: #f0ede8;
   --text-secondary: #9aada8;
+
+  /* Auth screen tokens */
+  --auth-brand-from: #1a2637;
+  --auth-brand-to: #141d29;
+  --auth-brand-border: #26364a;
+  --auth-icon-brand: #5f9fe0;
+  --auth-surface: #141e2b;
+  --auth-border-input: #212e3f;
+  --auth-border-otp: #1e2c3b;
+  --auth-border-chip: #223142;
+  --auth-focus: #3f6da3;
+  --auth-cursor: #4a86c8;
+  --auth-cursor-shadow: 0 0 0 4px rgba(74, 134, 200, 0.18);
+  --auth-otp-filled-bg: #16273c;
+  --auth-surface-chip: #131d29;
+  --auth-surface-icon: #16273b;
+  --auth-text-subtitle: #8996a5;
+  --auth-text-label: #c3ccd6;
+  --auth-text-hint: #4b5a6b;
+  --auth-text-helper: #66717f;
+  --auth-text-email: #e2e9f1;
+  --auth-text-change: #8391a3;
+  --auth-icon-input: #6b7889;
+  --auth-icon-chip: #6f9fd0;
+  --auth-success: #5aa17a;
+  --auth-btn-disabled-bg: #1a2532;
+  --auth-btn-disabled-fg: #54626f;
+  --auth-btn-active: linear-gradient(180deg, #4d86c4, #3f74b0);
+  --auth-btn-text: #ffffff;
+  --auth-btn-shadow: 0 6px 18px rgba(63, 116, 176, 0.35);
+  --auth-resend-disabled: #40566b;
+  --auth-resend-active: #6ea3dc;
 }
 
 @layer base {
@@ -202,5 +234,8 @@
       display: none;
     }
     scrollbar-width: none;
+  }
+  .auth-email-input::placeholder {
+    color: var(--auth-text-hint);
   }
 }

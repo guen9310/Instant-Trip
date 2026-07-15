@@ -5,7 +5,7 @@ import { getSession } from "@/server/session";
 export default async function OnboardingPage() {
   const session = await getSession();
   if (session?.user?.onboardingDone) {
-    redirect("/feed");
+    redirect("/");
   }
 
   return (

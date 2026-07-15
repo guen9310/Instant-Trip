@@ -1,5 +1,5 @@
 import { tourFetch, extractItems } from "@/lib/tour/client";
-import { readCache, writeCache } from "@/lib/tour/cache";
+import { readCache, writeCache, writeCacheEmpty, CACHE_EMPTY } from "@/lib/tour/cache";
 import { ENDPOINTS } from "@/lib/tour/endpoints";
 import type {
   TourItem,
@@ -8,11 +8,10 @@ import type {
   TourDetailIntroLeports,
   TourDetailIntroRestaurant,
 } from "@/lib/tour/types";
+import { TTL } from "@/lib/cache/ttl";
+import { getKstHour, getKstMinute, getKstDay } from "@/shared/utils/kst";
 
 export type AvailableItem = TourItem & { availabilityUncertain: boolean };
-
-// 운영시간·휴무일 정보는 자주 바뀌지 않으므로 24시간 캐시해도 무방하다.
-const INTRO_TTL = 24 * 60 * 60 * 1000; // 24시간
 const BATCH_SIZE = 10;
 
 type IntroItem =
@@ -27,7 +26,6 @@ const INTRO_FIELDS: Record<string, { usetime: string; restdate: string }> = {
   "12": { usetime: "usetime", restdate: "restdate" },
   "14": { usetime: "usetimeculture", restdate: "restdateculture" },
   "28": { usetime: "usetimeleports", restdate: "restdateleports" },
-  "39": { usetime: "opentimefood", restdate: "restdatefood" },
 };
 
 // "09:00~18:00" 또는 "9시~18시" 형식의 운영시간 문자열을 파싱해서
@@ -73,7 +71,7 @@ const DAY_PATTERNS: RegExp[] = [
 // dayIndex: 0=일, 1=월, ..., 6=토 (테스트 시 주입 가능)
 export function isRestDay(
   restdate: string,
-  dayIndex: number = new Date().getDay(),
+  dayIndex: number = getKstDay(),
 ): boolean {
   if (!restdate) return false;
   return DAY_PATTERNS[dayIndex].test(restdate);
@@ -128,8 +126,10 @@ function checkAvailability(usetime: string, restdate: string): OpenResult {
     };
   }
   const now = new Date();
-  const cur = now.getHours() * 60 + now.getMinutes();
-  const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const kstHour = getKstHour(now);
+  const kstMin = getKstMinute(now);
+  const cur = kstHour * 60 + kstMin;
+  const timeStr = `${String(kstHour).padStart(2, "0")}:${String(kstMin).padStart(2, "0")}`;
   const openStr = `${String(Math.floor(range.open / 60)).padStart(2, "0")}:${String(range.open % 60).padStart(2, "0")}`;
   const closeStr = `${String(Math.floor(range.close / 60)).padStart(2, "0")}:${String(range.close % 60).padStart(2, "0")}`;
 
@@ -143,6 +143,124 @@ function checkAvailability(usetime: string, restdate: string): OpenResult {
     open: isOpen,
     reason: `${openStr}~${closeStr} / 현재 ${timeStr}`,
     label: isOpen ? "통과(영업중)" : "제외(운영종료)",
+  };
+}
+
+// 단일 장소 가용성 검사 결과 — 차단 여부(open)와 함께 판정 근거를 그대로 노출한다.
+// filterByAvailability(배치)와 장소 선택 진입(단일, 비차단) 양쪽이 공유하는 형태.
+export type PlaceAvailabilityCheck = {
+  open: boolean;
+  // 판정 자체가 불확실한 경우(API 오류·intro 없음·파싱 실패) true.
+  // open=true는 이 경우 "차단하지 않기 위한 관대 처리"일 뿐 실제 영업 확인이 아니다.
+  uncertain: boolean;
+  label: Verdict;
+  hours: string | null; // usetime 원문 (없으면 null)
+  restDayNote: string | null; // restdate 원문 (없으면 null)
+};
+
+// [stage2 코어] 장소 1건의 운영시간(usetime)·휴무일(restdate)을 detailIntro2로 조회해
+// 현재 시각 기준 운영 여부를 판정한다. filterByAvailability의 배치 루프와 장소 선택
+// 진입(선택 코스 생성)의 단일 호출이 이 함수 하나를 공유한다 — 캐시·판정 로직 이중화 방지.
+//
+// API 실패·intro 없음·파싱 실패는 uncertain=true로 표시하고 open=true(관대 통과)를 반환한다.
+// 호출부가 이 결과로 "차단"할지 "데이터로만 노출"할지 결정한다.
+export async function checkPlaceAvailability(
+  item: TourItem,
+  logPrefix: string,
+): Promise<PlaceAvailabilityCheck> {
+  const cacheKey = `tour:detailIntro2:${item.contentid}`;
+  const cachedIntro = await readCache<IntroItem>(cacheKey);
+
+  // 이전 API 호출에서 데이터가 없었던 장소 — 재호출 없이 통과(uncertain)
+  if (cachedIntro === CACHE_EMPTY) {
+    console.log(`${logPrefix} → 캐시 HIT (빈 응답) → uncertain=true`);
+    return {
+      open: true,
+      uncertain: true,
+      label: "통과(데이터없음)",
+      hours: null,
+      restDayNote: null,
+    };
+  }
+
+  const ts = Date.now();
+  let intro: IntroItem | undefined;
+
+  if (cachedIntro !== null) {
+    intro = cachedIntro;
+    console.log(`${logPrefix} → 캐시 HIT`);
+  } else {
+    try {
+      const data = await tourFetch<IntroItem>(ENDPOINTS.DETAIL_INTRO, {
+        contentId: item.contentid,
+        contentTypeId: item.contenttypeid,
+      });
+      intro = extractItems(data)[0];
+      if (intro) {
+        await writeCache(cacheKey, intro, TTL.DETAIL_INTRO);
+      } else {
+        await writeCacheEmpty(cacheKey, TTL.EMPTY_RESULT);
+      }
+    } catch (err) {
+      console.warn(`${logPrefix} → 통과(API오류) → uncertain=true (${Date.now() - ts}ms) — ${err}`);
+      // 운영시간을 확인하지 못한 채 통과시키는 것이므로 불확실 플래그를 켠다.
+      return {
+        open: true,
+        uncertain: true,
+        label: "통과(API오류)",
+        hours: null,
+        restDayNote: null,
+      };
+    }
+  }
+
+  const elapsed = Date.now() - ts;
+
+  // intro 자체가 없는 경우 (API는 성공했지만 해당 장소의 상세 정보가 DB에 없는 경우).
+  // 데이터 미비로 인한 것이므로 통과시킨다.
+  if (!intro) {
+    console.log(
+      `${logPrefix} → 통과(데이터없음) intro 자체 없음 → uncertain=true (${elapsed}ms)`,
+    );
+    return {
+      open: true,
+      uncertain: true,
+      label: "통과(데이터없음)",
+      hours: null,
+      restDayNote: null,
+    };
+  }
+
+  // contentTypeId별 필드명을 INTRO_FIELDS 맵으로 조회해서 운영시간·휴무일을 추출한다.
+  // 알 수 없는 타입은 빈 문자열로 처리(통과).
+  const fields = INTRO_FIELDS[item.contenttypeid] ?? {
+    usetime: "",
+    restdate: "",
+  };
+  const raw = intro as unknown as Record<string, string>;
+  const usetime = raw[fields.usetime] ?? "";
+  const restdate = raw[fields.restdate] ?? "";
+
+  const restdayResult = isRestDay(restdate);
+  const result = checkAvailability(usetime, restdate);
+  const uncertain =
+    result.label === "통과(데이터없음)" || result.label === "통과(파싱실패)";
+
+  // 필드명과 원문값, isRestDay 입력·결과를 한 줄로 출력한다.
+  const fieldLog = fields.restdate
+    ? `${fields.restdate}="${restdate}" ${fields.usetime}="${usetime.slice(0, 40)}"`
+    : `(알수없는타입=${item.contenttypeid})`;
+  const restdayLog = `isRestDay("${restdate.slice(0, 20)}")=${restdayResult}`;
+  console.log(
+    `${logPrefix} | ${fieldLog}\n         → ${restdayLog} → ${result.label} ${result.reason} → open=${result.open} uncertain=${uncertain} (${elapsed}ms)`,
+  );
+
+  return {
+    open: result.open,
+    uncertain,
+    label: result.label,
+    hours: usetime || null,
+    restDayNote: restdate || null,
   };
 }
 
@@ -175,84 +293,15 @@ export async function filterByAvailability(
     const idx = `[${globalIdx + 1}/${items.length}]`;
     const prefix = `[stage2] ${idx} "${item.title}" type=${item.contenttypeid} src=${item.source ?? "tour"}`;
 
-    // 카카오 출처 장소는 Tour API detailIntro2가 없으므로 검사를 건너뛴다.
-    if (item.source === "kakao") {
-      passed++;
-      console.log(`${prefix} → 검사안함(source=kakao)`);
-      return { ...item, availabilityUncertain: false };
-    }
-
-    const cacheKey = `intro_${item.contentid}`;
-    const cachedIntro = readCache<IntroItem>(cacheKey, INTRO_TTL);
-
-    const ts = Date.now();
-    let intro: IntroItem | undefined;
-
-    if (cachedIntro) {
-      intro = cachedIntro;
-    } else {
-      try {
-        const data = await tourFetch<IntroItem>(ENDPOINTS.DETAIL_INTRO, {
-          contentId: item.contentid,
-          contentTypeId: item.contenttypeid,
-        });
-        intro = extractItems(data)[0];
-        if (intro) writeCache(cacheKey, intro);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (err) {
-        errCount++;
-        console.warn(`${prefix} → 통과(API오류) (${Date.now() - ts}ms)`);
-        return { ...item, availabilityUncertain: false };
-      }
-    }
-
-    const elapsed = Date.now() - ts;
-
-    // intro 자체가 없는 경우 (API는 성공했지만 해당 장소의 상세 정보가 DB에 없는 경우).
-    // 데이터 미비로 인한 것이므로 통과시킨다.
-    if (!intro) {
-      passed++;
-      console.log(
-        `${prefix} → 통과(데이터없음) intro 자체 없음 → uncertain=true (${elapsed}ms)`,
-      );
-      return { ...item, availabilityUncertain: true };
-    }
-
-    // contentTypeId별 필드명을 INTRO_FIELDS 맵으로 조회해서 운영시간·휴무일을 추출한다.
-    // 알 수 없는 타입은 빈 문자열로 처리(통과).
-    const fields = INTRO_FIELDS[item.contenttypeid] ?? {
-      usetime: "",
-      restdate: "",
-    };
-    const raw = intro as unknown as Record<string, string>;
-    const usetime = raw[fields.usetime] ?? "";
-    const restdate = raw[fields.restdate] ?? "";
-
-    const restdayResult = isRestDay(restdate);
-    const result = checkAvailability(usetime, restdate);
-
-    // 필드명과 원문값, isRestDay 입력·결과를 한 줄로 출력한다.
-    const fieldLog = fields.restdate
-      ? `${fields.restdate}="${restdate}" ${fields.usetime}="${usetime.slice(0, 40)}"`
-      : `(알수없는타입=${item.contenttypeid})`;
-    const restdayLog = `isRestDay("${restdate.slice(0, 20)}")=${restdayResult}`;
+    const result = await checkPlaceAvailability(item, prefix);
+    if (result.label === "통과(API오류)") errCount++;
 
     if (result.open) {
-      const uncertain =
-        result.label === "통과(데이터없음)" ||
-        result.label === "통과(파싱실패)";
       passed++;
-      console.log(
-        `${prefix} | ${fieldLog}\n         → ${restdayLog} → ${result.label} ${result.reason} → uncertain=${uncertain} (${elapsed}ms)`,
-      );
-      return { ...item, availabilityUncertain: uncertain };
-    } else {
-      blocked++;
-      console.log(
-        `${prefix} | ${fieldLog}\n         → ${restdayLog} → ${result.label} ${result.reason} (${elapsed}ms)`,
-      );
-      return null;
+      return { ...item, availabilityUncertain: result.uncertain };
     }
+    blocked++;
+    return null;
   };
 
   // BATCH_SIZE(10)개씩 끊어서 병렬 처리한다.

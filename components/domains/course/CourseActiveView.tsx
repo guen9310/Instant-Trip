@@ -1,8 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import {
-  ArrowRight,
-  Navigation,
+  ChevronUp,
   Coffee,
   ShoppingBag,
   Plus,
@@ -11,11 +11,20 @@ import {
   Utensils,
   SquareParking,
   Fuel,
+  Check,
+  MapPin,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
-import { cn } from "@/shared/utils";
+import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
+import { cn, isBlank } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
-import { CourseMap, CourseMapPlaceholder } from "@/components/domains/course/CourseMap";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+} from "@/components/commons/Drawer";
 import { useCourseActive } from "@/client/hooks/useCourseActive";
 import type { NearbyCategory, NearbyPoi } from "@/shared/types/course.types";
 
@@ -27,12 +36,12 @@ type PoiMeta = {
 };
 
 const CATEGORY_META: Record<Exclude<NearbyCategory, "all">, PoiMeta> = {
-  cafe:        { label: "카페",   icon: Coffee,         color: "text-accent",   bg: "bg-accent/10" },
-  convenience: { label: "편의점", icon: ShoppingBag,    color: "text-point",    bg: "bg-point/10" },
-  pharmacy:    { label: "약국",   icon: Plus,           color: "text-primary",  bg: "bg-primary/10" },
-  restaurant:  { label: "음식점", icon: Utensils,       color: "text-orange-500", bg: "bg-orange-500/10" },
-  parking:     { label: "주차장", icon: SquareParking,  color: "text-sky-500",  bg: "bg-sky-500/10" },
-  gas_station: { label: "주유소", icon: Fuel,           color: "text-yellow-500", bg: "bg-yellow-500/10" },
+  cafe:        { label: "카페",   icon: Coffee,        color: "text-accent",     bg: "bg-accent/10" },
+  convenience: { label: "편의점", icon: ShoppingBag,   color: "text-point",      bg: "bg-point/10" },
+  pharmacy:    { label: "약국",   icon: Plus,          color: "text-primary",    bg: "bg-primary/10" },
+  restaurant:  { label: "음식점", icon: Utensils,      color: "text-orange-500", bg: "bg-orange-500/10" },
+  parking:     { label: "주차장", icon: SquareParking, color: "text-sky-500",    bg: "bg-sky-500/10" },
+  gas_station: { label: "주유소", icon: Fuel,          color: "text-yellow-500", bg: "bg-yellow-500/10" },
 };
 
 const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
@@ -45,8 +54,10 @@ const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
   { id: "gas_station", label: "주유소" },
 ];
 
-export function CourseActiveView() {
-  const state = useCourseActive();
+export function CourseActiveView({ courseId }: { courseId: string }) {
+  const state = useCourseActive(courseId);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
 
   if (state.status === "loading") {
     return (
@@ -56,87 +67,132 @@ export function CourseActiveView() {
     );
   }
 
-  const { places, idx, current, next, cat, setCat, pois, filteredPois, poisLoading, selectedPoiId, selectPoi, handleAdvance } = state;
-
-  const selectedPoi = selectedPoiId ? pois.find((p) => p.id === selectedPoiId) ?? null : null;
-  const kakaoNavUrl = selectedPoi
-    ? `https://map.kakao.com/link/to/${encodeURIComponent(selectedPoi.name)},${selectedPoi.coord.lat},${selectedPoi.coord.lng}`
-    : null;
+  const { place, cat, setCat, filteredPois, poisLoading, selectedPoiId, selectPoi, handleComplete } = state;
 
   return (
     <>
-      {/* 지도 영역 — 고정 높이 */}
-      <div className="relative shrink-0" style={{ height: "45vh" }}>
-        {/* 헤더 — 지도 위에 오버레이 */}
-        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-4 pb-2 bg-linear-to-b from-background/90 to-transparent">
-          <h1 className="text-[18px] font-bold text-text-primary tracking-tight">
-            진행 중인 코스
-          </h1>
-          <StepDots total={places.length} current={idx} />
+      <div className="flex-1 overflow-y-auto">
+        {/* 장소 이미지 */}
+        <div className="relative h-52 bg-card overflow-hidden shrink-0">
+          <PlaceThumbnail
+            imageUrl={place.imageUrl}
+            cat={place.cat}
+            className="w-full h-full"
+            sizes="(max-width: 430px) 100vw, 430px"
+          />
         </div>
 
-        {current.coord ? (
-          <CourseMap
-            mainPlace={{ name: current.name, coord: current.coord }}
-            pois={selectedPoiId ? pois.filter((p) => p.id === selectedPoiId) : []}
-            selectedPoiId={selectedPoiId}
-            onSelectPoi={selectPoi}
-          />
-        ) : (
-          <CourseMapPlaceholder />
-        )}
-
-        {/* POI 선택 시 플로팅 내비게이션 바 */}
-        {selectedPoi && kakaoNavUrl && (
-          <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center gap-2 bg-background/95 backdrop-blur-sm rounded-xl px-3 py-2.5 shadow-lg border border-border">
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-semibold text-text-primary truncate">{selectedPoi.name}</p>
-              <p className="text-[11px] text-text-secondary">{selectedPoi.dist}</p>
-            </div>
-            <a
-              href={kakaoNavUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 flex items-center gap-1.5 bg-primary text-white text-[12px] font-semibold px-3 py-1.5 rounded-lg active:opacity-80"
-            >
-              <Navigation size={13} strokeWidth={2.5} />
-              길 안내
-            </a>
+        {/* 장소 정보 */}
+        <div className="px-4 pt-4 pb-2 flex flex-col gap-3">
+          {/* 카테고리 + 정보 불확실 경고 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="secondary">{place.cat}</Badge>
+            {place.availabilityUncertain && (
+              <div className="flex items-center gap-1 text-point">
+                <AlertTriangle size={12} strokeWidth={2} />
+                <span className="text-[11px] font-medium">정보가 정확하지 않을 수 있어요</span>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* 장소명 + 현재 배지 */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-[26px] font-bold text-text-primary leading-tight tracking-tight">
+              {place.name}
+            </h1>
+            <Badge variant="secondary">현재</Badge>
+          </div>
+
+          {/* 주소 */}
+          {place.addr && (
+            <div className="flex items-start gap-1.5">
+              <MapPin size={13} strokeWidth={2} className="text-text-secondary shrink-0 mt-0.5" />
+              <span className="text-[13px] text-text-secondary leading-snug">{place.addr}</span>
+            </div>
+          )}
+
+          {/* 설명 */}
+          {!isBlank(place.desc) && (
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDescOpen((v) => !v)}
+                className="self-start text-primary text-[12px] font-semibold hover:underline"
+              >
+                {descOpen ? "설명 접기" : "설명 보기"}
+              </button>
+              {descOpen && (
+                <p className="text-[14px] text-text-secondary leading-relaxed">{place.desc}</p>
+              )}
+            </div>
+          )}
+
+          {/* 체류 시간 카드 */}
+          <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Clock size={15} strokeWidth={2} className="text-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide mb-0.5">
+                예상 체류
+              </p>
+              <p className="text-[15px] font-bold text-text-primary">{place.dur}</p>
+              <p className="text-[11px] text-text-secondary mt-0.5">
+                카테고리 평균 기준
+              </p>
+            </div>
+          </div>
+
+          {/* 태그 칩 */}
+          {place.tags.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {place.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 rounded-full bg-card border border-border text-[12px] font-medium text-text-secondary"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 주변 보기 버튼 */}
+        <button
+          type="button"
+          onClick={() => setNearbyOpen(true)}
+          className="flex items-center justify-center gap-2 w-full py-4 border-t border-border mt-2 text-text-secondary active:bg-card transition-colors"
+        >
+          <ChevronUp size={14} strokeWidth={2.5} className="text-text-secondary/50" />
+          <span className="text-[12px] font-semibold">주변 정보 보기</span>
+          {poisLoading && (
+            <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
+          )}
+          {!poisLoading && filteredPois.length > 0 && (
+            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+              {filteredPois.length}
+            </span>
+          )}
+        </button>
       </div>
 
-      {/* 바텀시트 — 세 섹션으로 분리 */}
-      <div className="flex-1 overflow-y-auto bg-background rounded-t-3xl -mt-5 z-10 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        {/* 드래그 핸들 */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-9 h-1 rounded-full bg-border" />
-        </div>
+      {/* CTA 바 */}
+      <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] shrink-0">
+        <Button size="cta" className="w-full gap-2" onClick={handleComplete}>
+          방문 완료
+          <Check size={16} />
+        </Button>
+      </div>
 
-        <div className="px-4 pt-2 pb-4 flex flex-col gap-4">
-          {/* 섹션 A: 지금 여기 */}
-          <div className="rounded-xl bg-card border-l-4 border-primary px-4 py-3.5">
-            <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-2">
-              지금 여기
-            </p>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-[17px] font-bold text-text-primary leading-tight">{current.name}</span>
-              <Badge variant="secondary">현재</Badge>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-text-secondary uppercase tracking-wide">
-                {current.cat}
-              </span>
-              <span className="text-text-secondary/50">·</span>
-              <span className="text-xs text-text-secondary">{current.dur} 머무는 중</span>
-            </div>
-          </div>
-
-          {/* 섹션 B: 주변 */}
-          <div>
-            <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-[0.04em] mb-2.5">
-              주변
-            </p>
+      {/* 주변 정보 Drawer */}
+      <Drawer open={nearbyOpen} onOpenChange={setNearbyOpen}>
+        <DrawerContent className="h-[70dvh]">
+          <DrawerTitle className="px-4 pb-1">주변</DrawerTitle>
+          <div
+            data-vaul-no-drag
+            className="flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom,12px)]"
+          >
             <NearbyPanel
               cat={cat}
               setCat={setCat}
@@ -146,39 +202,8 @@ export function CourseActiveView() {
               onSelect={selectPoi}
             />
           </div>
-
-          {/* 섹션 C: 다음 장소 */}
-          {next && (
-            <div className="p-4 rounded-xl bg-card border border-border">
-              <p className="text-[11px] font-semibold text-text-secondary uppercase tracking-[0.04em] mb-2.5">
-                다음 장소
-              </p>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
-                  <Navigation size={16} strokeWidth={2} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-bold text-text-primary tracking-tight mb-1">
-                    {next.name}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={next.badge.variant}>{next.cat}</Badge>
-                    <span className="text-xs text-text-secondary">{next.travel} 이동</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* CTA 바 */}
-      <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
-        <Button size="cta" className="w-full gap-2" onClick={handleAdvance}>
-          {idx >= places.length - 1 ? "코스 완료" : "여기 완료, 다음으로"}
-          <ArrowRight size={16} />
-        </Button>
-      </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }
@@ -194,8 +219,7 @@ type NearbyPanelProps = {
 
 function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: NearbyPanelProps) {
   return (
-    <div className="pb-3">
-      {/* 카테고리 필터 칩 — 우측 페이드로 스크롤 힌트 */}
+    <div className="pb-4">
       <div className="relative">
         <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
           {FILTER_CHIPS.map((chip) => (
@@ -214,18 +238,15 @@ function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: Ne
             </button>
           ))}
         </div>
-        {/* 우측 페이드 — 더 보여줄 칩이 있음을 암시 */}
-        <div className="pointer-events-none absolute right-0 top-0 h-[calc(100%-8px)] w-8 bg-linear-to-l from-card to-transparent" />
+        <div className="pointer-events-none absolute right-0 top-0 h-[calc(100%-8px)] w-8 bg-linear-to-l from-background to-transparent" />
       </div>
 
-      {/* 주변 장소 목록 헤더 */}
-      <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide mb-2">
+      <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide mb-2 mt-1">
         현재 위치 기준
       </p>
 
-      {/* 주변 장소 목록 */}
       {loading && (
-        <div className="flex justify-center py-4">
+        <div className="flex justify-center py-6">
           <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       )}
@@ -243,9 +264,7 @@ function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: Ne
                 aria-pressed={isSelected}
                 className={cn(
                   "flex items-center gap-3 w-full text-left rounded-lg px-2 py-1.5 transition-colors border",
-                  isSelected
-                    ? "bg-primary/8 border-primary/30"
-                    : "border-transparent",
+                  isSelected ? "bg-primary/8 border-primary/30" : "border-transparent",
                 )}
               >
                 <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", meta.bg)}>
@@ -277,7 +296,7 @@ function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: Ne
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-2 py-4 mt-1">
+        <div className="flex flex-col items-center gap-2 py-6 mt-1">
           <FilterX size={20} className="text-text-secondary" strokeWidth={1.5} />
           <p className="text-[12px] text-text-secondary">
             {cat === "all"
@@ -290,22 +309,6 @@ function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: Ne
             </button>
           )}
         </div>
-      ))}
-    </div>
-  );
-}
-
-function StepDots({ total, current }: { total: number; current: number }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      {Array.from({ length: total }).map((_, i) => (
-        <span
-          key={i}
-          className={cn(
-            "rounded-full transition-all",
-            i < current ? "w-2 h-2 bg-primary/30" : i === current ? "w-4 h-2 bg-primary" : "w-2 h-2 bg-border",
-          )}
-        />
       ))}
     </div>
   );
