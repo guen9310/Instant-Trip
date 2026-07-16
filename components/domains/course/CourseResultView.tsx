@@ -236,7 +236,7 @@ export function CourseResultView({
 
         {/* 예상 체류 카드 */}
         {currentPlace.dur && (
-          <div className="mt-3 p-4 rounded-xl bg-card flex items-center gap-3">
+          <div className="mt-3 p-4 rounded-xl bg-card border border-border flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-primary/8 text-primary flex items-center justify-center shrink-0">
               <Clock size={18} />
             </div>
@@ -395,18 +395,18 @@ function HoursInfoCard({ placeName }: { placeName: string }) {
       rel="noopener noreferrer"
       className="mt-3 flex items-center gap-3.5 py-3.5 px-4 rounded-xl bg-card active:scale-[0.98] transition-transform duration-200"
     >
-      <div className="w-9.5 h-9.5 rounded-full bg-[#1e2b40] flex items-center justify-center shrink-0">
-        <Clock size={18} className="text-[#8b9ab3]" />
+      <div className="w-9.5 h-9.5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <Clock size={18} className="text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] text-[#8b96a8] leading-none mb-0.5">
+        <p className="text-[12px] text-text-secondary leading-none mb-0.5">
           영업시간 정보
         </p>
-        <p className="text-[14px] font-semibold text-[#b7c2d6] leading-snug">
+        <p className="text-[14px] font-semibold text-text-primary leading-snug">
           방문 전 영업시간을 확인해보세요
         </p>
       </div>
-      <ChevronRight size={16} className="text-[#5c6b83] shrink-0" />
+      <ChevronRight size={16} className="text-text-secondary shrink-0" />
     </a>
   );
 }
