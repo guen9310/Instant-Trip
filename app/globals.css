@@ -102,6 +102,38 @@
   --surface: #ffffff;
   --text-primary: #1a1a1a;
   --text-secondary: #6b6560;
+
+  /* Auth screen tokens — derived from the light palette above (same roles as .dark's --auth-*) */
+  --auth-brand-from: color-mix(in srgb, var(--primary) 10%, var(--background));
+  --auth-brand-to: color-mix(in srgb, var(--primary) 5%, var(--background));
+  --auth-brand-border: color-mix(in srgb, var(--primary) 22%, var(--border));
+  --auth-icon-brand: var(--primary);
+  --auth-surface: var(--muted);
+  --auth-border-input: var(--border);
+  --auth-border-otp: var(--border);
+  --auth-border-chip: var(--border);
+  --auth-focus: var(--secondary);
+  --auth-cursor: var(--primary);
+  --auth-cursor-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 18%, transparent);
+  --auth-otp-filled-bg: color-mix(in srgb, var(--primary) 8%, var(--card));
+  --auth-surface-chip: var(--muted);
+  --auth-surface-icon: color-mix(in srgb, var(--muted) 80%, var(--card));
+  --auth-text-subtitle: var(--text-secondary);
+  --auth-text-label: color-mix(in srgb, var(--text-primary) 85%, var(--text-secondary));
+  --auth-text-hint: color-mix(in srgb, var(--text-secondary) 70%, var(--background));
+  --auth-text-helper: var(--text-secondary);
+  --auth-text-email: var(--text-primary);
+  --auth-text-change: var(--text-secondary);
+  --auth-icon-input: var(--text-secondary);
+  --auth-icon-chip: var(--secondary);
+  --auth-success: var(--accent);
+  --auth-btn-disabled-bg: var(--muted);
+  --auth-btn-disabled-fg: var(--muted-foreground);
+  --auth-btn-active: linear-gradient(180deg, var(--primary), color-mix(in srgb, var(--primary) 80%, black));
+  --auth-btn-text: var(--primary-foreground);
+  --auth-btn-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 35%, transparent);
+  --auth-resend-disabled: var(--muted-foreground);
+  --auth-resend-active: var(--secondary);
 }
 
 .dark {

@@ -45,6 +45,9 @@ export function HomeView() {
 
   useEffect(() => {
     if (state.status === "idle") requestPermission();
+    // 새로고침 직후 복원된(restored) 위치는 지오코딩 재확인이 끝나지 않은 상태이므로
+    // 마운트 시점에 다시 한번 위치를 확인해 "geo"로 확정한다.
+    else if (state.status === "granted" && state.source === "restored") requestPermission();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -93,13 +96,18 @@ export function HomeView() {
     router.push("/course/preview");
   };
 
+  // "restored"(새로고침 직후 재확인 전 위치)는 확정된 위치가 아니므로 쿼리를 막는다.
+  // 이렇게 하지 않으면 지오코딩 재확인 완료 시 좌표/지역명이 바뀌며 쿼리 키가 달라져
+  // 홈 데이터가 두 번 호출된다(1차 응답은 폐기됨).
   const locationKey =
-    state.status === "granted"
+    state.status === "granted" && state.source !== "restored"
       ? {
           city: state.city,
           sidoName: state.sidoName ?? null,
-          lat: state.lat ?? null,
-          lng: state.lng ?? null,
+          // GPS 좌표는 미세하게 흔들리므로(지터) 소수 4자리(~11m 단위)로 반올림해
+          // 쿼리 키를 안정시킨다. 액션 호출 자체는 원본 좌표를 그대로 쓴다.
+          lat: state.lat != null ? Math.round(state.lat * 1e4) / 1e4 : null,
+          lng: state.lng != null ? Math.round(state.lng * 1e4) / 1e4 : null,
         }
       : null;
 
@@ -118,7 +126,7 @@ export function HomeView() {
       }
       return getHomeDataByRegionAction({ regionName: sidoName ?? city });
     },
-    enabled: state.status === "granted",
+    enabled: state.status === "granted" && state.source !== "restored",
     staleTime: 5 * 60 * 1000,
   });
 

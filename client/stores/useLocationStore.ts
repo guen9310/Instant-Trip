@@ -69,6 +69,18 @@ export const useLocationStore = create<LocationStore>()(
     {
       name: "location-store",
       partialize: (s) => ({ state: s.state }),
+      // 새로고침 등으로 복원된 "geo" 위치는 그 사이 사용자가 이동했을 수 있으므로
+      // "restored"로 표시해 재확인 전까지는 확정된 위치로 취급하지 않는다.
+      // "manual"은 위치 이동과 무관한 선택이므로 그대로 유지한다.
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as { state?: LocationState } | undefined;
+        if (!persisted?.state) return currentState;
+        const restoredState: LocationState =
+          persisted.state.status === "granted" && persisted.state.source === "geo"
+            ? { ...persisted.state, source: "restored" }
+            : persisted.state;
+        return { ...currentState, state: restoredState };
+      },
     }
   )
 );
