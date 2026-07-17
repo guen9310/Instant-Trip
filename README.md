@@ -60,12 +60,11 @@
 /sign-in/verify       OTP 6자리 코드 입력
 /onboarding           최초 1회 yes/no 성향 질문 (5문항)
 /onboarding/done      성향 요약 확인
-/                     랜딩 페이지
+/                     홈 (위치 기반 축제·장소)
 /start                위치 확인 + 여행 규모 선택
 /course/[id]          코스 생성 결과 (장소 상세 모달 + 거절 플로우)
 /course/[id]/active   코스 진행 중 (지도 + 장소 체크리스트 + 주변 POI)
 /course/[id]/done     코스 완료 + 별점 후기 + XP 지급
-/feed                 다른 사용자 완료 코스 피드
 /profile              내 정보 + 완료 코스 목록
 /settings             성향 재설정
 ```
@@ -145,7 +144,7 @@
   detailImage2로 썸네일 조회 후 코스 카드 구성
 ```
 
-## 🎮 게이미피케이션
+## 🎮 게이미피케이션 (3순위 예정 기능)
 
 강제하지 않는 경험치 시스템. 여행을 마친 후 자연스럽게 쌓이는 기록입니다.
 
@@ -203,7 +202,7 @@ NEXT_PUBLIC_KAKAO_MAP_KEY=  # Kakao 지도 SDK 앱 키
 ### 2순위 — 완료
 
 - [x] 태그 가중치 개인화 (온보딩 답변 기반)
-- [x] 코스 피드 + 별점
+- [x] 별점 후기
 - [x] 프로필 페이지 (완료 코스 목록)
 - [x] Kakao Maps 지도 연동
 - [x] Kakao Local API 주변 POI 검색
