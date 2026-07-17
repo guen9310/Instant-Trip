@@ -128,7 +128,7 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
           )}
 
           {/* 체류 시간 카드 */}
-          <div className="flex items-center gap-3 rounded-xl bg-card px-4 py-3">
+          <div className="flex items-center gap-3 rounded-xl bg-card border border-border px-4 py-3">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <Clock size={15} strokeWidth={2} className="text-primary" />
             </div>

@@ -79,7 +79,7 @@ export function VerifyForm() {
   };
 
   return (
-    <div className="w-full max-w-sm rounded-2xl bg-card px-6 pb-6 pt-5 shadow-xl">
+    <div className="w-full max-w-sm rounded-2xl border border-border bg-card px-6 pb-6 pt-5 shadow-xl">
       <h1 className="mb-2 text-center text-[20px] font-bold text-text-primary">
         본인 확인
       </h1>
