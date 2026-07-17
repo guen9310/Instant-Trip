@@ -8,9 +8,11 @@ import { fetchAndCacheTourFestivals } from "@/lib/tour/searchFestival";
 // maxDuration이 300초라 여유가 크지만, 관측된 변동폭(약 2배)을 감안해 넉넉히 180초로
 // 못박아 둔다 (300초 상한 대비도 충분한 여유).
 //
-// vercel.json의 스케줄 "0 15 * * *"는 UTC 기준이다 (KST 00:00 = UTC 15:00).
-// JSON은 주석을 지원하지 않아 여기 남긴다. Hobby 플랜은 시간 단위 정밀도만 보장하므로
-// 실제 실행은 UTC 15:00~15:59(KST 00:00~00:59) 사이 아무 때나 발생할 수 있다.
+// vercel.json의 스케줄 "0 15 * * *"는 UTC 기준이다 (Vercel Cron 공식 설정 화면에 명시됨).
+// 즉 UTC 15:00 = KST 00:00. JSON은 주석을 지원하지 않아 여기 남긴다. Hobby 플랜은
+// 1시간 유동 창이 있어 실제 실행은 KST 00:00~00:59 사이 아무 때나 발생할 수 있다.
+// (과거 "KST 15시 실행 확인"이라는 메모가 있었으나, 이는 401 응답을 반환한 curl 호출
+// 기록을 실제 스케줄 실행으로 착각한 오독이었다 — 정정.)
 export const maxDuration = 180;
 
 export async function GET(request: NextRequest) {
