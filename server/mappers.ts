@@ -60,6 +60,7 @@ export function toCompletedCourse(
   places: PlaceRow[],
 ): CompletedCourse {
   return {
+    id: completion.id,
     name: course.name,
     date: formatDate(completion.completedAt),
     region: course.region,

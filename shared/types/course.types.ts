@@ -86,6 +86,7 @@ export type CourseProgress = {
 
 // 프로필 — 완료된 코스 기록
 export type CompletedCourse = {
+  id: string;
   name: string;
   date: string;
   region: string;

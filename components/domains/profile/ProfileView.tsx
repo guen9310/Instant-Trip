@@ -147,7 +147,7 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
           <div className="mb-4 flex flex-col gap-2.5">
             {completed.map((c) => (
               <button
-                key={c.date}
+                key={c.id}
                 onClick={() => setSelected(c)}
                 className="rounded-xl border border-border bg-card px-3.5 py-3.5 text-left"
               >
