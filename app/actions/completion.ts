@@ -44,7 +44,6 @@ export async function startCourseAction(
         id: dbCourseId,
         name: payload.courseName,
         region: payload.region ?? "알 수 없음",
-        regionCode: payload.region ?? "unknown",
         scale: payload.scale,
       }),
       db.insert(coursePlaces).values({
@@ -68,7 +67,6 @@ export async function startCourseAction(
         userId: session.user.id,
         courseId: dbCourseId,
         status: "active",
-        currentPlaceIndex: 0,
         startedAt: new Date(),
       }),
     ]);
@@ -139,7 +137,6 @@ export async function saveCourseCompletionAction(
         id: courseId,
         name: d.courseName,
         region: d.region ?? "알 수 없음",
-        regionCode: d.region ?? "unknown",
         scale: d.scale,
       }),
       db.insert(coursePlaces).values({
@@ -162,7 +159,6 @@ export async function saveCourseCompletionAction(
         userId: session.user.id,
         courseId,
         status: d.status,
-        currentPlaceIndex: 0,
         rating: d.rating,
         review: d.reactions.length ? d.reactions.join(", ") : null,
         startedAt,

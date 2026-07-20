@@ -94,7 +94,15 @@ export type CompletedCourse = {
   date: string;
   region: string;
   duration: string;
-  places: { name: string; category: string }[];
+  places: {
+    name: string;
+    category: string;
+    address: string;
+    description: string;
+    badge: { text: string; variant: BadgeVariant };
+    availabilityUncertain: boolean;
+    coord: { lat: number; lng: number } | null;
+  }[];
   rating: number;
   review: string;
 };
