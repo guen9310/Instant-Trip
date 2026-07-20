@@ -69,7 +69,7 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     cat,
     name:     p.title,
     addr:     p.address,
-    hours:    "",
+    hours:    p.hours ?? "",
     time:     "",
     dur:      formatDuration(p.estimatedDuration),
     badge,

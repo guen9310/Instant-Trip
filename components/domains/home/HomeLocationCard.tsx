@@ -6,7 +6,7 @@ import { useWeatherQuery } from "@/client/hooks/useWeatherQuery";
 import {
   kmaToWeatherCondition,
   type WeatherCondition,
-} from "@/shared/utils/feedContext";
+} from "@/shared/utils/weatherContext";
 
 const CONDITION_META: Record<WeatherCondition, { label: string; icon: string }> = {
   clear: { label: "맑음", icon: "🌤️" },
@@ -18,8 +18,8 @@ const CONDITION_META: Record<WeatherCondition, { label: string; icon: string }> 
 const WEATHER_MESSAGE: Record<WeatherCondition, string> = {
   clear: "걷기 딱 좋은 날씨예요",
   cloudy: "산책하기 나쁘지 않아요",
-  rain: "실내 코스를 추천해요",
-  snow: "따뜻한 실내 코스 어때요",
+  rain: "실내 장소를 추천해요",
+  snow: "따뜻한 실내는 어때요",
 };
 
 interface Props {
@@ -110,7 +110,7 @@ export function HomeLocationCard({ regionLat, regionLng }: Props) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[19px] font-extrabold text-text-primary tracking-[-0.02em] leading-tight">
-            위치를 설정해야 코스를 추천해드려요
+            위치를 설정하면 갈 곳을 추천해드려요
           </p>
           <p className="text-[12px] text-text-secondary mt-1">
             탭하면 현재 위치를 확인해드려요

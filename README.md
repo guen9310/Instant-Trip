@@ -1,17 +1,17 @@
 # 지금어때 (Instant-Trip)
 
-즉흥 여행자를 위한 고민 제로 서비스. 위치와 여행 규모만 선택하면, 지금 당장 갈 수 있는 당일 코스 하나를 자동으로 생성해드립니다.
+지금 갈 만한 곳을 딱 한 군데 정해주는 즉흥 외출 서비스. 위치와 외출 규모만 선택하면, 지금 문을 연 곳 중 취향에 맞는 장소 하나를 골라드립니다.
 
-> "여행을 위해 시간을 내는 것이 아니라, 시간이 나는 순간 바로 떠날 수 있도록 만드는 서비스"
+> "여행을 위해 시간을 내는 것이 아니라, 시간이 나는 순간 바로 나갈 수 있도록"
 
 ## 🎯 서비스 개요
 
-기존 여행 플래너 서비스는 많은 정보를 제공하지만, 오히려 선택지가 많아질수록 즉흥 여행의 의미가 퇴색됩니다. **지금어때**는 결정을 줄이고 실행을 늘리는 것을 핵심 철학으로 삼습니다.
+기존 여행 플래너 서비스는 많은 정보를 제공하지만, 오히려 선택지가 많아질수록 즉흥적으로 나서는 재미는 퇴색됩니다. **지금어때**는 결정을 줄이고 실행을 늘리는 것을 핵심 철학으로 삼습니다.
 
 - **현재 위치 기반** 주변 관광지 자동 수집
-- **지금 영업 중인 곳만** 실시간 필터링
-- **오늘 열리는 축제·행사** 우선 반영
-- **단 하나의 코스**만 제시 — 비교 과정 제거
+- **요일별 운영시간을 해석**해 지금 영업 중인 곳만 실시간 필터링
+- **오늘 열리는 축제·행사**도 함께 조회해 홈 화면에서 확인
+- **단 하나의 장소**만 제시 — 비교 과정 제거
 - **거절 기반 재추천** — 싫은 이유를 선택하면 즉시 재생성 (최대 3회)
 
 ## 🛠 기술 스택
@@ -37,21 +37,25 @@
 
 ### 한국관광공사 TourAPI 4.4
 
-| API                | 용도                                       |
-| ------------------ | ------------------------------------------ |
-| locationBasedList2 | GPS 좌표 + 반경 기반 주변 관광지 수집      |
-| detailIntro2       | 운영시간(usetime), 휴무일(restdate) 필터링 |
-| searchFestival2    | 오늘 날짜 기준 진행 중인 축제·행사 조회    |
-| detailImage2       | 코스 카드 썸네일 이미지                    |
-| detailCommon2      | 관광지 기본 정보 (명칭, 주소, 좌표)        |
+| API                | 용도                                                |
+| ------------------ | --------------------------------------------------- |
+| locationBasedList2 | GPS 좌표 + 반경 기반 주변 관광지 수집 (추천 파이프라인) |
+| areaBasedList2     | 홈 화면 근처 장소 수집                               |
+| detailIntro2       | 운영시간(usetime)·휴무일(restdate) 요일 인지 판정    |
+| detailCommon2      | 관광지 기본 정보 (명칭, 주소, 좌표)                  |
+| detailImage2       | 장소 카드 썸네일 이미지                              |
+| searchFestival2    | 오늘 날짜 기준 진행 중인 축제·행사 조회              |
 
 ### 외부 API
 
-| API               | 용도                                           |
-| ----------------- | ---------------------------------------------- |
-| Kakao Local API   | 코스 진행 중 근처 카페·식당·약국·주차장 검색   |
-| 공공데이터 문화축제 | 실시간 축제 데이터 (피드 + 코스 우선순위 반영) |
-| Weather API       | 날씨 정보 표시                                 |
+| API                          | 용도                                                     |
+| ----------------------------- | -------------------------------------------------------- |
+| 공공데이터포털 문화축제 API   | 축제 데이터 소스 — searchFestival2와 병합해 홈 화면에 표시 |
+| Kakao Local API               | 후보 부족 시 공원 보충, 외출 진행 중 근처 카페·식당·약국·주차장 검색 |
+| Kakao 지도 JS SDK (Map)       | 외출 추천 결과 화면의 장소 지도 미리보기                 |
+| Kakao 지도 JS SDK (Places)    | 근처 맛집 섹션 (음식 선호 취향 선택 시)                  |
+| Nominatim (OpenStreetMap)     | 위치 권한 승인 시 좌표 → 주소 역지오코딩                 |
+| 기상청 getUltraSrtNcst        | 홈 화면 날씨 정보 표시 (초단기실황)                      |
 
 ## 📱 화면 구조
 
@@ -60,13 +64,12 @@
 /sign-in/verify       OTP 6자리 코드 입력
 /onboarding           최초 1회 yes/no 성향 질문 (5문항)
 /onboarding/done      성향 요약 확인
-/                     랜딩 페이지
-/start                위치 확인 + 여행 규모 선택
-/course/[id]          코스 생성 결과 (장소 상세 모달 + 거절 플로우)
-/course/[id]/active   코스 진행 중 (지도 + 장소 체크리스트 + 주변 POI)
-/course/[id]/done     코스 완료 + 별점 후기 + XP 지급
-/feed                 다른 사용자 완료 코스 피드
-/profile              내 정보 + 완료 코스 목록
+/                     홈 (위치 기반 근처 장소·축제)
+/start                위치 확인 + 외출 규모 선택
+/course/preview       외출 추천 결과 (지도 미리보기 + 인라인 거절 패널)
+/course/active/[id]   외출 진행 중 (장소 체크리스트 + 주변 정보 Drawer)
+/course/done/[id]     외출 완료 + 별점 후기
+/profile              내 정보 + 완료 기록 목록
 /settings             성향 재설정
 ```
 
@@ -79,11 +82,11 @@
 ├── shared/           # 공용 코드 (types, constants, utils)
 ├── components/
 │   ├── commons/      # 도메인 무관 UI 컴포넌트 (Button, Card, …)
-│   └── domains/      # 기능별 컴포넌트 (auth, course, feed, profile, …)
+│   └── domains/      # 기능별 컴포넌트 (auth, course, home, location, onboarding, profile, settings, start)
 └── lib/
-    ├── pipeline/     # 코스 생성 파이프라인 (5단계)
+    ├── pipeline/     # 외출 추천 파이프라인
     ├── tour/         # TourAPI 클라이언트 + 매퍼
-    └── clients/      # 외부 API 클라이언트 (Kakao, Weather, Festival)
+    └── clients/      # 외부 API 클라이언트 (Kakao, Weather, 문화축제)
 ```
 
 ## 🎨 디자인 시스템
@@ -108,7 +111,7 @@
 
 - **Primary** — CTA 버튼, 로고, 주요 인터랙션
 - **Accent** — 영업중 배지, 완료 배지, 위치 확인 등 긍정 상태
-- **Point** — 오늘 축제 배지, XP 보상, 이벤트 강조
+- **Point** — 오늘 축제 배지, 이벤트 강조
 
 ## 🔐 인증 플로우
 
@@ -118,53 +121,52 @@
 이메일 입력 → 6자리 OTP 코드 발송 (Resend) → 코드 입력 → 세션 생성
 ```
 
-## 🧠 코스 생성 파이프라인
+## 🧠 외출 추천 파이프라인
 
 ```
-1단계 후보지 수집
+stage1 후보지 수집
   locationBasedList2로 GPS 좌표 + 반경 내 관광지 목록 조회
-  (contentTypeId: 12 관광지, 14 문화시설, 28 레포츠, 39 음식점)
-  여행 규모: light(5km) / moderate(10km) / leisurely(20km)
+  (contentTypeId: 12 관광지, 14 문화시설, 28 레포츠)
+  외출 규모: 가볍게(5km) / 적당히(10km) / 여유롭게(20km)
 
-2단계 실시간 가용성 필터링
-  detailIntro2로 운영시간, 휴무일 확인
-  현재 시간 기준 방문 불가 장소 제거
+stage2 실시간 가용성 검사
+  detailIntro2의 운영시간(usetime)·휴무일(restdate) 원문을 요일 단위로
+  해석해(checkOpenByDayAwareHours) 현재 시각 기준 영업 여부를 판정한다.
+  요일별 표기 형식을 해석하며, 판정 불가한 형식은 보수적으로 통과시킨다(uncertain).
 
-3단계 행사 우선 반영
-  searchFestival2로 오늘 진행 중인 축제 조회
-  반경 내 행사에 최상위 가중치 부여
+stage3.5 조건부 Kakao 보충
+  외출 규모가 '가볍게'이고 가용 후보가 5건 미만이면
+  Kakao Local API(공원 키워드)로 후보를 보충한다.
 
-4단계 태그 기반 점수화
+stage4 태그 기반 점수화
   온보딩 yes/no 답변 → 태그 가중치 변환
   사용자 태그 가중치 × 관광지 태그 매핑 → 적합도 점수 산출
   거절 이력 반영하여 실시간 보정 (최대 3회 재생성)
 
-5단계 최종 코스 생성
-  여행 규모에 맞는 장소 수만큼 상위 점수 관광지 선정
-  Kakao Local API로 근처 식당 추가 (음식 선호 시)
-  detailImage2로 썸네일 조회 후 코스 카드 구성
+stage5 상세 조회
+  최고 점수 후보 1곳의 상세 정보를 조회한다
+  detailImage2로 썸네일 확보 후 결과 화면 구성
 ```
 
-## 🎮 게이미피케이션
+축제·행사는 이 파이프라인의 점수화에 관여하지 않는다 — searchFestival2와 공공데이터포털 문화축제 API를 병렬로 조회해 홈 화면에 별도로 표시한다.
 
-강제하지 않는 경험치 시스템. 여행을 마친 후 자연스럽게 쌓이는 기록입니다.
+## 🎮 게이미피케이션 (3순위 예정 기능)
+
+강제하지 않는 경험치 시스템을 구상 중입니다. 외출을 마친 후 자연스럽게 쌓이는 기록을 목표로 하며, 아직 코드에는 반영되지 않았습니다.
 
 | 액션                | 경험치 |
 | ------------------- | ------ |
-| 코스 완료           | +30 XP |
+| 외출 완료           | +30 XP |
 | 첫 지역 방문 보너스 | +10 XP |
 | 후기 작성 (선택)    | +5 XP  |
 
-레벨업 시 칭호 부여 (탐험가 → 지역 전문가 → …)
+레벨업 시 칭호 부여 (탐험가 → 지역 전문가 → …) — 예정된 설계안이며 구현 전입니다.
 
 ## 🚀 시작하기
 
 ```bash
 # 의존성 설치
 pnpm install
-
-# 환경 변수 설정
-cp .env.example .env.local
 
 # DB 마이그레이션
 pnpm drizzle-kit push
@@ -177,14 +179,31 @@ pnpm dev
 
 ### 필수 환경 변수
 
+`.env.local` 파일을 직접 만들어 아래 값을 채워주세요 (저장소에 `.env.example`은 없습니다).
+
 ```
 DATABASE_URL=          # Neon PostgreSQL 연결 URL
-BETTER_AUTH_SECRET=    # better-auth 시크릿 키
+BETTER_AUTH_SECRET=    # better-auth 세션 암호화 시크릿 키
+BETTER_AUTH_URL=       # 배포 환경 URL (better-auth trustedOrigins)
+NEXT_PUBLIC_APP_URL=   # 클라이언트 auth 요청 baseURL
 RESEND_API_KEY=        # Resend 이메일 발송 API 키
+RESEND_FROM_EMAIL=     # OTP 발신 이메일 주소
 TOUR_API_KEY=          # 한국관광공사 TourAPI 인증 키
-KAKAO_REST_API_KEY=    # Kakao REST API 키 (Local API)
-NEXT_PUBLIC_KAKAO_MAP_KEY=  # Kakao 지도 SDK 앱 키
+TOUR_API_BASE_URL=     # TourAPI 베이스 URL (선택, 기본값 있음)
+KAKAO_REST_KEY=        # Kakao REST API 키 (Local API)
+NEXT_PUBLIC_KAKAO_KEY= # Kakao 지도 SDK 앱 키
+WEATHER_API_KEY=       # 기상청 API 인증 키
+CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
 ```
+
+## 🧪 테스트 · CI/CD
+
+- `pnpm test`(vitest run) — 18개 파일, 130개 테스트 전부 통과
+- `pnpm type-check`(tsc --noEmit) — 에러 0건
+- `pnpm lint`(eslint) — 에러 0건
+- CI(`.github/workflows/ci.yml`) — PR 시 lint → type-check → test → build 순으로 검증
+- 배포(`.github/workflows/deploy.yml`) — main 브랜치 push 시 CI 통과를 전제로 `vercel build --prod` → `vercel deploy --prebuilt --prod`(prebuilt 배포)
+- 크론(`vercel.json`) — `/api/cron/warm-festivals`를 매일 UTC 15:00(KST 00:00)에 호출해 축제 캐시를 예열
 
 ## 🌱 개발 로드맵
 
@@ -193,18 +212,18 @@ NEXT_PUBLIC_KAKAO_MAP_KEY=  # Kakao 지도 SDK 앱 키
 - [x] 프로젝트 초기 설정 및 아키텍처 구성
 - [x] better-auth + emailOTP 인증 (이메일 → OTP → 세션)
 - [x] 온보딩 5문항 성향 파악 + 태그 가중치 변환
-- [x] TourAPI 연동 및 5단계 코스 생성 파이프라인
-- [x] 실시간 운영시간 필터링 (detailIntro2)
-- [x] 축제·행사 우선 반영 (searchFestival2)
-- [x] 코스 결과 화면 + 거절 재추천 (최대 3회)
-- [x] 코스 진행 화면 (지도 + 체크리스트 + 주변 POI)
-- [x] 코스 완료 화면 (별점 후기 + XP 지급)
+- [x] TourAPI 연동 및 5단계 외출 추천 파이프라인
+- [x] 요일 인지 실시간 운영시간 판정 (detailIntro2)
+- [x] 축제·행사 조회 및 홈 화면 표시 (searchFestival2 + 공공데이터포털)
+- [x] 외출 추천 결과 화면 + 거절 재추천 (최대 3회)
+- [x] 외출 진행 화면 (체크리스트 + 주변 POI)
+- [x] 외출 완료 화면 (별점 후기)
 
 ### 2순위 — 완료
 
 - [x] 태그 가중치 개인화 (온보딩 답변 기반)
-- [x] 코스 피드 + 별점
-- [x] 프로필 페이지 (완료 코스 목록)
+- [x] 별점 후기
+- [x] 프로필 페이지 (완료 기록 목록)
 - [x] Kakao Maps 지도 연동
 - [x] Kakao Local API 주변 POI 검색
 - [x] 다크 모드
@@ -212,7 +231,7 @@ NEXT_PUBLIC_KAKAO_MAP_KEY=  # Kakao 지도 SDK 앱 키
 ### 3순위 — 예정
 
 - [ ] 게이미피케이션 XP/레벨 실제 연동
-- [ ] 날씨 API 연동 완성
+- [ ] 날씨 API 연동 완성 (초단기예보·단기예보 활용)
 - [ ] PWA 적용 (next-pwa)
 - [ ] 대중교통 예상 비용 (ODsay API)
 - [ ] 다국어 지원

@@ -286,6 +286,7 @@ export async function getUltraSrtNcst(
   }
 }
 
+// 로드맵 예정 기능용, 현재 미사용
 export async function getUltraSrtFcst(
   nx: number,
   ny: number,
@@ -305,6 +306,7 @@ export async function getUltraSrtFcst(
   }
 }
 
+// 로드맵 예정 기능용, 현재 미사용
 export async function getVilageFcst(
   nx: number,
   ny: number,

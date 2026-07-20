@@ -75,6 +75,9 @@ export type PendingCourse = {
   dbCourseId?: string;
   // 선택 진입(place.origin==="selected")에서만 채워진다 — 추천 진입은 이 필드를 모른다.
   availability?: PlaceAvailabilitySnapshot;
+  // 코스 생성 성공 시점(epoch ms). 운영시간 배지는 이 시점의 실시간 판정을 스냅샷으로
+  // 저장한 것이므로, 오래 지난 스냅샷은 화면 층에서 배지를 숨기는 만료 판단에 쓴다.
+  generatedAt?: number;
 };
 
 // 프로필 — 진행 중인 코스 상태
@@ -91,7 +94,15 @@ export type CompletedCourse = {
   date: string;
   region: string;
   duration: string;
-  places: { name: string; category: string }[];
+  places: {
+    name: string;
+    category: string;
+    address: string;
+    description: string;
+    badge: { text: string; variant: BadgeVariant };
+    availabilityUncertain: boolean;
+    coord: { lat: number; lng: number } | null;
+  }[];
   rating: number;
   review: string;
 };

@@ -56,7 +56,7 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
     <>
       <div className="flex flex-1 flex-col px-4 pt-4 pb-4">
         <p className="text-[13px] text-text-secondary leading-normal mb-4">
-          설정한 취향을 바탕으로 코스를 추천해드려요. 언제든지 변경할 수 있어요.
+          설정한 취향을 바탕으로 갈 곳을 추천해드려요. 언제든지 변경할 수 있어요.
         </p>
 
         <div className="flex flex-1 flex-col">

@@ -112,6 +112,8 @@ export async function generateCourseFromPlace(
       availabilityUncertain: availabilityCheck.uncertain,
       estimatedDuration,
       stayDurationKey,
+      hours: availabilityCheck.hours,
+      restDayNote: availabilityCheck.restDayNote,
     };
 
     // buildCoursePlace가 내부에서 fetchDetail(contentId)를 다시 호출하지만,

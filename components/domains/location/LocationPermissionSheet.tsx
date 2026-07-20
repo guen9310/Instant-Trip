@@ -25,9 +25,9 @@ export function LocationPermissionSheet({ open, onOpenChange, onAllow }: Props) 
                 위치 권한이 필요해요
               </h2>
               <p className="text-[13px] text-text-secondary leading-[1.6]">
-                현재 위치를 기반으로 코스를 만들어드려요.
+                현재 위치에서 갈 만한 곳을 찾아드려요.
                 <br />
-                권한을 허용하지 않으면 코스를 추천받을 수 없어요.
+                권한을 허용하지 않으면 추천을 받을 수 없어요.
               </p>
             </div>
           </div>

@@ -44,7 +44,7 @@ export function CourseLoadingOverlay() {
       </div>
       <div className="text-center">
         <p className="text-[16px] font-bold text-text-primary tracking-tight mb-2">
-          코스를 만들고 있어요
+          지금 갈 만한 곳을 찾고 있어요
         </p>
         <p className="text-[13px] text-text-secondary">{MESSAGES[msgIdx]}</p>
       </div>

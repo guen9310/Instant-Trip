@@ -11,7 +11,11 @@ import type {
 import { TTL } from "@/lib/cache/ttl";
 import { getKstHour, getKstMinute, getKstDay } from "@/shared/utils/kst";
 
-export type AvailableItem = TourItem & { availabilityUncertain: boolean };
+export type AvailableItem = TourItem & {
+  availabilityUncertain: boolean;
+  hours: string | null;
+  restDayNote: string | null;
+};
 const BATCH_SIZE = 10;
 
 type IntroItem =
@@ -27,6 +31,19 @@ const INTRO_FIELDS: Record<string, { usetime: string; restdate: string }> = {
   "14": { usetime: "usetimeculture", restdate: "restdateculture" },
   "28": { usetime: "usetimeleports", restdate: "restdateleports" },
 };
+
+// <br> 계열 태그를 줄바꿈(\n)으로 보존 치환한다 — 원문의 줄 구분을 그대로 유지해서
+// 화면 층이 flex-col 등으로 줄 단위 렌더링을 선택할 수 있게 한다. 각 줄 내부의 연속
+// 공백만 하나로 축약하고 trim한다 (줄 자체는 축약하지 않음). 빈 줄은 제거한다.
+// usetime/restdate 원문을 화면에 노출하기 전 정리하는 용도 — 판정에 쓰는 원문은 건드리지 않는다.
+export function stripBrTags(s: string): string {
+  return s
+    .replace(/<br\s*\/?>/gi, "\n")
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line.length > 0)
+    .join("\n");
+}
 
 // "09:00~18:00" 또는 "9시~18시" 형식의 운영시간 문자열을 파싱해서
 // { open: 분 단위 시작, close: 분 단위 종료 } 형태로 반환한다.
@@ -77,6 +94,194 @@ export function isRestDay(
   return DAY_PATTERNS[dayIndex].test(restdate);
 }
 
+// 요일 인지 판정용 문자 매핑 — getKstDay()/isRestDay와 동일한 0=일...6=토 인덱스.
+const DAY_CHAR_TO_INDEX: Record<string, number> = {
+  일: 0,
+  월: 1,
+  화: 2,
+  수: 3,
+  목: 4,
+  금: 5,
+  토: 6,
+};
+// 범위("A~B") 전개 시 순회 순서 — 월요일을 시작으로 한 주 순서(요일 개념의 범위 표기 기준).
+const WEEK_ORDER_CHARS = ["월", "화", "수", "목", "금", "토", "일"];
+
+// "A요일~B요일"(또는 축약 "A~B") 범위를 순차 전개한다. 시작이 끝보다 뒤여도 주 경계를
+// 넘겨 순회한다 — 예: expandDayRange("토", "화") → [토, 일, 월, 화].
+function expandDayRange(startChar: string, endChar: string): number[] {
+  const startPos = WEEK_ORDER_CHARS.indexOf(startChar);
+  const endPos = WEEK_ORDER_CHARS.indexOf(endChar);
+  if (startPos === -1 || endPos === -1) return [];
+  const days: number[] = [];
+  let pos = startPos;
+  for (let i = 0; i < 7; i++) {
+    days.push(DAY_CHAR_TO_INDEX[WEEK_ORDER_CHARS[pos]]);
+    if (pos === endPos) break;
+    pos = (pos + 1) % 7;
+  }
+  return days;
+}
+
+// 요일 chain(예: "월요일~목요일", "월,수,금") 안에서 "구분자? + 문자 + (요일)?" 토큰을
+// 순서대로 추출한다. 첫 토큰은 선행 구분자가 없다.
+const DAY_TOKEN_WITH_SEP_RE = /([~\-,·/])?\s*([일월화수목금토])(요일)?/g;
+
+// 완전어("월요일")는 단독으로도 인정하지만, 축약형("월")은 범위(~/-)나 나열(,·/)
+// 문맥 안에서만 인정한다 — "공휴일"의 "일", "매월"의 "월" 같은 비요일 문맥 오탐을
+// 피하기 위함이다(완전 파서가 아니므로 애매하면 정보 없음으로 취급).
+const DAY_CHAIN_RE =
+  /[일월화수목금토](?:요일)?(?:\s*[~\-,·/]\s*[일월화수목금토](?:요일)?)*/g;
+
+// 한 줄에서 적용 요일 인덱스 집합을 구한다. 요일 정보 자체가 없으면 null(요일 라벨 없음)을 반환한다.
+function extractDayIndices(line: string): Set<number> | null {
+  let found = false;
+  const days = new Set<number>();
+
+  DAY_CHAIN_RE.lastIndex = 0;
+  let chainMatch: RegExpExecArray | null;
+  while ((chainMatch = DAY_CHAIN_RE.exec(line))) {
+    const chain = chainMatch[0];
+    const tokens: { sep: string | null; char: string; hasSuffix: boolean }[] =
+      [];
+    DAY_TOKEN_WITH_SEP_RE.lastIndex = 0;
+    let tokenMatch: RegExpExecArray | null;
+    while ((tokenMatch = DAY_TOKEN_WITH_SEP_RE.exec(chain))) {
+      tokens.push({
+        sep: tokenMatch[1] ?? null,
+        char: tokenMatch[2],
+        hasSuffix: !!tokenMatch[3],
+      });
+    }
+    // 문맥 없는 단독 축약형(길이 1, "요일" 접미사 없음) — 요일 토큰으로 인정하지 않는다.
+    if (tokens.length === 1 && !tokens[0].hasSuffix) continue;
+
+    found = true;
+    days.add(DAY_CHAR_TO_INDEX[tokens[0].char]);
+    for (let i = 1; i < tokens.length; i++) {
+      const cur = tokens[i];
+      if (cur.sep === "~" || cur.sep === "-") {
+        for (const d of expandDayRange(tokens[i - 1].char, cur.char)) {
+          days.add(d);
+        }
+      } else {
+        days.add(DAY_CHAR_TO_INDEX[cur.char]);
+      }
+    }
+  }
+
+  return found ? days : null;
+}
+
+// 한 줄에서 "HH:MM~HH:MM"(우선) 또는 "H시~H시" 시간대를 전부(global) 추출한다.
+// parseTimeRange와 같은 정규식을 재사용하되, 한 요일에 여러 시간대가 있는 경우
+// (예: "10:00~11:00, 14:00~15:00")를 모두 뽑아내기 위해 global로 반복 매칭한다.
+function extractTimeRanges(line: string): { open: number; close: number }[] {
+  const ranges: { open: number; close: number }[] = [];
+  const colonRe = /(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})/g;
+  let m: RegExpExecArray | null;
+  while ((m = colonRe.exec(line))) {
+    ranges.push({
+      open: parseInt(m[1]) * 60 + parseInt(m[2]),
+      close: parseInt(m[3]) * 60 + parseInt(m[4]),
+    });
+  }
+  if (ranges.length > 0) return ranges;
+
+  const hourRe = /(\d{1,2})시\s*[~\-]\s*(\d{1,2})시/g;
+  while ((m = hourRe.exec(line))) {
+    ranges.push({ open: parseInt(m[1]) * 60, close: parseInt(m[2]) * 60 });
+  }
+  return ranges;
+}
+
+// 자정을 넘는 운영시간(close < open)을 포함해 현재 시각이 범위 안인지 확인한다.
+function isWithinRange(
+  range: { open: number; close: number },
+  curMinutes: number,
+): boolean {
+  return range.close < range.open
+    ? curMinutes >= range.open || curMinutes <= range.close
+    : curMinutes >= range.open && curMinutes <= range.close;
+}
+
+export type KstNow = { day: number; hour: number; minute: number };
+
+type DayAwareResult = {
+  verdict: "open" | "closed" | "unknown";
+  // 로그 노출용 판정 근거 — 매칭된 요일 줄, 또는 "요일매칭없음"/"요일라벨없음".
+  matchReason: string;
+};
+
+// [핵심] 운영시간 문자열을 요일 인지 방식으로 판정한다. 완전 파서가 아니다 — 아래
+// 명시된 형식(요일 라벨 + 시간대, 또는 요일 라벨 없는 단일/복수 시간대) 외엔 전부 "unknown"이다.
+//
+// 판단 순서:
+// 1. stripBrTags 후 줄 단위로 분리해 각 줄의 요일 라벨을 찾는다(완전어 "월요일", 범위
+//    "월요일~목요일"/"월~금", 나열 "월,수,금"만 인정 — 문맥 없는 단독 축약형은 무시).
+// 2. 요일 라벨이 하나라도 있는 문서인데 오늘 요일과 매칭되는 줄이 없으면 → closed
+//    (예: 금/토 요일 정보만 있고 오늘이 일요일이면, 오늘은 영업 안 하는 것으로 판단).
+// 3. 오늘 매칭되는 줄이 있으면, 그 줄(들)의 모든 시간대와 현재 시각을 비교한다.
+//    매칭 줄은 있는데 그 안에서 시간대 파싱이 실패하면 → unknown(완전 파서 금지 원칙).
+// 4. 요일 라벨이 전혀 없으면 → 기존 방식(문자열 첫 매치 시간대 하나)으로 비교한다.
+//    그마저 파싱 실패하면 → unknown.
+function evaluateDayAwareHours(usetime: string, now: KstNow): DayAwareResult {
+  const lines = stripBrTags(usetime)
+    .split("\n")
+    .filter((l) => l.length > 0);
+  const curMinutes = now.hour * 60 + now.minute;
+  const curTimeStr = `${String(now.hour).padStart(2, "0")}:${String(now.minute).padStart(2, "0")}`;
+
+  let anyDayLabelFound = false;
+  const matchedLines: string[] = [];
+
+  for (const line of lines) {
+    const dayIndices = extractDayIndices(line);
+    if (dayIndices === null) continue;
+    anyDayLabelFound = true;
+    if (dayIndices.has(now.day)) matchedLines.push(line);
+  }
+
+  if (anyDayLabelFound) {
+    if (matchedLines.length === 0) {
+      return { verdict: "closed", matchReason: "요일매칭없음" };
+    }
+    const ranges = matchedLines.flatMap(extractTimeRanges);
+    if (ranges.length === 0) {
+      return {
+        verdict: "unknown",
+        matchReason: `요일매칭(${matchedLines.join(" / ")}) 시간대파싱실패`,
+      };
+    }
+    const isOpen = ranges.some((r) => isWithinRange(r, curMinutes));
+    return {
+      verdict: isOpen ? "open" : "closed",
+      matchReason: `요일매칭(${matchedLines.join(" / ")}) / 현재 ${curTimeStr}`,
+    };
+  }
+
+  // 요일 라벨이 전혀 없는 자유 텍스트 — 기존 첫 매치 시간대 비교로 폴백한다.
+  const range = parseTimeRange(usetime);
+  if (!range) {
+    return { verdict: "unknown", matchReason: "요일라벨없음, 시간대파싱실패" };
+  }
+  const isOpen = isWithinRange(range, curMinutes);
+  return {
+    verdict: isOpen ? "open" : "closed",
+    matchReason: `요일라벨없음 / 현재 ${curTimeStr}`,
+  };
+}
+
+// evaluateDayAwareHours의 판정(verdict)만 노출하는 공개 함수 — 단위 테스트가 이 함수로
+// 시나리오를 검증한다. 판정 근거 로그가 필요한 내부 호출부(checkAvailability)는
+// evaluateDayAwareHours를 직접 호출해 matchReason도 함께 얻는다.
+export function checkOpenByDayAwareHours(
+  usetime: string,
+  now: KstNow,
+): "open" | "closed" | "unknown" {
+  return evaluateDayAwareHours(usetime, now).verdict;
+}
+
 type Verdict =
   | "제외(휴무)"
   | "제외(운영종료)"
@@ -96,10 +301,15 @@ type OpenResult =
 // 1. 오늘이 휴무일이면 → 닫힘
 // 2. 운영시간 데이터가 없으면 → 통과 (데이터 없음 = 판단 불가 → 관대하게 처리)
 // 3. "24시간" 또는 "연중무휴" 포함 → 열림
-// 4. 시간 범위 파싱 성공 → 현재 시각과 비교
-// 5. 시간 범위 파싱 실패 → 통과 (자유 텍스트라 파싱 못하는 경우가 많음)
+// 4. 요일 인지 판정(evaluateDayAwareHours) → open/closed면 그대로 반영, unknown이면 통과
 function checkAvailability(usetime: string, restdate: string): OpenResult {
-  if (isRestDay(restdate)) {
+  const now: KstNow = {
+    day: getKstDay(),
+    hour: getKstHour(),
+    minute: getKstMinute(),
+  };
+
+  if (isRestDay(restdate, now.day)) {
     return {
       open: false,
       reason: `휴무일 (${restdate.slice(0, 20)})`,
@@ -117,31 +327,19 @@ function checkAvailability(usetime: string, restdate: string): OpenResult {
   if (lower.includes("24시간") || lower.includes("연중무휴")) {
     return { open: true, reason: "24시간/연중무휴", label: "통과(영업중)" };
   }
-  const range = parseTimeRange(usetime);
-  if (!range) {
+
+  const { verdict, matchReason } = evaluateDayAwareHours(usetime, now);
+  if (verdict === "unknown") {
     return {
       open: true,
-      reason: `파싱불가 → 통과 (원문: "${usetime.slice(0, 30)}")`,
+      reason: `파싱불가 → 통과 (${matchReason}, 원문: "${usetime.slice(0, 30)}")`,
       label: "통과(파싱실패)",
     };
   }
-  const now = new Date();
-  const kstHour = getKstHour(now);
-  const kstMin = getKstMinute(now);
-  const cur = kstHour * 60 + kstMin;
-  const timeStr = `${String(kstHour).padStart(2, "0")}:${String(kstMin).padStart(2, "0")}`;
-  const openStr = `${String(Math.floor(range.open / 60)).padStart(2, "0")}:${String(range.open % 60).padStart(2, "0")}`;
-  const closeStr = `${String(Math.floor(range.close / 60)).padStart(2, "0")}:${String(range.close % 60).padStart(2, "0")}`;
-
-  // 자정을 넘는 운영시간 처리: close < open이면 자정을 넘기는 케이스다.
-  // 예: 22:00~02:00 → 22시 이후 또는 02시 이전이면 운영 중
-  const isOpen =
-    range.close < range.open
-      ? cur >= range.open || cur <= range.close
-      : cur >= range.open && cur <= range.close;
+  const isOpen = verdict === "open";
   return {
     open: isOpen,
-    reason: `${openStr}~${closeStr} / 현재 ${timeStr}`,
+    reason: matchReason,
     label: isOpen ? "통과(영업중)" : "제외(운영종료)",
   };
 }
@@ -259,8 +457,8 @@ export async function checkPlaceAvailability(
     open: result.open,
     uncertain,
     label: result.label,
-    hours: usetime || null,
-    restDayNote: restdate || null,
+    hours: usetime ? stripBrTags(usetime) : null,
+    restDayNote: restdate ? stripBrTags(restdate) : null,
   };
 }
 
@@ -298,7 +496,12 @@ export async function filterByAvailability(
 
     if (result.open) {
       passed++;
-      return { ...item, availabilityUncertain: result.uncertain };
+      return {
+        ...item,
+        availabilityUncertain: result.uncertain,
+        hours: result.hours,
+        restDayNote: result.restDayNote,
+      };
     }
     blocked++;
     return null;
