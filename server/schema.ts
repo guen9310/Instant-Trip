@@ -91,6 +91,7 @@ export const courses = pgTable(
     region: text("region").notNull(),       // '서울 마포구' (화면 표시용)
     regionCode: text("region_code").notNull(), // 'seoul-mapo' (필터링용)
     imageSeed: text("image_seed"),
+    // TODO: 미사용 컬럼, 차기 마이그레이션에서 제거
     isFestival: boolean("is_festival").notNull().default(false),
     scale: text("scale").notNull(),         // 'light' | 'moderate' | 'leisurely'
     // 취향 필터. NULL = 모든 취향에 적합
