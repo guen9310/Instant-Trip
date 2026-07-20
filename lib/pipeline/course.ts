@@ -24,6 +24,21 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
+// usetime/restdate 원문(이미 stripBrTags로 정리된 값)을 CoursePlace.hours 표시용
+// 문자열로 합성한다. br 치환·정규화는 availability.ts가 원천에서 책임진다 — 여기서는
+// 합성만 담당한다.
+function synthesizeHours(
+  usetime: string | null | undefined,
+  restDayNote: string | null | undefined,
+): string {
+  const time = usetime ?? "";
+  const rest = restDayNote ?? "";
+  if (time && rest) return `${time} (휴무: ${rest})`;
+  if (time) return time;
+  if (rest) return `휴무: ${rest}`;
+  return "";
+}
+
 export function toShortAddress(addr1: string): string {
   return addr1
     .replace("특별시", "")
@@ -152,6 +167,7 @@ export async function buildCoursePlace(
       estimatedDuration: candidate.estimatedDuration,
       stayDurationKey: candidate.stayDurationKey,
       origin,
+      hours: "",
     };
   }
 
@@ -183,6 +199,7 @@ export async function buildCoursePlace(
     estimatedDuration: candidate.estimatedDuration,
     stayDurationKey: candidate.stayDurationKey,
     origin,
+    hours: synthesizeHours(candidate.hours, candidate.restDayNote),
   };
 }
 
@@ -195,7 +212,7 @@ export async function buildCoursePlace(
 export async function assembleCourse(
   scored: PlaceCandidate[],
   profile: UserProfile,
-): Promise<Omit<CourseResult, "festivals" | "recommended_food">> {
+): Promise<Omit<CourseResult, "festivals">> {
   const t0 = Date.now();
 
   if (scored.length === 0) {

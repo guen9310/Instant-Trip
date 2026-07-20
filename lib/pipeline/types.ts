@@ -42,7 +42,12 @@ export function getSearchRadiusM(profile: UserProfile): number {
 }
 
 // DB에서 조회한 장소 (tag_scores 사전 계산 포함)
-export type PlaceWithTags = TourItem & { tagScores: Record<TagKey, number>; availabilityUncertain?: boolean };
+export type PlaceWithTags = TourItem & {
+  tagScores: Record<TagKey, number>;
+  availabilityUncertain?: boolean;
+  hours?: string | null;
+  restDayNote?: string | null;
+};
 
 export interface PlaceCandidate {
   item: TourItem;
@@ -54,6 +59,10 @@ export interface PlaceCandidate {
   estimatedDuration: DurationRange;
   // 매칭된 체류시간 규칙의 key — 완료 기록에 저장되어 실측 집계의 조인 키가 된다
   stayDurationKey: string;
+  // detailIntro2 usetime/restdate 원문 — CoursePlace.hours 합성 입력.
+  // 배치 필터(filterByAvailability) 경로에서만 채워진다.
+  hours?: string | null;
+  restDayNote?: string | null;
 }
 
 // 이 장소가 어떻게 코스에 들어왔는지 — 취향 기반 추천(stage4 점수화) vs
@@ -75,6 +84,8 @@ export interface CoursePlace {
   estimatedDuration: DurationRange;
   stayDurationKey: string;
   origin: PlaceOrigin;
+  // usetime/restdate 원문을 합성한 표시용 문자열. 데이터 없으면 "".
+  hours: string;
 }
 
 export interface CourseResult {
