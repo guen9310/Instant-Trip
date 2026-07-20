@@ -22,8 +22,52 @@ if (!Element.prototype.setPointerCapture) {
   Element.prototype.hasPointerCapture = () => false;
 }
 
+// input-otp(내부 useEffect)가 0/10/50ms 타이머 3개를 예약하지만 클린업 함수를
+// 반환하지 않아 언마운트 시 정리되지 않는다 — 테스트 종료 후 jsdom window가
+// 정리된 시점에 뒤늦게 발동하면 "window is not defined" unhandled error로
+// vitest가 간헐적으로 exit 1이 된다. setTimeout/clearTimeout을 계측해 아직
+// 발동하지 않은 타이머를 각 테스트 종료·전체 종료 시점에 정리한다
+// (어느 컴포넌트가 예약했든 동일하게 적용되는 범용 안전망).
+type TimeoutId = ReturnType<typeof setTimeout>;
+
+const pendingTimeouts = new Set<TimeoutId>();
+const originalSetTimeout = global.setTimeout;
+const originalClearTimeout = global.clearTimeout;
+
+global.setTimeout = ((handler: unknown, timeout?: number, ...args: unknown[]) => {
+  if (typeof handler !== "function") {
+    return (originalSetTimeout as (...a: unknown[]) => TimeoutId)(
+      handler,
+      timeout,
+      ...args,
+    );
+  }
+  const id = originalSetTimeout(() => {
+    pendingTimeouts.delete(id);
+    (handler as (...a: unknown[]) => void)(...args);
+  }, timeout);
+  pendingTimeouts.add(id);
+  return id;
+}) as typeof setTimeout;
+
+global.clearTimeout = ((id?: TimeoutId) => {
+  if (id !== undefined) pendingTimeouts.delete(id);
+  return originalClearTimeout(id);
+}) as typeof clearTimeout;
+
+function flushPendingTimeouts() {
+  pendingTimeouts.forEach((id) => originalClearTimeout(id));
+  pendingTimeouts.clear();
+}
+
 export const server = setupServer(...handlers);
 
 beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+afterEach(() => {
+  server.resetHandlers();
+  flushPendingTimeouts();
+});
+afterAll(() => {
+  server.close();
+  flushPendingTimeouts();
+});
