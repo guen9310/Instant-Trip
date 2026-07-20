@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "지금어때",
-  description: "즉흥 여행 코스 생성 서비스",
+  description: "지금 갈 만한 곳을 정해주는 즉흥 외출 서비스",
 };
 
 export default function RootLayout({

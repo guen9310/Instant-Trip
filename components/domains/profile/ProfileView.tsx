@@ -57,7 +57,7 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
       {/* 통계 */}
       <div className="mb-6 grid grid-cols-2 gap-2.5">
         {[
-          { label: "완료한 코스", value: completed.length },
+          { label: "완료한 외출", value: completed.length },
           { label: "방문한 지역", value: totalRegions },
         ].map(({ label, value }) => (
           <div
@@ -79,7 +79,7 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
             첫 즉흥 여행을 떠나볼까요?
           </p>
           <p className="text-[13px] text-text-secondary leading-relaxed">
-            코스를 완료하면 여기에<br />기록과 도장이 쌓여요
+            외출을 마치면 여기에<br />기록과 도장이 쌓여요
           </p>
           <Link
             href="/start"
@@ -88,14 +88,14 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
               "mt-1 rounded-xl px-6 text-[14px] font-semibold",
             )}
           >
-            코스 뽑으러 가기
+            어디 갈지 뽑으러 가기
           </Link>
         </div>
       ) : (
         <>
           {/* 진행 중인 코스 */}
           <h3 className="mb-2.5 text-[13px] font-semibold text-text-secondary">
-            진행 중인 코스
+            진행 중인 외출
           </h3>
           {inProgress ? (
             <div
@@ -128,13 +128,13 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
           ) : (
             <div className="mb-6 flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 py-6">
               <p className="text-[13px] text-text-secondary">
-                진행 중인 코스가 없어요
+                진행 중인 외출이 없어요
               </p>
               <Link
                 href="/start"
                 className="flex items-center gap-0.5 text-[13px] font-semibold text-primary"
               >
-                코스 뽑으러 가기
+                어디 갈지 뽑으러 가기
                 <ChevronRight size={14} />
               </Link>
             </div>
@@ -142,7 +142,7 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
 
           {/* 완료한 코스 */}
           <h3 className="mb-2.5 text-[13px] font-semibold text-text-secondary">
-            완료한 코스
+            완료한 외출
           </h3>
           <div className="mb-4 flex flex-col gap-2.5">
             {completed.map((c) => (
@@ -177,7 +177,7 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
               href="/start"
               className="flex items-center gap-0.5 text-[13px] font-semibold text-primary"
             >
-              근처 코스 둘러보기
+              근처 장소 둘러보기
               <ChevronRight size={14} />
             </Link>
           </div>

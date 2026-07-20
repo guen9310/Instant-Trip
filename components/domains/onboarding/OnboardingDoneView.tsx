@@ -40,7 +40,7 @@ export function OnboardingDoneView() {
           준비됐어요!
         </h1>
         <p className="text-[14px] text-text-secondary leading-[1.55] mb-8 text-balance">
-          설정한 취향을 바탕으로 코스를 만들어드릴게요.
+          설정한 취향을 바탕으로 갈 곳을 골라드릴게요.
         </p>
 
         {/* 취향 프로필 */}

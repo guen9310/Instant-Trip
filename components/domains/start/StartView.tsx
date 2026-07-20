@@ -296,7 +296,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
           disabled={loading || !city}
           className="gap-2"
         >
-          코스 뽑기 <Shuffle size={16} />
+          어디 갈지 뽑기 <Shuffle size={16} />
         </Button>
       </div>
     </>

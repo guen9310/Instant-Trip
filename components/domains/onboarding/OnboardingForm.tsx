@@ -17,9 +17,9 @@ const STEPS: {
   {
     id: "travel",
     question: "걷는 거 좋아하세요?",
-    subtitle: "이동 방식에 맞게 코스를 짜드릴게요",
+    subtitle: "이동 방식에 맞는 곳을 골라드릴게요",
     options: [
-      { ...PREF_META.travel.options[0], title: "네", desc: "도보 코스 위주로", iconClass: "text-accent" },
+      { ...PREF_META.travel.options[0], title: "네", desc: "걸어서 갈 수 있는 곳 위주로", iconClass: "text-accent" },
       { ...PREF_META.travel.options[1], title: "아니요", desc: "이동 최소화로", iconClass: "text-primary" },
     ],
   },
@@ -28,8 +28,8 @@ const STEPS: {
     question: "혼자 여행하시나요?",
     subtitle: "인원에 맞게 장소를 골라드릴게요",
     options: [
-      { ...PREF_META.party.options[0], title: "혼자요", desc: "나만의 코스로", iconClass: "text-primary" },
-      { ...PREF_META.party.options[1], title: "같이요", desc: "함께하는 코스로", iconClass: "text-accent" },
+      { ...PREF_META.party.options[0], title: "혼자요", desc: "혼자 보내는 시간에 맞게", iconClass: "text-primary" },
+      { ...PREF_META.party.options[1], title: "같이요", desc: "함께하는 시간에 맞게", iconClass: "text-accent" },
     ],
   },
   {

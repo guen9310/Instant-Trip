@@ -79,7 +79,7 @@ export function HomeView() {
       setToastMsg(
         result.code === "NOT_FOUND"
           ? "장소 정보를 찾을 수 없어요. 다른 장소를 선택해주세요."
-          : "코스를 만드는 중 문제가 발생했어요. 다시 시도해주세요.",
+          : "갈 곳을 찾는 중 문제가 생겼어요. 다시 시도해주세요.",
       );
       return;
     }
