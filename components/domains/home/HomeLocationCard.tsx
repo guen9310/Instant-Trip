@@ -6,7 +6,7 @@ import { useWeatherQuery } from "@/client/hooks/useWeatherQuery";
 import {
   kmaToWeatherCondition,
   type WeatherCondition,
-} from "@/shared/utils/feedContext";
+} from "@/shared/utils/weatherContext";
 
 const CONDITION_META: Record<WeatherCondition, { label: string; icon: string }> = {
   clear: { label: "맑음", icon: "🌤️" },
