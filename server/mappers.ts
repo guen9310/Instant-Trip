@@ -1,45 +1,14 @@
 import type { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import type {
-  JourneyPlace,
   CourseProgress,
   CompletedCourse,
+  BadgeVariant,
 } from "@/shared/types/course.types";
-import { formatDuration } from "@/shared/utils/duration";
 
 // DB row 타입 — schema에서 직접 추론
 type CourseRow = typeof courses.$inferSelect;
 type PlaceRow = typeof coursePlaces.$inferSelect;
 type CompletionRow = typeof courseCompletions.$inferSelect;
-
-// ─── Journey ─────────────────────────────────────────────────────────────────
-
-export function toJourneyPlace(row: PlaceRow): JourneyPlace {
-  const duration = { min: row.stayMin, max: row.stayMax };
-  return {
-    id: row.id,
-    cat: row.category,
-    name: row.name,
-    addr: row.address,
-    hours: formatHours(row.openTime, row.closeTime, row.closedDays),
-    time: row.openTime ?? "",
-    dur: formatDuration(duration),
-    badge: {
-      text: row.badgeText ?? row.category,
-      variant:
-        (row.badgeVariant as JourneyPlace["badge"]["variant"]) ?? "secondary",
-    },
-    desc: row.description ?? "",
-    coord:
-      row.lat && row.lng
-        ? { lat: Number(row.lat), lng: Number(row.lng) }
-        : null,
-    imageUrl: null,
-    availabilityUncertain: row.availabilityUncertain,
-    estimatedDuration: duration,
-    stayDurationKey: row.stayDurationKey ?? undefined,
-    tags: [],
-  };
-}
 
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
@@ -65,23 +34,25 @@ export function toCompletedCourse(
     date: formatDate(completion.completedAt),
     region: course.region,
     duration: "", // 호출부에서 실제 소요 시간 계산
-    places: places.map((p) => ({ name: p.name, category: p.category })),
+    places: places.map((p) => ({
+      name: p.name,
+      category: p.category,
+      address: p.address,
+      description: p.description ?? "",
+      badge: {
+        text: p.badgeText ?? p.category,
+        variant: (p.badgeVariant as BadgeVariant) ?? "secondary",
+      },
+      availabilityUncertain: p.availabilityUncertain,
+      coord:
+        p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : null,
+    })),
     rating: completion.rating ?? 0,
     review: completion.review ?? "",
   };
 }
 
 // ─── 내부 유틸 ────────────────────────────────────────────────────────────────
-
-function formatHours(
-  open: string | null,
-  close: string | null,
-  closedDays: string[] | null,
-): string {
-  if (!open || !close) return "정보 없음";
-  const days = closedDays?.length ? ` (${closedDays.join("·")} 휴무)` : "";
-  return `${open} ~ ${close}${days}`;
-}
 
 function formatDate(date: Date | null): string {
   if (!date) return "";

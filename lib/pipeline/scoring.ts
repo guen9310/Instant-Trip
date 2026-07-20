@@ -223,7 +223,7 @@ export async function scoreCandidates(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur, stayDurationKey };
+    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur, stayDurationKey, hours: item.hours, restDayNote: item.restDayNote };
   });
 
   scored.sort((a, b) => b.score - a.score);

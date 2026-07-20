@@ -45,7 +45,7 @@ export function NoNearbyView({
           <AlertTriangle size={20} className="text-point shrink-0 mt-0.5" strokeWidth={2} />
           <div>
             <p className="text-[14px] font-bold text-text-primary tracking-tight mb-0.5">
-              근처 코스를 찾지 못했어요
+              근처에서 갈 만한 곳을 찾지 못했어요
             </p>
             <p className="text-[13px] text-text-secondary leading-[1.4]">
               {radiusKm !== null

@@ -126,6 +126,10 @@ export function StartView({ prefs }: { prefs: Prefs }) {
     // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
     recordAbandonedIfAny();
 
+    // 새 코스 생성 — 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다.
+    // 리롤(같은 코스 내 재추천)에서는 이 경로를 타지 않으므로 rejectedPlaceIds가 유지된다.
+    useCourseProgressStore.getState().resetRerolls();
+
     const pending: PendingCourse = {
       courseId: result.courseId,
       place: result.place,
@@ -137,6 +141,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
       region: state.city ?? undefined,
       // 생성 시점 취향 스냅샷 — 결과 화면의 칩·맛집 섹션·재추천이 이 값을 읽는다
       prefs,
+      generatedAt: Date.now(),
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
     router.push("/course/preview");
@@ -291,7 +296,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
           disabled={loading || !city}
           className="gap-2"
         >
-          코스 뽑기 <Shuffle size={16} />
+          어디 갈지 뽑기 <Shuffle size={16} />
         </Button>
       </div>
     </>

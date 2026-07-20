@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, PartyPopper, Trees, Landmark, Bike, MapPin, Loader2 } from "lucide-react";
 import type { ElementType } from "react";
 import { useLocationStore } from "@/client/stores/useLocationStore";
+import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { getHomeDataAction, getHomeDataByRegionAction } from "@/app/actions/home";
 import { generateCourseFromPlaceAction } from "@/app/actions/course";
 import { HomeLocationCard } from "@/components/domains/home/HomeLocationCard";
@@ -78,10 +79,14 @@ export function HomeView() {
       setToastMsg(
         result.code === "NOT_FOUND"
           ? "장소 정보를 찾을 수 없어요. 다른 장소를 선택해주세요."
-          : "코스를 만드는 중 문제가 발생했어요. 다시 시도해주세요.",
+          : "갈 곳을 찾는 중 문제가 생겼어요. 다시 시도해주세요.",
       );
       return;
     }
+
+    // 새 코스 생성 — 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다.
+    // 리롤(같은 코스 내 재추천)에서는 이 경로를 타지 않으므로 rejectedPlaceIds가 유지된다.
+    useCourseProgressStore.getState().resetRerolls();
 
     const pending: PendingCourse = {
       courseId: result.courseId,
@@ -91,6 +96,7 @@ export function HomeView() {
       mapX: lng,
       mapY: lat,
       availability: result.availability,
+      generatedAt: Date.now(),
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
     router.push("/course/preview");

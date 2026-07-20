@@ -26,7 +26,7 @@ export type {
   OnboardingAnswers,
   PlaceOrigin,
 } from "@/lib/pipeline/types";
-export { onboardingToProfile, getSearchRadiusM } from "@/lib/pipeline/types";
+export { getSearchRadiusM } from "@/lib/pipeline/types";
 export { generateCourseFromPlace } from "@/lib/pipeline/selectPlace";
 export type {
   GenerateCourseFromPlaceInput,

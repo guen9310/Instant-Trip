@@ -51,12 +51,6 @@ type GenerateCourseResult =
   | { ok: false; code: "NO_PLACE"; error: string; radiusM: number }
   | { ok: false; code: "UNKNOWN"; error: string };
 
-const COURSE_SUFFIX: Record<Scale, string> = {
-  light:     " 산책",
-  moderate:  " 코스",
-  leisurely: " 하루 코스",
-};
-
 const NEARBY_CAT_CODE: Record<Exclude<NearbyCategory, "all">, NearbyCategoryCode> = {
   cafe:        "CE7",
   convenience: "CS2",
@@ -128,12 +122,12 @@ export async function generateCourseAction(
 
     const courseId = nanoid();
     const place = coursePlaceToJourneyPlace(course.mainPlace);
-    const courseName = course.mainPlace.title + COURSE_SUFFIX[scale];
+    const courseName = course.mainPlace.title;
     const festivals = courseResultToFestivalSummaries(course);
 
     return { ok: true, courseId, place, courseName, festivals };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "코스 생성 중 오류가 발생했습니다.";
+    const message = err instanceof Error ? err.message : "추천 중 오류가 발생했어요.";
     return { ok: false, code: "UNKNOWN", error: message };
   }
 }

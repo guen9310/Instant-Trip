@@ -24,14 +24,16 @@ type StartCoursePayload = {
 
 type StartCourseResult =
   | { ok: true; completionId: string; dbCourseId: string }
-  | { ok: false };
+  // reason: "unauthenticated" — 비로그인 상태. 호출부(CourseResultView)가 이를
+  // 다른 실패(DB 오류 등)와 구분해 로그인 안내로 분기한다.
+  | { ok: false; reason?: "unauthenticated" };
 
 export async function startCourseAction(
   payload: StartCoursePayload,
 ): Promise<StartCourseResult> {
   try {
     const session = await getSession();
-    if (!session?.user) return { ok: false };
+    if (!session?.user) return { ok: false, reason: "unauthenticated" };
 
     const dbCourseId = crypto.randomUUID();
     const completionId = crypto.randomUUID();
@@ -42,7 +44,6 @@ export async function startCourseAction(
         id: dbCourseId,
         name: payload.courseName,
         region: payload.region ?? "알 수 없음",
-        regionCode: payload.region ?? "unknown",
         scale: payload.scale,
       }),
       db.insert(coursePlaces).values({
@@ -66,7 +67,6 @@ export async function startCourseAction(
         userId: session.user.id,
         courseId: dbCourseId,
         status: "active",
-        currentPlaceIndex: 0,
         startedAt: new Date(),
       }),
     ]);
@@ -137,7 +137,6 @@ export async function saveCourseCompletionAction(
         id: courseId,
         name: d.courseName,
         region: d.region ?? "알 수 없음",
-        regionCode: d.region ?? "unknown",
         scale: d.scale,
       }),
       db.insert(coursePlaces).values({
@@ -160,7 +159,6 @@ export async function saveCourseCompletionAction(
         userId: session.user.id,
         courseId,
         status: d.status,
-        currentPlaceIndex: 0,
         rating: d.rating,
         review: d.reactions.length ? d.reactions.join(", ") : null,
         startedAt,

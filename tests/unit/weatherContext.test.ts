@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { kmaToWeatherCondition } from "@/shared/utils/feedContext";
+import { kmaToWeatherCondition } from "@/shared/utils/weatherContext";
 
 describe("kmaToWeatherCondition", () => {
   it("PTY=3(적설) → snow", () => {
