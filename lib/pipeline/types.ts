@@ -29,28 +29,6 @@ export interface UserProfile {
   sigunguCode: string;
 }
 
-export function onboardingToProfile(
-  answers: OnboardingAnswers,
-  location: { mapX: number; mapY: number },
-  scale: TravelScale,
-  areaCode: string,
-  sigunguCode: string,
-): UserProfile {
-  return {
-    tagWeights: {
-      도보친화: answers.걷는거좋아요 ? 1 : 0,
-      "1인여행": answers.혼자여행해요 ? 1 : 0,
-      실내: answers.실내선호해요 ? 1 : 0,
-      조용함: answers.조용한곳좋아요 ? 1 : 0,
-    },
-    preferFood: answers.먹는게중요해요,
-    location,
-    scale,
-    areaCode,
-    sigunguCode,
-  };
-}
-
 // 여행 규모별 설정 — radius: 수집 반경(m)
 export const SCALE_CONFIG: Record<TravelScale, { radius: number }> = {
   가볍게:   { radius: 5000 },
