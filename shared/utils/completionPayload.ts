@@ -41,7 +41,6 @@ export function buildCompletionPayload(args: {
       coord: p.coord,
       stayMin: p.estimatedDuration.min,
       stayMax: p.estimatedDuration.max,
-      stayDurationKey: p.stayDurationKey,
       availabilityUncertain: p.availabilityUncertain,
       description: p.desc,
       badgeText: p.badge.text,

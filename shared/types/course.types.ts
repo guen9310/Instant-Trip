@@ -18,8 +18,6 @@ export type JourneyPlace = {
   imageUrl: string | null;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
-  // 매칭된 체류시간 규칙 key — 완료 기록의 실측 집계 조인 키 (구버전 localStorage엔 없을 수 있음)
-  stayDurationKey?: string;
   tags: string[];
   // 이 장소가 취향 추천(stage4 점수화)으로 왔는지, 홈 근처 카드에서 직접 선택했는지.
   // 구버전 localStorage 페이로드엔 없을 수 있어 optional.

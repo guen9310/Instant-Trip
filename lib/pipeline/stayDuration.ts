@@ -10,7 +10,7 @@ export type StayDurationInput = {
 };
 
 type StayDurationRule = {
-  // 향후 실측 통계(카테고리별 중앙값) 조인 키
+  // 규칙 식별용 라벨(로그·디버깅 용도)
   key: string;
   label: string;
   match: (i: StayDurationInput) => boolean;
@@ -20,8 +20,7 @@ type StayDurationRule = {
 // 기본 범위 — 분류 코드가 어느 규칙에도 매칭되지 않는 장소(역사유적·랜드마크 등)
 export const STAY_DURATION_DEFAULT: DurationRange = { min: 60, max: 120 };
 
-// 카테고리별 예상 체류시간 범위(분). TourAPI에 실데이터가 없어 카테고리 상수로 시작하고,
-// course_completions 실측이 쌓이면 key 기준으로 중앙값 통계로 교체한다.
+// 카테고리별 예상 체류시간 범위(분). TourAPI에 실데이터가 없어 카테고리 상수로 추정한다.
 // 순서가 우선순위다: kakao 출처 먼저, 그다음 구체적인 코드(긴 prefix) 먼저.
 export const STAY_DURATION_TABLE: StayDurationRule[] = [
   {
@@ -88,11 +87,10 @@ export const STAY_DURATION_TABLE: StayDurationRule[] = [
   },
 ];
 
-// 미매칭 장소의 조인 키 — 실측 집계에서 default 통으로 묶인다.
+// 미매칭 장소의 규칙 식별자
 export const STAY_DURATION_DEFAULT_KEY = "default";
 
 // 매칭된 규칙의 key와 범위를 함께 반환한다.
-// key는 완료 기록(course_places.stay_duration_key)에 저장되어 실측 집계의 조인 키가 된다.
 export function matchStayDurationRule(input: StayDurationInput): {
   key: string;
   range: DurationRange;

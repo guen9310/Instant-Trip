@@ -24,7 +24,6 @@ const pending: Partial<PendingCourse> = {
     imageUrl: null,
     availabilityUncertain: false,
     estimatedDuration: { min: 30, max: 60 },
-    stayDurationKey: "lcls2:VE03",
     tags: [],
   },
 };
@@ -44,7 +43,6 @@ describe("buildCompletionPayload", () => {
     const parsed = courseCompletionSchema.safeParse(payload);
     expect(parsed.success).toBe(true);
     if (parsed.success) {
-      expect(parsed.data.place.stayDurationKey).toBe("lcls2:VE03");
       expect(parsed.data.stamps).toHaveLength(1);
     }
   });

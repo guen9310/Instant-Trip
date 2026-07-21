@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import { getSession } from "@/server/session";
@@ -56,7 +56,6 @@ export async function startCourseAction(
         lng: place.coord ? String(place.coord.lng) : null,
         stayMin: place.estimatedDuration.min,
         stayMax: place.estimatedDuration.max,
-        stayDurationKey: place.stayDurationKey ?? null,
         availabilityUncertain: place.availabilityUncertain,
         description: place.desc || null,
         badgeText: place.badge.text || null,
@@ -119,11 +118,6 @@ export async function saveCourseCompletionAction(
           ),
         );
 
-      // TODO 3: 평점 집계
-      if (d.rating != null) {
-        await updateCourseRating(d.dbCourseId);
-      }
-
       return { ok: true };
     }
 
@@ -149,7 +143,6 @@ export async function saveCourseCompletionAction(
         lng: d.place.coord ? String(d.place.coord.lng) : null,
         stayMin: d.place.stayMin,
         stayMax: d.place.stayMax,
-        stayDurationKey: d.place.stayDurationKey ?? null,
         availabilityUncertain: d.place.availabilityUncertain,
         description: d.place.description || null,
         badgeText: d.place.badgeText || null,
@@ -168,41 +161,9 @@ export async function saveCourseCompletionAction(
       }),
     ]);
 
-    if (d.rating != null) {
-      await updateCourseRating(courseId);
-    }
-
     return { ok: true };
   } catch (err) {
     console.error("[completion] 저장 실패:", err);
     return { ok: false };
-  }
-}
-
-// ─── TODO 3: courses.rating_avg / review_count 집계 갱신 ──────────────────────
-// 해당 course의 완료 기록에서 평점이 있는 행을 모두 읽어 평균·건수를 재산출한다.
-async function updateCourseRating(courseId: string): Promise<void> {
-  try {
-    const rows = await db
-      .select({ rating: courseCompletions.rating })
-      .from(courseCompletions)
-      .where(
-        and(
-          eq(courseCompletions.courseId, courseId),
-          isNotNull(courseCompletions.rating),
-        ),
-      );
-
-    if (rows.length === 0) return;
-
-    const sum = rows.reduce((acc, r) => acc + (r.rating ?? 0), 0);
-    const ratingAvg = (sum / rows.length).toFixed(2);
-
-    await db
-      .update(courses)
-      .set({ ratingAvg, reviewCount: rows.length })
-      .where(eq(courses.id, courseId));
-  } catch (err) {
-    console.error("[rating] 집계 실패:", err);
   }
 }
