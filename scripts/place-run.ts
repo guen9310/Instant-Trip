@@ -59,7 +59,7 @@ async function main() {
   console.log(`  origin: ${mainPlace.origin}`);
   console.log(`  tags: ${mainPlace.tags.length ? mainPlace.tags.join(", ") : "(없음)"}`);
   console.log(`  이미지: ${mainPlace.images.length}장 | 개요: ${mainPlace.overview ? mainPlace.overview.length + "자" : "없음"}`);
-  console.log(`  예상 체류: ${mainPlace.estimatedDuration.min}~${mainPlace.estimatedDuration.max}분 (key=${mainPlace.stayDurationKey})`);
+  console.log(`  예상 체류: ${mainPlace.estimatedDuration.min}~${mainPlace.estimatedDuration.max}분`);
 
   sep("가용성 (availability)");
   console.log(`  isOpenNow: ${availability.isOpenNow === null ? "null (판단 불가)" : availability.isOpenNow}`);

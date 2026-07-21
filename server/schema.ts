@@ -90,9 +90,6 @@ export const courses = pgTable(
     name: text("name").notNull(),
     region: text("region").notNull(),       // '서울 마포구' (화면 표시용)
     scale: text("scale").notNull(),         // 'light' | 'moderate' | 'leisurely'
-    // 집계 (리뷰 제출 시 트랜잭션으로 갱신)
-    ratingAvg: numeric("rating_avg", { precision: 3, scale: 2 }).notNull().default("0"),
-    reviewCount: integer("review_count").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
 )
@@ -112,8 +109,6 @@ export const coursePlaces = pgTable(
     lng: numeric("lng", { precision: 10, scale: 7 }),
     stayMin: smallint("stay_min").notNull(), // 예상 체류 하한(분)
     stayMax: smallint("stay_max").notNull(), // 예상 체류 상한(분)
-    // 체류시간 규칙 조인 키 (lib/pipeline/stayDuration.ts의 rule.key). 실측 집계용
-    stayDurationKey: text("stay_duration_key"),
     // 휴무 데이터 불확실 플래그(stage2). 실시간 경로(lib/tour/mappers.ts)와 동일하게 보존한다.
     availabilityUncertain: boolean("availability_uncertain").notNull().default(false),
     description: text("description"),

@@ -57,8 +57,6 @@ export interface PlaceCandidate {
   available: boolean;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
-  // 매칭된 체류시간 규칙의 key — 완료 기록에 저장되어 실측 집계의 조인 키가 된다
-  stayDurationKey: string;
   // detailIntro2 usetime/restdate 원문 — CoursePlace.hours 합성 입력.
   // 배치 필터(filterByAvailability) 경로에서만 채워진다.
   hours?: string | null;
@@ -82,7 +80,6 @@ export interface CoursePlace {
   score: number;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
-  stayDurationKey: string;
   origin: PlaceOrigin;
   // usetime/restdate 원문을 합성한 표시용 문자열. 데이터 없으면 "".
   hours: string;

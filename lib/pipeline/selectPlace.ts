@@ -1,7 +1,7 @@
 import { fetchDetail, buildCoursePlace } from "@/lib/pipeline/course";
 import { checkPlaceAvailability } from "@/lib/pipeline/availability";
 import { applyMappingRules } from "@/lib/pipeline/scoring";
-import { matchStayDurationRule } from "@/lib/pipeline/stayDuration";
+import { estimateStayDuration } from "@/lib/pipeline/stayDuration";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import type { TourItem } from "@/lib/tour/types";
@@ -99,8 +99,7 @@ export async function generateCourseFromPlace(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    const { key: stayDurationKey, range: estimatedDuration } =
-      matchStayDurationRule(item);
+    const estimatedDuration = estimateStayDuration(item);
 
     const candidate: PlaceCandidate = {
       item,
@@ -111,7 +110,6 @@ export async function generateCourseFromPlace(
       available: true,
       availabilityUncertain: availabilityCheck.uncertain,
       estimatedDuration,
-      stayDurationKey,
       hours: availabilityCheck.hours,
       restDayNote: availabilityCheck.restDayNote,
     };

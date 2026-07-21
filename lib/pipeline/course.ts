@@ -165,7 +165,6 @@ export async function buildCoursePlace(
       score: candidate.score,
       availabilityUncertain: candidate.availabilityUncertain,
       estimatedDuration: candidate.estimatedDuration,
-      stayDurationKey: candidate.stayDurationKey,
       origin,
       hours: "",
     };
@@ -197,7 +196,6 @@ export async function buildCoursePlace(
     score: candidate.score,
     availabilityUncertain: candidate.availabilityUncertain,
     estimatedDuration: candidate.estimatedDuration,
-    stayDurationKey: candidate.stayDurationKey,
     origin,
     hours: synthesizeHours(candidate.hours, candidate.restDayNote),
   };

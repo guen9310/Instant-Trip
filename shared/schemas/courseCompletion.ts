@@ -19,8 +19,6 @@ export const courseCompletionSchema = z.object({
       coord: z.object({ lat: z.number(), lng: z.number() }).nullable(),
       stayMin: z.number().int().positive(),
       stayMax: z.number().int().positive(),
-      // 체류시간 규칙 조인 키 (구버전 localStorage 페이로드엔 없을 수 있음)
-      stayDurationKey: z.string().optional(),
       availabilityUncertain: z.boolean().default(false),
       description: z.string().default(""),
       badgeText: z.string().default(""),
