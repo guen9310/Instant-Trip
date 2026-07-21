@@ -78,7 +78,6 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     imageUrl: p.images?.[0] ?? null,
     availabilityUncertain: p.availabilityUncertain,
     estimatedDuration: p.estimatedDuration,
-    stayDurationKey: p.stayDurationKey,
     tags: p.tags,
     origin: p.origin,
   };

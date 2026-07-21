@@ -10,7 +10,7 @@ import { SCALE_CONFIG } from "@/lib/pipeline/types";
 import type { DurationRange } from "@/shared/utils/duration";
 import { getKstHour } from "@/shared/utils/kst";
 import { haversineKm } from "@/shared/utils/geo";
-import { matchStayDurationRule } from "@/lib/pipeline/stayDuration";
+import { estimateStayDuration } from "@/lib/pipeline/stayDuration";
 
 const TYPE_LABEL: Record<string, string> = {
   "12": "관광지",
@@ -194,7 +194,7 @@ export async function scoreCandidates(
     const distanceBonus = calcDistanceBonus(item, profile);
     const timeBonus = calcTimeBonus(item);
     const budget = TIME_BUDGET[profile.scale];
-    const { key: stayDurationKey, range: dur } = matchStayDurationRule({
+    const dur = estimateStayDuration({
       lclsSystm1: item.lclsSystm1,
       lclsSystm2: item.lclsSystm2,
       lclsSystm3: item.lclsSystm3,
@@ -223,7 +223,7 @@ export async function scoreCandidates(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur, stayDurationKey, hours: item.hours, restDayNote: item.restDayNote };
+    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur, hours: item.hours, restDayNote: item.restDayNote };
   });
 
   scored.sort((a, b) => b.score - a.score);
