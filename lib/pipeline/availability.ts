@@ -16,7 +16,7 @@ export type AvailableItem = TourItem & {
   hours: string | null;
   restDayNote: string | null;
 };
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 20;
 
 type IntroItem =
   | TourDetailIntroAttraction
@@ -388,6 +388,7 @@ export async function checkPlaceAvailability(
     intro = cachedIntro;
     console.log(`${logPrefix} → 캐시 HIT`);
   } else {
+    console.log(`${logPrefix} → detailIntro2 API 호출`);
     try {
       const data = await tourFetch<IntroItem>(ENDPOINTS.DETAIL_INTRO, {
         contentId: item.contentid,
@@ -462,10 +463,20 @@ export async function checkPlaceAvailability(
   };
 }
 
-// [stage2] stage1에서 수집한 장소 중 현재 시각에 운영 중인 곳만 통과시킨다.
+// [레거시/진단용] stage1에서 수집한 장소 전부에 대해 운영 중인 곳만 배치로 걸러낸다.
+//
+// 프로덕션 `generateCourse`(lib/pipeline/index.ts)는 더 이상 이 함수를 호출하지 않는다 —
+// 점수화(stage4)가 운영시간 데이터를 전혀 쓰지 않는다는 게 확인되어, "전수 배치 검사 후
+// 점수화" 대신 "점수화 후 순위 순으로 하나씩만 검사"하는 `availabilityGate.ts`의
+// `selectAvailableCandidate`로 대체됐다(TourAPI 일일 호출 한도 절감 목적). 이 함수는
+// `tests/unit/pipeline-diagnostic.test.ts`(CI 제외, 수동 진단용) 전용으로 남겨둔다.
 //
 // - detailIntro2 API로 각 장소의 운영시간(usetime)과 휴무일(restdate)을 조회한다.
-// - 10개씩 배치로 묶어 Promise.all로 병렬 처리해서 속도를 높인다.
+// - BATCH_SIZE개씩 배치로 묶어 Promise.all로 병렬 처리한다.
+//   (배치 경계 없는 동시성 워커 풀도 시도했으나, TourAPI에 지속적으로 최대 동시
+//   요청을 유지하자 타임아웃이 118건 중 50건까지 폭증했다 — 배치의 "가장 느린
+//   항목을 기다리는" 비효율이 의도치 않게 TourAPI에 숨 고를 틈을 주고 있었다.
+//   배치 방식이 이론상 덜 효율적이지만 이 API엔 이쪽이 실측상 더 안정적이다.)
 // - 행사(contenttypeid=15)는 운영시간 개념이 없으므로 이 단계를 건너뛰고 stage3에서 처리한다.
 // - API 실패 시에도 해당 장소를 통과시킨다 (코스 생성이 멈추는 것보다 낫다).
 // - 반환값: 운영 중으로 판단된 AvailableItem 배열 (availabilityUncertain 플래그 포함)
@@ -507,7 +518,7 @@ export async function filterByAvailability(
     return null;
   };
 
-  // BATCH_SIZE(10)개씩 끊어서 병렬 처리한다.
+  // BATCH_SIZE개씩 끊어서 병렬 처리한다.
   // 한꺼번에 전부 병렬 처리하면 API 레이트 리밋에 걸릴 수 있어서 배치로 나눈다.
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const batch = items.slice(i, i + BATCH_SIZE);

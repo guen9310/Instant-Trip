@@ -3,7 +3,9 @@ import { fetchCourseKakao } from "@/lib/clients/kakao-local";
 import type { KakaoPlaceTagged } from "@/lib/clients/kakao-local";
 import { haversineKm } from "@/shared/utils/geo";
 
-// 가용 TourAPI 후보가 이 값 미만일 때만 카카오 보충 발동 (scale='가볍게' 조건과 AND)
+// stage1에서 수집한 TourAPI 원본 후보 수가 이 값 미만일 때만 카카오 보충 발동
+// (scale='가볍게' 조건과 AND). 가용성(운영시간) 통과 여부와는 무관 — stage2가
+// stage4 이후로 밀려나면서(availabilityGate.ts) 가용 통과분을 미리 알 수 없기 때문.
 export const KAKAO_SUPPLEMENT_MIN = 5;
 
 // 중복 판정 거리 임계값 — TourAPI 후보 50m 이내 Kakao 후보는 드롭
@@ -73,10 +75,10 @@ export async function collectKakaoCandidates(
   return items;
 }
 
-// 파이프라인 배선용 — stage2 통과 TourAPI 후보에 카카오 후보를 보충
-// 두 조건 모두 충족 시 발동: scale='가볍게' AND tourAvailable.length < KAKAO_SUPPLEMENT_MIN
+// 파이프라인 배선용 — stage1 원본 TourAPI 후보(가용성 검사 이전)에 카카오 후보를 보충
+// 두 조건 모두 충족 시 발동: scale='가볍게' AND tourPool.length < KAKAO_SUPPLEMENT_MIN
 export async function supplementWithKakao(
-  tourAvailable: TourItem[],
+  tourPool: TourItem[],
   lat: number,
   lng: number,
   radiusM: number,
@@ -103,7 +105,7 @@ export async function supplementWithKakao(
     const kLng = parseFloat(kakao.mapx);
     if (isNaN(kLat) || isNaN(kLng)) return false;
 
-    for (const tour of tourAvailable) {
+    for (const tour of tourPool) {
       const tLat = parseFloat(tour.mapy);
       const tLng = parseFloat(tour.mapx);
       if (isNaN(tLat) || isNaN(tLng)) continue;
@@ -118,11 +120,11 @@ export async function supplementWithKakao(
   const parkFinal = dedupedKakao.length;
 
   console.log(
-    `[보충] 발동 (가용 ${tourAvailable.length}<${KAKAO_SUPPLEMENT_MIN})` +
+    `[보충] 발동 (수집 ${tourPool.length}<${KAKAO_SUPPLEMENT_MIN})` +
     ` → 공원키워드 ${rawCounts.parkKeyword}건,` +
     ` 좌표중복 ${coordDupCount}건 제거,` +
-    ` 최종 tour:${tourAvailable.length}/공원:${parkFinal}`,
+    ` 최종 tour:${tourPool.length}/공원:${parkFinal}`,
   );
 
-  return [...tourAvailable, ...dedupedKakao];
+  return [...tourPool, ...dedupedKakao];
 }
