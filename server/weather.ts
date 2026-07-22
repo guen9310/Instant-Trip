@@ -1,4 +1,6 @@
 import type { WeatherItem, GridXY } from "@/shared/types/weather.types";
+import { getCached, setCached, setCachedEmpty, CACHE_EMPTY } from "@/lib/cache/dbCache";
+import { TTL } from "@/lib/cache/ttl";
 
 export type { WeatherItem, GridXY };
 
@@ -272,15 +274,36 @@ export async function getUltraSrtNcst(
   ny: number,
   now: Date = new Date(),
 ): Promise<WeatherItem[]> {
+  const { base_date, base_time } = getNcstBaseTime(now);
+  // 5km 격자(nx, ny) + 발표시각 단위 캐시 — 같은 격자 안 모든 사용자가 같은 시간대엔
+  // 동일한 실황값을 받으므로, 사용자별이 아니라 격자별로 캐시한다.
+  const cacheKey = `weather:ncst:${nx}:${ny}:${base_date}:${base_time}`;
+
+  const cached = await getCached<WeatherItem[]>(cacheKey);
+  if (cached === CACHE_EMPTY) {
+    console.log(`[weather] 캐시 EMPTY — nx=${nx} ny=${ny} (${base_time})`);
+    return [];
+  }
+  if (cached !== null) {
+    console.log(`[weather] 캐시 HIT — nx=${nx} ny=${ny} (${base_time})`);
+    return cached;
+  }
+
   try {
-    const { base_date, base_time } = getNcstBaseTime(now);
     const data = await weatherFetch<WeatherItem>("getUltraSrtNcst", {
       nx,
       ny,
       base_date,
       base_time,
     });
-    return extractWeatherItems(data);
+    const items = extractWeatherItems(data);
+    if (items.length === 0) {
+      await setCachedEmpty(cacheKey, TTL.WEATHER_NCST);
+    } else {
+      await setCached(cacheKey, items, TTL.WEATHER_NCST);
+    }
+    console.log(`[weather] nx=${nx} ny=${ny} (${base_time}) → ${items.length}건`);
+    return items;
   } catch {
     return [];
   }

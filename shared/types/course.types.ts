@@ -64,7 +64,6 @@ export type PendingCourse = {
   mapX?: number;
   mapY?: number;
   scale?: string;
-  region?: string; // 출발 지역 표시명 (예: '서울 마포구') — 완료 기록 저장용
   // 생성 시점 취향 스냅샷 — 결과 화면 표시·재추천용. "이 코스가 어떤 취향으로
   // 만들어졌나"를 보존한다 (구버전 localStorage 페이로드엔 없을 수 있음)
   prefs?: Prefs;
@@ -81,7 +80,6 @@ export type PendingCourse = {
 // 프로필 — 진행 중인 코스 상태
 export type CourseProgress = {
   name: string;
-  region: string;
   courseId: string;
 };
 
@@ -90,7 +88,6 @@ export type CompletedCourse = {
   id: string;
   name: string;
   date: string;
-  region: string;
   duration: string;
   places: {
     name: string;

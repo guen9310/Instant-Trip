@@ -59,7 +59,7 @@ export function HomeView() {
     return () => clearTimeout(timer);
   }, [toastMsg]);
 
-  // 홈 근처 장소 카드 탭 → 시트 없이 바로 코스 생성 후 프리뷰로 이동
+  // 홈 지역 인기 장소 카드 탭 → 시트 없이 바로 코스 생성 후 프리뷰로 이동
   const handleSelectPlace = async (place: TourItem) => {
     if (startingId) return;
     setStartingId(place.contentid);
@@ -197,11 +197,12 @@ export function HomeView() {
             <FestivalSection festivals={allFestivals} />
           )}
 
-          {/* 4. 근처 장소 목록 */}
+          {/* 4. 지역 인기 장소 목록 — 거리순이 아니라 시/도 단위 카테고리별 인기순 top10 */}
           {!placesError && (
             <PlacesSection
               places={filteredPlaces}
               hasPlaces={(homeData?.places ?? []).length > 0}
+              regionName={homeData?.region?.name}
               filter={filter}
               onFilter={setFilter}
               startingId={startingId}
@@ -306,6 +307,7 @@ function FestivalSection({ festivals }: { festivals: FestivalSummary[] }) {
 function PlacesSection({
   places,
   hasPlaces,
+  regionName,
   filter,
   onFilter,
   startingId,
@@ -313,6 +315,7 @@ function PlacesSection({
 }: {
   places: TourItem[];
   hasPlaces: boolean;
+  regionName?: string | null;
   filter: FilterChip;
   onFilter: (chip: FilterChip) => void;
   startingId: string | null;
@@ -323,7 +326,7 @@ function PlacesSection({
   return (
     <section>
       <h2 className="text-[15px] font-bold text-text-primary tracking-tight mb-3">
-        근처 장소
+        {regionName ? `${regionName}에서 인기예요` : "인기예요"}
       </h2>
 
       {/* 필터 칩 */}

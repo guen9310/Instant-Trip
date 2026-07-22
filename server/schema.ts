@@ -1,7 +1,6 @@
 import {
   boolean,
   index,
-  integer,
   jsonb,
   numeric,
   pgTable,
@@ -88,7 +87,6 @@ export const courses = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
-    region: text("region").notNull(),       // '서울 마포구' (화면 표시용)
     scale: text("scale").notNull(),         // 'light' | 'moderate' | 'leisurely'
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
@@ -136,10 +134,6 @@ export const courseCompletions = pgTable(
     review: text("review"),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     completedAt: timestamp("completed_at"),
-    // 출발지→장소 직선거리(m). 이동시간 추정용 — 좌표 원본은 저장하지 않는다
-    travelDistM: integer("travel_dist_m"),
-    // 위치 도장: [{t: epoch ms, distM: 장소와의 거리 m}]. 진행 화면 재개/제스처/완료 시 기록
-    locationStamps: jsonb("location_stamps").$type<{ t: number; distM: number }[]>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

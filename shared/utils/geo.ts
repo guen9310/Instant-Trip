@@ -15,13 +15,3 @@ export function haversineKm(
       Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
-// 두 좌표 사이의 거리를 미터 정수로 계산한다. 측정 기록(이동 거리, 위치 도장)용.
-export function haversineM(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
-  return Math.round(haversineKm(lat1, lng1, lat2, lng2) * 1000);
-}

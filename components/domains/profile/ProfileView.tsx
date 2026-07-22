@@ -26,7 +26,6 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
   const [selected, setSelected] = useState<CompletedCourse | null>(null);
   const reexploration = buildReexplorationText(prefs);
 
-  const totalRegions = new Set(completed.map((c) => c.region)).size;
   const isNewUser = inProgress === null && completed.length === 0;
 
   return (
@@ -55,21 +54,11 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
       </div>
 
       {/* 통계 */}
-      <div className="mb-6 grid grid-cols-2 gap-2.5">
-        {[
-          { label: "완료한 외출", value: completed.length },
-          { label: "방문한 지역", value: totalRegions },
-        ].map(({ label, value }) => (
-          <div
-            key={label}
-            className="rounded-xl border border-border bg-card px-4 py-3"
-          >
-            <p className="text-[12px] text-text-secondary">{label}</p>
-            <p className="mt-1 text-[22px] font-bold text-text-primary tabular-nums">
-              {value}
-            </p>
-          </div>
-        ))}
+      <div className="mb-6 rounded-xl border border-border bg-card px-4 py-3">
+        <p className="text-[12px] text-text-secondary">완료한 외출</p>
+        <p className="mt-1 text-[22px] font-bold text-text-primary tabular-nums">
+          {completed.length}
+        </p>
       </div>
 
       {/* 신규 사용자 — 두 섹션을 하나의 온보딩 블록으로 통합 */}
@@ -105,15 +94,12 @@ export function ProfileView({ user, prefs, inProgress, completed }: Props) {
               )}
             >
               <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <span className="text-[14px] font-semibold text-text-primary">
                     {inProgress.name}
                   </span>
                   <Badge variant="secondary">진행 중</Badge>
                 </div>
-                <p className="text-[12px] text-text-secondary">
-                  {inProgress.region}
-                </p>
               </div>
               <Link
                 href={`/course/active/${inProgress.courseId}`}

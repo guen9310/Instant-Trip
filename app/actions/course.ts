@@ -151,7 +151,7 @@ type GenerateCourseFromPlaceActionResult =
   | { ok: false; code: "NOT_FOUND"; error: string }
   | { ok: false; code: "UNKNOWN"; error: string };
 
-// 홈 근처 장소 카드에서 사용자가 직접 고른 장소로 코스를 만든다 (7-A 데이터 층).
+// 홈 지역 인기 장소 카드에서 사용자가 직접 고른 장소로 코스를 만든다 (7-A 데이터 층).
 // generateCourseAction과 동일한 반환 형태(courseId/place/courseName/festivals)를
 // 유지해 프리뷰 화면(CourseResultView)을 그대로 재사용할 수 있게 하고, availability를
 // 추가로 얹는다. place.origin="selected"로 진입 경로를 구분한다.

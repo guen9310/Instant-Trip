@@ -54,7 +54,7 @@
 | Kakao Local API               | 후보 부족 시 공원 보충, 외출 진행 중 근처 카페·식당·약국·주차장 검색 |
 | Kakao 지도 JS SDK (Map)       | 외출 추천 결과 화면의 장소 지도 미리보기                 |
 | Kakao 지도 JS SDK (Places)    | 근처 맛집 섹션 (음식 선호 취향 선택 시)                  |
-| Nominatim (OpenStreetMap)     | 위치 권한 승인 시 좌표 → 주소 역지오코딩                 |
+| 국토교통부 브이월드 지오코더  | 위치 권한 승인 시 좌표 → 주소 역지오코딩                 |
 | 기상청 getUltraSrtNcst        | 홈 화면 날씨 정보 표시 (초단기실황)                      |
 
 ## 📱 화면 구조
@@ -193,6 +193,7 @@ TOUR_API_BASE_URL=     # TourAPI 베이스 URL (선택, 기본값 있음)
 KAKAO_REST_KEY=        # Kakao REST API 키 (Local API)
 NEXT_PUBLIC_KAKAO_KEY= # Kakao 지도 SDK 앱 키
 WEATHER_API_KEY=       # 기상청 API 인증 키
+VWORLD_KEY=            # 국토교통부 브이월드 지오코더 API 인증 키
 CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
 ```
 

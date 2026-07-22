@@ -18,7 +18,6 @@ import type { JourneyPlace } from "@/shared/types/course.types";
 type StartCoursePayload = {
   courseName: string;
   scale: string;
-  region?: string;
   place: JourneyPlace;
 };
 
@@ -43,7 +42,6 @@ export async function startCourseAction(
       db.insert(courses).values({
         id: dbCourseId,
         name: payload.courseName,
-        region: payload.region ?? "알 수 없음",
         scale: payload.scale,
       }),
       db.insert(coursePlaces).values({
@@ -108,8 +106,6 @@ export async function saveCourseCompletionAction(
           review: d.reactions.length ? d.reactions.join(", ") : null,
           startedAt,
           completedAt,
-          travelDistM: d.travelDistM,
-          locationStamps: d.stamps.length ? d.stamps : null,
         })
         .where(
           and(
@@ -130,7 +126,6 @@ export async function saveCourseCompletionAction(
       db.insert(courses).values({
         id: courseId,
         name: d.courseName,
-        region: d.region ?? "알 수 없음",
         scale: d.scale,
       }),
       db.insert(coursePlaces).values({
@@ -156,8 +151,6 @@ export async function saveCourseCompletionAction(
         review: d.reactions.length ? d.reactions.join(", ") : null,
         startedAt,
         completedAt,
-        travelDistM: d.travelDistM,
-        locationStamps: d.stamps.length ? d.stamps : null,
       }),
     ]);
 

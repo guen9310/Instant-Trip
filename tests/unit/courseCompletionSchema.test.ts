@@ -6,7 +6,6 @@ import {
 
 const validPayload: CourseCompletionPayload = {
   courseName: "한적한 오후 산책",
-  region: "울산 남구",
   scale: "light",
   place: {
     name: "울산대공원",
@@ -90,28 +89,5 @@ describe("courseCompletionSchema", () => {
       rating: null,
     });
     expect(result.success).toBe(true);
-  });
-
-  it("위치 도장 배열을 검증한다 — 음수 거리는 거부", () => {
-    const ok = courseCompletionSchema.safeParse({
-      ...validPayload,
-      stamps: [{ t: 1750001000000, distM: 45 }],
-    });
-    expect(ok.success).toBe(true);
-
-    const bad = courseCompletionSchema.safeParse({
-      ...validPayload,
-      stamps: [{ t: 1750001000000, distM: -5 }],
-    });
-    expect(bad.success).toBe(false);
-  });
-
-  it("travelDistM/stamps 누락 시 null/[]로 기본값 처리한다", () => {
-    const result = courseCompletionSchema.safeParse(validPayload);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.travelDistM).toBeNull();
-      expect(result.data.stamps).toEqual([]);
-    }
   });
 });
