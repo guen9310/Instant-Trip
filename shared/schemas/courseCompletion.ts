@@ -4,7 +4,6 @@ import { z } from "zod";
 // 타임스탬프만 서버로 보낸다. 검증 실패는 저장 skip일 뿐 완료 UX를 막지 않는다.
 export const courseCompletionSchema = z.object({
   courseName: z.string().min(1),
-  region: z.string().optional(),
   scale: z.enum(["light", "moderate", "leisurely"]).default("moderate"),
   // completed = 완료 버튼, abandoned = 새 코스 시작으로 이전 코스 포기가 확정된 경우
   status: z.enum(["completed", "abandoned"]).default("completed"),
@@ -31,13 +30,6 @@ export const courseCompletionSchema = z.object({
   completedAt: z.number().int().positive().nullable(), // epoch ms
   rating: z.number().int().min(1).max(5).nullable(),
   reactions: z.array(z.string()).max(10).default([]),
-  // 출발지→장소 직선거리(m)
-  travelDistM: z.number().int().nonnegative().nullable().default(null),
-  // 위치 도장: 진행 화면 재개/완료 순간의 (시각, 장소와의 거리 m)
-  stamps: z
-    .array(z.object({ t: z.number().int().positive(), distM: z.number().int().nonnegative() }))
-    .max(100)
-    .default([]),
 });
 
 export type CourseCompletionPayload = z.input<typeof courseCompletionSchema>;

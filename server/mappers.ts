@@ -18,7 +18,6 @@ export function toCourseProgress(
 ): CourseProgress {
   return {
     name: course.name,
-    region: course.region,
     courseId: course.id,
   };
 }
@@ -32,7 +31,6 @@ export function toCompletedCourse(
     id: completion.id,
     name: course.name,
     date: formatDate(completion.completedAt),
-    region: course.region,
     duration: "", // 호출부에서 실제 소요 시간 계산
     places: places.map((p) => ({
       name: p.name,

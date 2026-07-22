@@ -145,14 +145,14 @@ describe("A1: 권한 허용 흐름 — 홈 섹션 구조", () => {
     });
   });
 
-  it("데이터 로드 후 '근처 장소' 섹션과 필터 칩이 렌더된다", async () => {
+  it("데이터 로드 후 '울산에서 인기예요' 섹션과 필터 칩이 렌더된다", async () => {
     mockStore.state = GEO_STATE;
     mockGetHomeDataAction.mockResolvedValue(makeHomeData());
 
     renderWithClient(<HomeView />);
 
     await waitFor(() => {
-      expect(screen.getByText("근처 장소")).toBeInTheDocument();
+      expect(screen.getByText("울산에서 인기예요")).toBeInTheDocument();
     });
     // 필터 칩 4종
     expect(screen.getByRole("button", { name: "전체" })).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe("A1: 권한 허용 흐름 — 홈 섹션 구조", () => {
     const user = userEvent.setup();
     renderWithClient(<HomeView />);
 
-    await waitFor(() => expect(screen.getByText("근처 장소")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("울산에서 인기예요")).toBeInTheDocument());
 
     const chipTourist = screen.getByRole("button", { name: "관광지" });
     await user.click(chipTourist);
@@ -201,7 +201,7 @@ describe("A2: 축제 0건 — FestivalSection DOM 부재 검증 (제주 기준)"
 
     await waitFor(() => {
       // 장소 섹션이 로드됐으면 데이터 도착한 것
-      expect(screen.getByText("근처 장소")).toBeInTheDocument();
+      expect(screen.getByText("제주에서 인기예요")).toBeInTheDocument();
     });
 
     // 축제 섹션 헤더가 DOM에 전혀 없음을 확인
@@ -226,7 +226,7 @@ describe("A2: 축제 0건 — FestivalSection DOM 부재 검증 (제주 기준)"
 
     renderWithClient(<HomeView />);
 
-    await waitFor(() => expect(screen.getByText("근처 장소")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("제주에서 인기예요")).toBeInTheDocument());
     expect(screen.queryByText("주변 축제")).not.toBeInTheDocument();
   });
 });
@@ -303,7 +303,7 @@ describe("A4: 근처 장소 카드 탭 — 시트 없이 프리뷰 직행", () =
     const user = userEvent.setup();
     renderWithClient(<HomeView />);
 
-    await waitFor(() => expect(screen.getByText("근처 장소")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("울산에서 인기예요")).toBeInTheDocument());
 
     const card = screen.getByText("관광지 1").closest("button")!;
     await user.click(card);

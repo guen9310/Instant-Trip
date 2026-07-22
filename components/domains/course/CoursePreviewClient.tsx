@@ -42,7 +42,6 @@ export function CoursePreviewClient({ isAuthenticated }: Props) {
       mapX={course.mapX}
       mapY={course.mapY}
       scale={course.scale}
-      region={course.region}
       prefs={course.prefs}
       availability={course.availability}
       generatedAt={course.generatedAt}

@@ -6,10 +6,7 @@ import type { PendingCourse } from "@/shared/types/course.types";
 const pending: Partial<PendingCourse> = {
   courseId: "abc123",
   courseName: "한적한 오후 산책",
-  region: "울산 남구",
   scale: "light",
-  mapX: 129.3114, // 출발지 경도
-  mapY: 35.5384, // 출발지 위도
   place: {
     id: "p1",
     cat: "도시공원",
@@ -20,7 +17,7 @@ const pending: Partial<PendingCourse> = {
     dur: "30분~1시간 정도",
     badge: { text: "공원", variant: "secondary" },
     desc: "도심 속 대형 공원",
-    coord: { lat: 35.552, lng: 129.32 }, // 출발지에서 약 1.7km
+    coord: { lat: 35.552, lng: 129.32 },
     imageUrl: null,
     availabilityUncertain: false,
     estimatedDuration: { min: 30, max: 60 },
@@ -37,36 +34,10 @@ describe("buildCompletionPayload", () => {
       completedAt: 1750003600000,
       rating: 4,
       reactions: ["조용해요"],
-      stamps: [{ t: 1750001000000, distM: 45 }],
     });
     expect(payload).not.toBeNull();
     const parsed = courseCompletionSchema.safeParse(payload);
     expect(parsed.success).toBe(true);
-    if (parsed.success) {
-      expect(parsed.data.stamps).toHaveLength(1);
-    }
-  });
-
-  it("출발 좌표와 장소 좌표로 이동 거리(m)를 계산한다", () => {
-    const payload = buildCompletionPayload({
-      pending,
-      status: "completed",
-      startedAt: null,
-      completedAt: null,
-    });
-    // (35.5384,129.3114) → (35.552,129.32): 약 1.7km
-    expect(payload?.travelDistM).toBeGreaterThan(1500);
-    expect(payload?.travelDistM).toBeLessThan(2000);
-  });
-
-  it("좌표가 없으면 travelDistM은 null", () => {
-    const payload = buildCompletionPayload({
-      pending: { ...pending, mapX: undefined, mapY: undefined },
-      status: "completed",
-      startedAt: null,
-      completedAt: null,
-    });
-    expect(payload?.travelDistM).toBeNull();
   });
 
   it("estimatedDuration 없는 장소(구버전/mock)는 null — 기록하지 않는다", () => {

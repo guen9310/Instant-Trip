@@ -33,11 +33,11 @@ export type GenerateCourseFromPlaceResult =
   | { ok: false; code: "NOT_FOUND"; error: string }
   | { ok: false; code: "UNKNOWN"; error: string };
 
-// 홈 근처 카드와 동일한 탐색 반경 관행(lib/home/core.ts의 FESTIVAL_RADIUS_KM=20)을 따른다.
+// 홈 인기 장소 카드와 동일한 탐색 반경 관행(lib/home/core.ts의 FESTIVAL_RADIUS_KM=20)을 따른다.
 // 선택 진입엔 온보딩 scale(여행 규모) 개념이 없어 별도 상수로 둔다.
 const SELECTED_FESTIVAL_RADIUS_KM = 20;
 
-// [선택 진입 — 데이터 층] 홈 근처 장소 카드에서 사용자가 직접 고른 Tour 출처 장소로
+// [선택 진입 — 데이터 층] 홈 지역 인기 장소 카드에서 사용자가 직접 고른 Tour 출처 장소로
 // 코스를 만든다. stage1(수집)·stage3.5(카카오 보충)·stage4(점수화)는 필요 없다 —
 // 이미 사용자가 장소를 정했기 때문이다. stage2(가용성, 단 비차단)와 stage5(조립)만
 // 재사용한다.

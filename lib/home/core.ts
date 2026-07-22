@@ -31,8 +31,12 @@ export async function fetchHomeCore(
   const errors: string[] = [];
 
   // 장소 목록 — areaCode가 없으면 빈 배열 반환 후 errors에 표시
-  const places: TourItem[] = [];
-  if (region) {
+  const fetchPlaces = async (): Promise<TourItem[]> => {
+    if (!region) {
+      console.log("[home] region 없음 — 장소 조회 스킵");
+      errors.push("places");
+      return [];
+    }
     try {
       const results = await Promise.all(
         TARGET_CONTENT_TYPES.map((typeId) =>
@@ -40,6 +44,7 @@ export async function fetchHomeCore(
         ),
       );
       const seen = new Set<string>();
+      const places: TourItem[] = [];
       for (const items of results) {
         for (const item of items) {
           if (!seen.has(item.contentid)) {
@@ -49,29 +54,41 @@ export async function fetchHomeCore(
         }
       }
       console.log(`[home] 장소 수집 완료 — ${places.length}건 (${region.name})`);
+      return places;
     } catch (err) {
       console.warn(`[home] 장소 조회 실패 — ${err}`);
       errors.push("places");
+      return [];
     }
-  } else {
-    console.log("[home] region 없음 — 장소 조회 스킵");
-    errors.push("places");
-  }
+  };
 
-  // 축제 — 좌표만 있으면 항상 시도
-  let ongoingFestivals: FestivalSummary[] = [];
-  let upcomingFestivals: FestivalSummary[] = [];
-  try {
-    const raw = await fetchNearbyFestivals(lat, lng, FESTIVAL_RADIUS_KM);
-    const summaries = festivalsToSummaries(raw);
-    // 진행중 먼저, 나머지 슬롯을 예정으로 채워 최대 FESTIVAL_MAX_CARDS장
-    ongoingFestivals = summaries.ongoing.slice(0, FESTIVAL_MAX_CARDS);
-    const remainingSlots = FESTIVAL_MAX_CARDS - ongoingFestivals.length;
-    upcomingFestivals = summaries.upcoming.slice(0, remainingSlots);
-  } catch (err) {
-    console.warn(`[home] 축제 조회 실패 — ${err}`);
-    errors.push("festivals");
-  }
+  // 축제 — 좌표만 있으면 항상 시도. 장소 조회와 서로 결과를 주고받지 않으므로 병렬 실행한다.
+  const fetchFestivals = async (): Promise<{
+    ongoing: FestivalSummary[];
+    upcoming: FestivalSummary[];
+  }> => {
+    try {
+      const raw = await fetchNearbyFestivals(lat, lng, FESTIVAL_RADIUS_KM);
+      const summaries = festivalsToSummaries(raw);
+      // 진행중 먼저, 나머지 슬롯을 예정으로 채워 최대 FESTIVAL_MAX_CARDS장
+      const ongoing = summaries.ongoing.slice(0, FESTIVAL_MAX_CARDS);
+      const remainingSlots = FESTIVAL_MAX_CARDS - ongoing.length;
+      const upcoming = summaries.upcoming.slice(0, remainingSlots);
+      return { ongoing, upcoming };
+    } catch (err) {
+      console.warn(`[home] 축제 조회 실패 — ${err}`);
+      errors.push("festivals");
+      return { ongoing: [], upcoming: [] };
+    }
+  };
 
-  return { region, places, ongoingFestivals, upcomingFestivals, errors };
+  const [places, festivals] = await Promise.all([fetchPlaces(), fetchFestivals()]);
+
+  return {
+    region,
+    places,
+    ongoingFestivals: festivals.ongoing,
+    upcomingFestivals: festivals.upcoming,
+    errors,
+  };
 }
