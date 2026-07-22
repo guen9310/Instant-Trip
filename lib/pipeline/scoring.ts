@@ -164,11 +164,17 @@ function calcTimeBonus(item: TourItem): number {
   return 0;
 }
 
-// [stage4] stage2/stage3를 통과한 일반 장소에 점수를 부여하고 내림차순으로 정렬한다.
+// [stage4] stage1(+카카오 보충) 후보 전체에 점수를 부여하고 내림차순으로 정렬한다.
 //
 // 최종 점수 = W.tag × tagScore + W.distance × distanceBonus + W.time × timeBonus + W.budget × budgetFitness
 //           = 0.5 × [0,1] + 0.25 × [0,1] + 0.1 × [0,1] + 0.15 × [0,1]
 //           → 범위: [0, 1.0]
+//
+// 이 4개 컴포넌트는 전부 stage1 필드(mapx/mapy, cat1/lclsSystm*, contenttypeid)만으로
+// 계산되며 운영시간 데이터를 쓰지 않는다. 따라서 이 시점엔 가용성(hours/restDayNote/
+// availabilityUncertain)을 아직 모르며, 정직하게 null/null/false 기본값을 채운다 —
+// 이후 순차 가용성 게이트(availabilityGate.ts의 selectAvailableCandidate)가 채택된
+// 1건에만 실제 값을 덮어쓴다.
 export async function scoreCandidates(
   items: PlaceWithTags[],
   profile: UserProfile,
@@ -223,7 +229,7 @@ export async function scoreCandidates(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true, availabilityUncertain: item.availabilityUncertain ?? false, estimatedDuration: dur, hours: item.hours, restDayNote: item.restDayNote };
+    return { item, tagScores, tags, score, available: true, availabilityUncertain: false, estimatedDuration: dur, hours: null, restDayNote: null };
   });
 
   scored.sort((a, b) => b.score - a.score);

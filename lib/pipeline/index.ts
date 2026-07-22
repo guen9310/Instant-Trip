@@ -6,7 +6,7 @@ import type {
 } from "@/lib/pipeline/types";
 import { getSearchRadiusM } from "@/lib/pipeline/types";
 import { collectCandidates } from "@/lib/pipeline/collect";
-import { filterByAvailability } from "@/lib/pipeline/availability";
+import { selectAvailableCandidate } from "@/lib/pipeline/availabilityGate";
 import type { TourItem } from "@/lib/tour/types";
 import { scoreCandidates, applyMappingRules } from "@/lib/pipeline/scoring";
 import { assembleCourse } from "@/lib/pipeline/course";
@@ -78,102 +78,83 @@ export async function generateCourse(
     };
   }
 
-  ts = Date.now();
-  const placesWithTags: PlaceWithTags[] = items.map((item) => ({
-    ...item,
-    tagScores: applyMappingRules(item),
-  }));
-  console.log(
-    `[pipeline] stage1 완료 — ${placesWithTags.length}건 | ${elapsed(Date.now() - ts)}`,
-  );
-
-  if (placesWithTags.length === 0) {
-    console.log(`[pipeline] 후보지 없음 — 종료`);
-    const empty: CourseResult = {
-      mainPlace: null,
-      nearbyPlaces: [],
-      festivals: { ongoing: [], upcoming: [] },
-      scale: profile.scale,
-      generatedAt: new Date().toISOString(),
-    };
-    return {
-      course: empty,
-      debug: { collected: [], available: [], scored: [] },
-    };
-  }
-
-  // stage2: 현재 운영 중인 장소만 통과
-  ts = Date.now();
-  const available = await filterByAvailability(placesWithTags);
-  console.log(
-    `[pipeline] stage2 완료 — ${available.length}/${placesWithTags.length}건 통과 | ${elapsed(Date.now() - ts)}`,
-  );
-
-  // stage3.5: 가볍게 + 가용 후보 부족 시 카카오 후보 보충
-  // supplementWithKakao는 TourItem[]을 반환하므로 TourItem[]으로 받고, 이후 맵에서 availabilityUncertain를 복원
-  let availablePool: TourItem[] = available;
-  if (profile.scale === "가볍게" && available.length < KAKAO_SUPPLEMENT_MIN) {
+  // stage3.5: 가볍게 + stage1 원본 수집 건수 부족 시 카카오 후보 보충
+  // (트리거 기준이 가용성 통과분 → 원본 수집분으로 변경됨: 아래 신규 순차 가용성
+  // 게이트 이전이라 아직 "가용 통과 건수"라는 개념 자체가 없기 때문)
+  let mergedPool: TourItem[] = items;
+  if (profile.scale === "가볍게" && items.length < KAKAO_SUPPLEMENT_MIN) {
     try {
       ts = Date.now();
-      availablePool = await supplementWithKakao(
-        available,
+      mergedPool = await supplementWithKakao(
+        items,
         lat,
         lng,
         getSearchRadiusM(profile),
       );
       console.log(
-        `[pipeline] stage3.5 보충 완료 — ${available.length} → ${availablePool.length}건 | ${elapsed(Date.now() - ts)}`,
+        `[pipeline] stage3.5 보충 완료 — ${items.length} → ${mergedPool.length}건 | ${elapsed(Date.now() - ts)}`,
       );
     } catch (err) {
       console.warn(`[pipeline] stage3.5 카카오 보충 실패, 기존 후보 유지 — ${err}`);
     }
   } else if (profile.scale === "가볍게") {
     console.log(
-      `[pipeline] stage3.5 보충 스킵 — 가용 ${available.length}건 ≥ ${KAKAO_SUPPLEMENT_MIN}`,
+      `[pipeline] stage3.5 보충 스킵 — 수집 ${items.length}건 ≥ ${KAKAO_SUPPLEMENT_MIN}`,
     );
   }
 
   // source 분포 로깅
-  const tourCount = availablePool.filter((i) => i.source !== "kakao").length;
-  const kakaoCount = availablePool.filter((i) => i.source === "kakao").length;
+  const tourCount = mergedPool.filter((i) => i.source !== "kakao").length;
+  const kakaoCount = mergedPool.filter((i) => i.source === "kakao").length;
   if (kakaoCount > 0) {
     console.log(`[pipeline] 후보 source 분포 — tour:${tourCount} / kakao:${kakaoCount}`);
   }
 
-  // stage4: tagScores는 이미 placesWithTags에 부착되어 있으므로 그대로 재부착
-  // excludeIds에 포함된 장소는 후보에서 제외한다 (거절 재추천용)
-  // 데이터 출처: item.source === "kakao" → Kakao 로컬 API 보충분 / 그 외 → 한국관광공사 Tour API
+  // excludeIds에 포함된 장소는 점수화 이전에 제외한다 (거절 재추천용) —
+  // 게이트가 이미 거절된 후보를 다시 확인하는 낭비를 막는다.
   const excludeSet = new Set(options.excludeIds ?? []);
-  const availableWithTags: PlaceWithTags[] = availablePool
-    .filter((item) => !excludeSet.has(item.contentid))
-    .map((item) => ({
-      ...item,
-      // Kakao 보충 아이템은 tagScores가 없으므로 항상 applyMappingRules 적용
-      tagScores: (item as PlaceWithTags).tagScores ?? applyMappingRules(item),
-      // filterByAvailability가 부착한 플래그; 카카오 보충 아이템은 운영시간 데이터가
-      // 아예 없으므로(가용성 검사 미통과) 항상 불확실로 처리한다.
-      availabilityUncertain:
-        (item as PlaceWithTags).availabilityUncertain ?? item.source === "kakao",
-    }));
+  const filteredPool = mergedPool.filter((item) => !excludeSet.has(item.contentid));
   if (excludeSet.size > 0) {
     console.log(
-      `[pipeline] excludeIds ${excludeSet.size}건 제외 — ${available.length} → ${availableWithTags.length}건`,
+      `[pipeline] excludeIds ${excludeSet.size}건 제외 — ${mergedPool.length} → ${filteredPool.length}건`,
     );
   }
 
+  // stage4: 점수화 — 운영시간 데이터 없이 stage1 필드만으로 계산되므로
+  // tour/kakao 구분 없이 한 번에 태그를 붙인다.
   ts = Date.now();
-  const scored = await scoreCandidates(availableWithTags, profile);
+  const placesWithTags: PlaceWithTags[] = filteredPool.map((item) => ({
+    ...item,
+    tagScores: applyMappingRules(item),
+  }));
+  const scored = await scoreCandidates(placesWithTags, profile);
   const tourScored = scored.filter((p) => p.item.source !== "kakao").length;
   const kakaoScored = scored.filter((p) => p.item.source === "kakao").length;
   console.log(
     `[pipeline] stage4 완료 — ${scored.length}건 점수화 (관광공사:${tourScored} / 카카오:${kakaoScored}) | ${elapsed(Date.now() - ts)}`,
   );
 
-  const allCandidates = [...scored];
-
-  // stage5: 최종 코스 조립
+  // 신규: 점수 순으로 하나씩만 운영시간을 확인해 최초로 열려있는 후보를 채택한다
+  // (기존엔 stage2가 전체를 미리 검사했으나, 점수화가 운영시간 데이터를 쓰지 않으므로
+  // 순서를 뒤집어 TourAPI 호출을 80~120건에서 보통 1~수건으로 줄인다)
   ts = Date.now();
-  const courseBase = await assembleCourse(allCandidates, profile);
+  const gate = await selectAvailableCandidate(scored);
+  console.log(
+    gate
+      ? `[gate] 완료 — "${gate.winner.item.title}" 채택 (검사 ${gate.checksPerformed}건${gate.exhausted ? ", 상한소진→1위 폴백" : ""}) | ${elapsed(Date.now() - ts)}`
+      : `[gate] 완료 — 채택 후보 없음 | ${elapsed(Date.now() - ts)}`,
+  );
+
+  const allCandidates = gate
+    ? scored.map((c) =>
+        c.item.contentid === gate.winner.item.contentid ? gate.winner : c,
+      )
+    : scored;
+
+  // stage5: 최종 코스 조립 — 채택된 1건(또는 0건)만 넘긴다.
+  // assembleCourse는 scored[0]만 읽고 nearbyPlaces는 항상 []를 반환하므로 안전하다.
+  ts = Date.now();
+  const courseBase = await assembleCourse(gate ? [gate.winner] : [], profile);
   console.log(
     `[pipeline] stage5 완료 — 메인 ${courseBase.mainPlace ? 1 : 0}곳 + 연계 ${courseBase.nearbyPlaces.length}곳 | ${elapsed(Date.now() - ts)}`,
   );
@@ -204,6 +185,6 @@ export async function generateCourse(
 
   return {
     course,
-    debug: { collected: availablePool, available: availablePool, scored: scoredWithCourse },
+    debug: { collected: mergedPool, available: filteredPool, scored: scoredWithCourse },
   };
 }

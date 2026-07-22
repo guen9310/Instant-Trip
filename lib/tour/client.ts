@@ -79,9 +79,14 @@ export function createApiFetch(baseUrl: string) {
       return data;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
+      // AbortSignal.timeout(10_000)이 발동한 경우 — 서버가 응답을 안 주는 상황이라
+      // 재시도해도 같은 10초를 또 기다릴 가능성이 높다. 연결 자체가 끊긴 경우(DNS
+      // 실패, 커넥션 리셋 등)만 일시적일 수 있다고 보고 재시도 대상으로 남긴다.
+      const isTimeout = err instanceof Error && err.name === "TimeoutError";
+      const canRetry = retryCount === 0 && !isTimeout;
 
       // 상세 에러 로그 (1회만 — 재시도 전에만 출력)
-      if (retryCount === 0) {
+      if (canRetry) {
         console.warn(
           `[ERR] ⚠ ${endpoint} (시도 ${attempt})\n` +
             `  URL    : ${safe}\n` +
@@ -96,9 +101,9 @@ export function createApiFetch(baseUrl: string) {
         return apiFetch(endpoint, params, retryCount + 1);
       }
 
-      // 재시도도 실패 — 최종 에러 로그
+      // 재시도도 실패했거나, 타임아웃이라 재시도를 생략한 경우 — 최종 에러 로그
       console.error(
-        `[ERR] ✗ ${endpoint} 최종 실패 (시도 ${attempt})\n` +
+        `[ERR] ✗ ${endpoint} 최종 실패 (시도 ${attempt}${isTimeout && retryCount === 0 ? ", 타임아웃이라 재시도 생략" : ""})\n` +
           `  URL    : ${safe}\n` +
           `  HTTP   : ${httpStatus ?? "연결 실패"}\n` +
           `  원인   : ${errMsg}` +
