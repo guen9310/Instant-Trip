@@ -1,4 +1,3 @@
-import { haversineM } from "@/shared/utils/geo";
 import type { PendingCourse } from "@/shared/types/course.types";
 import type { CourseCompletionPayload } from "@/shared/schemas/courseCompletion";
 
@@ -11,16 +10,9 @@ export function buildCompletionPayload(args: {
   completedAt: number | null;
   rating?: number | null;
   reactions?: string[];
-  stamps?: { t: number; distM: number }[];
 }): CourseCompletionPayload | null {
   const p = args.pending?.place;
   if (!p?.estimatedDuration || !args.pending?.courseName) return null;
-
-  // 출발지→장소 직선거리 — 이동시간 추정 재료. 좌표 원본은 보내지 않는다
-  const travelDistM =
-    p.coord && args.pending.mapX != null && args.pending.mapY != null
-      ? haversineM(args.pending.mapY, args.pending.mapX, p.coord.lat, p.coord.lng)
-      : null;
 
   // 구버전 localStorage의 임의 문자열 방어 — 유효하지 않으면 moderate로 폴백
   const s = args.pending.scale;
@@ -29,7 +21,6 @@ export function buildCompletionPayload(args: {
 
   return {
     courseName: args.pending.courseName,
-    region: args.pending.region,
     scale,
     status: args.status,
     completionId: args.pending.completionId,
@@ -50,7 +41,5 @@ export function buildCompletionPayload(args: {
     completedAt: args.completedAt,
     rating: args.rating ?? null,
     reactions: args.reactions ?? [],
-    travelDistM,
-    stamps: args.stamps ?? [],
   };
 }

@@ -61,7 +61,7 @@ function recordAbandonedIfAny() {
     const raw = localStorage.getItem("pendingCourse");
     if (!raw) return;
     const prev = JSON.parse(raw) as Partial<PendingCourse>;
-    const { courseId, startedAt, completedAt, stamps } =
+    const { courseId, startedAt, completedAt } =
       useCourseProgressStore.getState();
     if (!startedAt || completedAt || !courseId || courseId !== prev.courseId)
       return;
@@ -70,7 +70,6 @@ function recordAbandonedIfAny() {
       status: "abandoned",
       startedAt,
       completedAt: null,
-      stamps,
     });
     if (payload) void saveCourseCompletionAction(payload).catch(() => {});
   } catch {
@@ -138,7 +137,6 @@ export function StartView({ prefs }: { prefs: Prefs }) {
       mapX: coords.lng,
       mapY: coords.lat,
       scale: selected,
-      region: state.city ?? undefined,
       // 생성 시점 취향 스냅샷 — 결과 화면의 칩·맛집 섹션·재추천이 이 값을 읽는다
       prefs,
       generatedAt: Date.now(),

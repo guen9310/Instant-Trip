@@ -28,7 +28,7 @@ export function CompletedCourseDetailModal({ course, onClose }: Props) {
           <DialogTitle>{course?.name}</DialogTitle>
           {course && (
             <p className="text-[12px] text-text-secondary">
-              {course.date} · {course.region} · {course.duration} 소요
+              {course.date} · {course.duration} 소요
             </p>
           )}
         </DialogHeader>

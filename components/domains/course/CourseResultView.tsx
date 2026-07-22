@@ -53,7 +53,6 @@ type Props = {
   mapX?: number;
   mapY?: number;
   scale?: string;
-  region?: string;
   // 생성 시점 취향 스냅샷 (PendingCourse.prefs) — 칩·맛집 섹션·재추천이 읽는다.
   // 구버전 localStorage 페이로드엔 없을 수 있어 optional: 없으면 취향 표시를 숨긴다.
   prefs?: Prefs;
@@ -80,7 +79,6 @@ export function CourseResultView({
   mapX,
   mapY,
   scale,
-  region,
   prefs,
   availability,
   generatedAt,
@@ -164,7 +162,6 @@ export function CourseResultView({
       mapX,
       mapY,
       scale,
-      region,
       prefs,
       generatedAt,
     };
@@ -212,7 +209,6 @@ export function CourseResultView({
     void startCourseAction({
       courseName: currentCourseName,
       scale: scale ?? "moderate",
-      region,
       place: currentPlace,
     }).then((result) => {
       // 세션 만료 등 엣지 — 이미 이동한 뒤라 되돌리진 않되 기존 안내 처리는 유지한다.

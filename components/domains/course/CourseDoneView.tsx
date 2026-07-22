@@ -44,7 +44,7 @@ function readPendingCourse(): Partial<PendingCourse> | null {
 
 export function CourseDoneView() {
   const router = useRouter();
-  const { startedAt, completedAt, stamps, reset } = useCourseProgressStore();
+  const { startedAt, completedAt, reset } = useCourseProgressStore();
   const [stars, setStars] = useState(0);
   const [reactions, setReactions] = useState<string[]>([]);
 
@@ -71,7 +71,6 @@ export function CourseDoneView() {
       completedAt,
       rating: stars > 0 ? stars : null,
       reactions,
-      stamps,
     });
     if (payload) {
       // 텔레메트리 — 실패해도 완료 흐름은 그대로 진행
