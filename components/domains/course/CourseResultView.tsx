@@ -14,6 +14,7 @@ import {
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/commons/Dialog";
 import { FestivalDetailSheet } from "@/components/domains/course/FestivalDetailSheet";
 import {
   useCourseProgressStore,
@@ -26,6 +27,7 @@ import type {
   FestivalSummary,
   PendingCourse,
   PlaceAvailabilitySnapshot,
+  CourseProgress,
 } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
@@ -64,6 +66,11 @@ type Props = {
   // 서버 컴포넌트(page.tsx)에서 getSession()으로 미리 판정 — 탭 시 서버 왕복 없이
   // 즉시 분기하기 위함 (비로그인은 안내 후 이동, 로그인은 낙관적 이동).
   isAuthenticated: boolean;
+  // page.tsx가 getActiveCourse()로 미리 조회해둔, 이미 진행 중인 외출(있다면).
+  // "여기로 갈게요" 탭 시 이 값이 있으면 곧바로 시작하지 않고 먼저 확인을 받는다 —
+  // 새 외출을 시작하면 서버가 기존 active 기록을 abandoned로 종료하기 때문
+  // (startCourseAction 참고). 이 화면은 그 사실을 사용자에게 미리 알리는 역할만 한다.
+  activeCourse: CourseProgress | null;
 };
 
 // 운영시간 배지 스냅샷 유효 시간 — 이보다 오래된 generatedAt은 배지를 숨긴다.
@@ -83,6 +90,7 @@ export function CourseResultView({
   availability,
   generatedAt,
   isAuthenticated,
+  activeCourse,
 }: Props) {
   const [selectedFestival, setSelectedFestival] =
     useState<FestivalSummary | null>(null);
@@ -105,6 +113,8 @@ export function CourseResultView({
   const [authNotice, setAuthNotice] = useState(false);
   const [rejectPanelOpen, setRejectPanelOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState<string | null>(null);
+  // 기존 진행 중인 외출을 종료하고 새로 시작하는 것을 확인받는 패널
+  const [replaceActiveNotice, setReplaceActiveNotice] = useState(false);
 
   const router = useRouter();
   const startCourse = useCourseProgressStore((s) => s.start);
@@ -202,6 +212,22 @@ export function CourseResultView({
       return;
     }
 
+    // 진행 중인 외출이 이미 있으면 곧바로 시작하지 않고 먼저 확인을 받는다 —
+    // 새로 시작하면 그 기록이 종료된다는 걸 사용자가 알고 선택하게 한다.
+    if (activeCourse) {
+      setReplaceActiveNotice(true);
+      return;
+    }
+
+    proceedStart();
+  };
+
+  const handleConfirmReplace = () => {
+    setReplaceActiveNotice(false);
+    proceedStart();
+  };
+
+  const proceedStart = () => {
     // 낙관적 이동 — startCourseAction 완료를 기다리지 않고 즉시 진행 화면으로 전환한다.
     startCourse(currentCourseId);
     router.push(`/course/active/${currentCourseId}`);
@@ -509,6 +535,50 @@ export function CourseResultView({
         festival={selectedFestival}
         onClose={() => setSelectedFestival(null)}
       />
+
+      {/* 진행 중인 외출 종료 확인 모달 */}
+      <Dialog open={replaceActiveNotice} onOpenChange={setReplaceActiveNotice}>
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-85 gap-3 p-6 text-center"
+        >
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-point/10 border border-point/40">
+            <AlertCircle size={20} className="text-point" />
+          </div>
+          <DialogTitle className="text-[17px] font-extrabold text-text-primary text-center">
+            진행 중인 외출이 있어요
+          </DialogTitle>
+          <p className="text-[13px] leading-[1.55] text-text-secondary text-center">
+            <span className="font-bold text-point">{activeCourse?.name}</span>{" "}
+            외출이 아직 진행 중이에요. 새로 시작하면 이 기록은 종료돼요.
+          </p>
+          <div className="flex flex-col gap-2.5 mt-1">
+            {activeCourse && (
+              <Button
+                size="cta"
+                variant="accent"
+                onClick={() => router.push(`/course/active/${activeCourse.courseId}`)}
+              >
+                {activeCourse.name} 이어가기
+              </Button>
+            )}
+            <Button
+              size="cta"
+              variant="outline"
+              className="border-point/45 text-point hover:bg-point/5"
+              onClick={handleConfirmReplace}
+            >
+              새로 시작할게요
+            </Button>
+            <button
+              onClick={() => setReplaceActiveNotice(false)}
+              className="w-full h-9 text-[13px] font-medium text-text-secondary/70"
+            >
+              취소
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {authNotice && (
         <div className="fixed bottom-[calc(76px+env(safe-area-inset-bottom,6px))] left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-foreground text-background text-[13px] font-medium shadow-lg max-w-[calc(100vw-32px)] text-center">

@@ -15,8 +15,12 @@ import {
   MapPin,
   Clock,
   AlertTriangle,
+  Navigation,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
+import { CourseMap } from "@/components/domains/course/CourseMap";
 import { cn, isBlank } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
@@ -26,7 +30,7 @@ import {
   DrawerTitle,
 } from "@/components/commons/Drawer";
 import { useCourseActive } from "@/client/hooks/useCourseActive";
-import type { NearbyCategory, NearbyPoi } from "@/shared/types/course.types";
+import type { NearbyCategory, NearbyPoi, ResumableCourse } from "@/shared/types/course.types";
 
 type PoiMeta = {
   label: string;
@@ -54,8 +58,15 @@ const FILTER_CHIPS: { id: NearbyCategory; label: string }[] = [
   { id: "gas_station", label: "주유소" },
 ];
 
-export function CourseActiveView({ courseId }: { courseId: string }) {
-  const state = useCourseActive(courseId);
+type Props = {
+  courseId: string;
+  // localStorage에 세션이 없을 때(다른 기기·저장소 초기화 등) 쓰는 서버 측 대비책.
+  // page.tsx가 미리 조회해둔다 — 자세한 이유는 useCourseActive.ts 참고.
+  dbFallback: ResumableCourse | null;
+};
+
+export function CourseActiveView({ courseId, dbFallback }: Props) {
+  const state = useCourseActive(courseId, dbFallback);
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [descOpen, setDescOpen] = useState(false);
 
@@ -67,7 +78,7 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
     );
   }
 
-  const { place, cat, setCat, filteredPois, poisLoading, selectedPoiId, selectPoi, handleComplete } = state;
+  const { place, placeCoord, cat, setCat, filteredPois, poisLoading, selectedPoiId, selectPoi, handleComplete } = state;
 
   return (
     <>
@@ -191,9 +202,11 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
           <DrawerTitle className="px-4 pb-1">주변</DrawerTitle>
           <div
             data-vaul-no-drag
-            className="flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom,12px)]"
+            className="flex-1 min-h-0 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom,12px)]"
           >
             <NearbyPanel
+              placeName={place.name}
+              placeCoord={placeCoord}
               cat={cat}
               setCat={setCat}
               pois={filteredPois}
@@ -209,6 +222,8 @@ export function CourseActiveView({ courseId }: { courseId: string }) {
 }
 
 type NearbyPanelProps = {
+  placeName: string;
+  placeCoord: { lat: number; lng: number } | null;
   cat: NearbyCategory;
   setCat: (cat: NearbyCategory) => void;
   pois: NearbyPoi[];
@@ -217,9 +232,74 @@ type NearbyPanelProps = {
   onSelect: (id: string | null) => void;
 };
 
-function NearbyPanel({ cat, setCat, pois, loading, selectedPoiId, onSelect }: NearbyPanelProps) {
+function NearbyPanel({
+  placeName,
+  placeCoord,
+  cat,
+  setCat,
+  pois,
+  loading,
+  selectedPoiId,
+  onSelect,
+}: NearbyPanelProps) {
+  // 길찾기 대상 — POI를 선택 중이면 그 장소로, 아니면 현재 장소로.
+  // 별도 state/ref 없이 selectedPoiId + pois에서 매 렌더 파생한다(단일 진실 소스 유지).
+  const selectedPoi = selectedPoiId ? pois.find((p) => p.id === selectedPoiId) : undefined;
+  const directionsName = selectedPoi?.name ?? placeName;
+
+  // 주변 마커 숨기기 — POI가 몰려 있을 때 현재 장소 마커를 완전히 가리고 싶을 때 쓴다.
+  // 목록에서 특정 장소를 선택하면(그 하나만 보고 싶다는 의도) 자동으로 해제한다.
+  // pois 자체를 비워 넘기지 않는다 — CourseMap의 bounds 계산도 pois를 쓰기 때문에,
+  // 그렇게 하면 마커를 껐다 켤 때마다 지도 확대 범위(30m↔250m)까지 같이 튀는 부작용이 생긴다.
+  const [poisHidden, setPoisHidden] = useState(false);
+
   return (
     <div className="pb-4">
+      {/* 지도 미리보기 — 현재 장소 + 필터링된 POI 마커, 리스트 탭과 선택 상태를 공유 */}
+      {placeCoord && (
+        <div className="relative h-72 rounded-xl overflow-hidden border border-border mb-3">
+          <CourseMap
+            mainPlace={{ name: placeName, coord: placeCoord }}
+            pois={pois}
+            selectedPoiId={selectedPoiId}
+            onSelectPoi={onSelect}
+            hideMarkers={poisHidden && !selectedPoiId}
+          />
+          {/* 주변 마커 토글 — 스크린샷처럼 POI가 몰려 현재 장소가 묻힐 때 전부 끌 수 있게 */}
+          {pois.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setPoisHidden((v) => !v)}
+              className="absolute z-10 top-3 right-3 flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/95 backdrop-blur-xs border border-border shadow-md text-[12px] font-semibold text-text-secondary active:scale-95 transition-transform"
+            >
+              {poisHidden ? (
+                <>
+                  <Eye size={13} strokeWidth={2.2} />
+                  모두 보기
+                </>
+              ) : (
+                <>
+                  <EyeOff size={13} strokeWidth={2.2} />
+                  숨기기
+                </>
+              )}
+            </button>
+          )}
+          {/* 카카오맵 길찾기 — 현재 위치 → 선택한 장소(없으면 현재 장소)로의 경로를 새 탭에서 연다.
+              카카오맵 SDK가 지도 컨테이너 내부에 자체 stacking context를 만들어서
+              z-index 지정 없이는 형제 요소가 DOM 순서상 위에 있어도 지도 레이어에 가려진다. */}
+          <a
+            href={`https://map.kakao.com/link/map/${encodeURIComponent(directionsName)},${(selectedPoi?.coord ?? placeCoord).lat},${(selectedPoi?.coord ?? placeCoord).lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute z-10 bottom-3 right-3 flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/95 backdrop-blur-xs border border-border shadow-md text-[12px] font-semibold text-primary active:scale-95 transition-transform"
+          >
+            <Navigation size={13} strokeWidth={2.2} />
+            길찾기
+          </a>
+        </div>
+      )}
+
       <div className="relative">
         <div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
           {FILTER_CHIPS.map((chip) => (

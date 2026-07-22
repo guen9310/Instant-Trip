@@ -77,6 +77,17 @@ export type PendingCourse = {
   generatedAt?: number;
 };
 
+// /course/active/[id] 서버 컴포넌트가 미리 조회해두는 DB 기반 이어서 데이터.
+// localStorage의 pendingCourse가 없거나(다른 기기·저장소 초기화) URL의 courseId와
+// 다를 때, 프로필 "이어서"가 가리키는 courseId(DB courses.id)로 화면을 복원하는 데 쓴다.
+export type ResumableCourse = {
+  completionId: string;
+  courseId: string;
+  courseName: string;
+  scale: string;
+  place: JourneyPlace;
+};
+
 // 프로필 — 진행 중인 코스 상태
 export type CourseProgress = {
   name: string;
