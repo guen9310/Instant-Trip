@@ -44,7 +44,7 @@ export default function RootLayout({
         <Script
           id="kakao-map-sdk"
           strategy="beforeInteractive"
-          src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&libraries=services&autoload=false`}
+          src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&libraries=services,clusterer&autoload=false`}
         />
         <DarkModeSync />
         <div className="flex flex-col h-full w-full max-w-107.5 bg-background overflow-hidden md:shadow-[0_0_40px_rgba(0,0,0,0.08)]">

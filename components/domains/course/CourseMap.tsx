@@ -1,20 +1,62 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Map, MapMarker, useMap } from "react-kakao-maps-sdk";
-import { MapPin } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Map, MapMarker, CustomOverlayMap, useMap } from "react-kakao-maps-sdk";
+import { MapPin, Navigation, Palette } from "lucide-react";
 import type { NearbyPoi } from "@/shared/types/course.types";
+import {
+  POI_CATEGORY_COLOR,
+  POI_CATEGORY_LABEL,
+  POI_CATEGORY_ORDER,
+  type PoiCategory,
+} from "@/shared/constants/poiCategory";
+import { clusterPoints } from "@/shared/utils/clusterPoints";
+import { cn } from "@/shared/utils";
 
 type Coord = { lat: number; lng: number };
+
+type MapDisplayMode = "full" | "hidden";
+
+// 클러스터로 묶을 화면 픽셀 거리 임계값 — 그리드가 아니라 실제 픽셀 거리 기준이라
+// 격자 경계에 걸려 애매하게 나뉘는 케이스가 없다.
+const CLUSTER_PIXEL_THRESHOLD = 40;
+// 배지 하나가 담을 수 있는 최대 멤버 수 — 이 이상 뭉치면 "58개가 배지 하나"처럼
+// 정보 과밀 해소라는 목적과 충돌하므로, 넘으면 배지를 여러 개로 자동 분할한다.
+const MAX_CLUSTER_SIZE = 8;
+// 배지 클릭 시 이 개수 이하면 인라인 목록으로 개별 선택, 초과하면 줌인.
+const INLINE_LIST_MAX = 4;
+
+type PoiClusterState = { key: string; memberIds: string[]; centerCoord: Coord };
+
+// 클러스터링 검증용 임시 헬퍼 — 확인 후 되돌릴 예정.
+function reportViewport(
+  map: kakao.maps.Map,
+  onViewportChange?: (bounds: { sw: Coord; ne: Coord } | null) => void,
+) {
+  if (!onViewportChange) return;
+  const bounds = map.getBounds();
+  const sw = bounds.getSouthWest();
+  const ne = bounds.getNorthEast();
+  onViewportChange({
+    sw: { lat: sw.getLat(), lng: sw.getLng() },
+    ne: { lat: ne.getLat(), lng: ne.getLng() },
+  });
+}
+
+const DISPLAY_MODE_SEGMENTS: { id: MapDisplayMode; label: string }[] = [
+  { id: "full", label: "전체" },
+  { id: "hidden", label: "숨김" },
+];
 
 type Props = {
   mainPlace: { name: string; coord: Coord };
   pois?: NearbyPoi[];
   selectedPoiId?: string | null;
   onSelectPoi?: (id: string | null) => void;
-  // 마커만 안 보이게 하고 지도 확대 범위(bounds)는 그대로 유지한다 — pois 자체를 비워
-  // 넘기면 bounds 계산에도 반영돼 확대/축소가 같이 튀는 부작용이 생긴다.
-  hideMarkers?: boolean;
+  // 클러스터링 검증용 임시 prop — 확인 후 되돌릴 예정. 현재 지도 뷰포트 경계를
+  // 부모(NearbyPanel)로 올려, 하단 리스트를 화면에 실제로 보이는 핀만으로 좁혀
+  // 배지 숫자와 실제 장소 수가 맞는지 비교할 수 있게 한다.
+  onViewportChange?: (bounds: { sw: Coord; ne: Coord } | null) => void;
 };
 
 export function CourseMapPlaceholder() {
@@ -83,12 +125,24 @@ function BoundsAdjuster({ mainCoord, coords }: { mainCoord: Coord; coords: Coord
 
 export function CourseMap({
   mainPlace,
-  pois = [],
+  pois: poisProp,
   selectedPoiId,
   onSelectPoi,
-  hideMarkers = false,
+  onViewportChange,
 }: Props) {
+  const pois = poisProp ?? [];
+  // 카드 전체(지도+툴바+범례+길찾기)를 이 컴포넌트가 소유하는 "풀 모드"인지 판별하는 기준.
+  // pois.length가 아니라 prop이 "전달됐는지"로 본다 — CourseResultView는 pois를 아예 안 넘기고
+  // (bare 모드 유지), NearbyPanel은 필터링으로 진짜 빈 배열이 될 때도 있어(예: "주변에 표시할
+  // 장소가 없어요") 배열 길이로 판별하면 그 상태에서 카드 높이 지정 자체가 사라져버린다.
+  const isFullMode = poisProp !== undefined;
+
   const [loaded, setLoaded] = useState(false);
+  const [displayMode, setDisplayMode] = useState<MapDisplayMode>("full");
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
+  const [clusters, setClusters] = useState<PoiClusterState[]>([]);
+  const [openClusterKey, setOpenClusterKey] = useState<string | null>(null);
 
   useEffect(() => {
     const kakao = (
@@ -97,8 +151,6 @@ export function CourseMap({
     kakao?.maps?.load(() => setLoaded(true));
   }, []);
 
-  if (!loaded) return <CourseMapPlaceholder />;
-
   // 목록에서 하나를 선택하면 그 마커만 남기고 나머지는 숨긴다 —
   // 여러 핀이 섞여 있으면 지금 선택한 곳이 어디인지 지도만 보고는 알기 어렵기 때문.
   // bounds도 이 목록 기준으로 다시 잡혀 선택한 장소가 화면에 크게 보인다.
@@ -106,44 +158,308 @@ export function CourseMap({
     ? pois.filter((p) => p.id === selectedPoiId)
     : pois;
 
+  // bounds는 아래 allCoords에서 이 목록 기준으로 계산된다 — displayMode는 렌더링에만 관여한다.
+  // "숨김"이어도 목록에서 특정 장소를 선택했다면(그 하나만 보고 싶다는 의도) 그 핀은 보여준다.
+  const renderedPois = displayMode === "hidden" && !selectedPoiId ? [] : visiblePois;
+
+  // 클러스터 재계산 트리거 — BoundsAdjuster와 동일하게 배열 참조가 아니라 문자열 키로
+  // 변경을 감지한다(매 렌더 새 배열이 생겨도 값이 같으면 이펙트가 재실행되지 않도록).
+  const renderedPoisKey = renderedPois
+    .map((p) => `${p.id}:${p.coord.lat},${p.coord.lng}`)
+    .join("|");
+
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    const recompute = () => {
+      const projection = mapInstance.getProjection();
+      const points = renderedPoisKey
+        .split("|")
+        .filter(Boolean)
+        .map((entry) => {
+          const [id, latlng] = entry.split(":");
+          const [lat, lng] = latlng.split(",").map(Number);
+          const pt = projection.pointFromCoords(new kakao.maps.LatLng(lat, lng));
+          return { id, x: pt.x, y: pt.y };
+        });
+      const grouped = clusterPoints(points, {
+        thresholdPx: CLUSTER_PIXEL_THRESHOLD,
+        maxSize: MAX_CLUSTER_SIZE,
+      });
+      const next = grouped.map((g) => {
+        const cx = g.members.reduce((s, m) => s + m.x, 0) / g.members.length;
+        const cy = g.members.reduce((s, m) => s + m.y, 0) / g.members.length;
+        const centerLatLng = projection.coordsFromPoint(new kakao.maps.Point(cx, cy));
+        return {
+          key: g.key,
+          memberIds: g.members.map((m) => m.id),
+          centerCoord: { lat: centerLatLng.getLat(), lng: centerLatLng.getLng() },
+        };
+      });
+      setClusters(next);
+      // 재클러스터링 후 더 이상 존재하지 않는 클러스터 키를 팝오버로 열어둔 채 남기지 않는다.
+      setOpenClusterKey((prev) => (prev && next.some((c) => c.key === prev) ? prev : null));
+    };
+
+    recompute();
+    kakao.maps.event.addListener(mapInstance, "idle", recompute);
+    return () => kakao.maps.event.removeListener(mapInstance, "idle", recompute);
+  }, [mapInstance, renderedPoisKey]);
+
+  // 클러스터링 검증용 임시 이펙트 — 확인 후 되돌릴 예정. mapInstance가 준비되는 즉시
+  // (최초 1회) 뷰포트를 한 번 보고한다 — 이후 팬/줌에 의한 갱신은 <Map onBoundsChanged>가 담당.
+  // onCreate prop에 인라인 함수를 넘기면 SDK의 onCreate 이펙트가 매 렌더 재실행돼 무한
+  // 렌더 루프가 생기므로, onCreate는 안정적인 setMapInstance 그대로 두고 별도 이펙트로 분리했다.
+  useEffect(() => {
+    if (!mapInstance) return;
+    reportViewport(mapInstance, onViewportChange);
+  }, [mapInstance, onViewportChange]);
+
+  // bounds_changed 콜백을 useCallback으로 고정 — react-kakao-maps-sdk의 useKakaoEvent는
+  // 콜백 참조가 바뀔 때마다 리스너를 addListener/removeListener로 재등록한다. 인라인 함수를
+  // 그대로 넘기면 매 렌더 재등록될 뿐 아니라, 위 onCreate 사례처럼 상태를 갱신하는 콜백이면
+  // 무한 루프로 이어질 수 있어 항상 메모이즈해서 넘긴다.
+  const handleBoundsChanged = useCallback(
+    (map: kakao.maps.Map) => reportViewport(map, onViewportChange),
+    [onViewportChange],
+  );
+  const handleMapClick = useCallback(() => setOpenClusterKey(null), []);
+
+  if (!loaded) return <CourseMapPlaceholder />;
+
   const allCoords: Coord[] = [
     mainPlace.coord,
     ...visiblePois.map((p) => p.coord).filter((c): c is Coord => !!(c?.lat && c?.lng)),
   ];
 
-  // bounds(allCoords)는 위에서 이미 계산 끝 — hideMarkers는 렌더링에만 관여한다
-  const renderedPois = hideMarkers ? [] : visiblePois;
+  // 클러스터 배지 클릭 — 멤버가 적으면 인라인 목록을 토글, 많으면 해당 클러스터
+  // bounds로 확대(BoundsAdjuster가 쓰는 것과 동일한 setBounds API). 확대가 끝나면
+  // idle 이벤트로 재계산되어 더 잘게 쪼개진 클러스터·개별 핀이 드러난다.
+  const handleClusterClick = (cluster: PoiClusterState, members: NearbyPoi[]) => {
+    if (members.length <= INLINE_LIST_MAX) {
+      setOpenClusterKey((prev) => (prev === cluster.key ? null : cluster.key));
+      return;
+    }
+    if (!mapInstance) return;
+    const bounds = new kakao.maps.LatLngBounds();
+    members.forEach((m) => bounds.extend(new kakao.maps.LatLng(m.coord.lat, m.coord.lng)));
+    mapInstance.setBounds(bounds, 40);
+  };
+
+  // 범례 — 필터 칩으로 카테고리를 좁혀도 항상 6개 전부 보여준다. pois에 실제로 있는
+  // 카테고리만 추리면 필터링·POI 선택할 때마다 범례가 줄었다 늘었다 해서 색 기준표 역할을
+  // 못 하게 된다("이 색이 무슨 카테고리였지" 확인하려는 시점에 정작 안 보일 수 있음).
+  const legendCategories = POI_CATEGORY_ORDER;
+
+  // 길찾기 대상 — 목록에서 선택 중인 POI가 있으면 그곳으로, 아니면 현재 장소로.
+  // NearbyPoi.coord는 필수 필드라 별도 null 체크가 필요 없다.
+  const selectedPoi = selectedPoiId ? pois.find((p) => p.id === selectedPoiId) : undefined;
+  const directionsTarget = selectedPoi ?? mainPlace;
+
+  // 지도 자체(마커)는 bare/full 두 모드에서 완전히 동일 — 감싸는 컨테이너 크기(h-full vs
+  // h-72)만 다르므로 한 번만 만들어 양쪽에서 재사용한다.
+  const mapElement = (
+    <Map
+      center={mainPlace.coord}
+      style={{ width: "100%", height: "100%" }}
+      level={3}
+      onCreate={setMapInstance}
+      onBoundsChanged={handleBoundsChanged}
+      onClick={handleMapClick}
+    >
+      <BoundsAdjuster mainCoord={mainPlace.coord} coords={allCoords} />
+
+      {/* 현재 장소 마커 — POI 핀이 몰려 있으면 카테고리 핀들 사이에 묻혀 안 보이던 문제.
+          핀과는 다른 halo+dot 실루엣(형태로 구분) + 최상단 zIndex(겹쳐도 항상 위)로 해결한다. */}
+      <MapMarker
+        position={mainPlace.coord}
+        image={{ src: MAIN_PLACE_MARKER_ICON, size: { width: 40, height: 40 } }}
+        zIndex={999}
+      />
+
+      {/* POI 마커 — 픽셀 거리 기준으로 묶은 클러스터. 멤버가 1개면 기존과 동일한 개별
+          핀, 2개 이상이면 배지(ClusterBadge)로 그린다. */}
+      {clusters.map((cluster) => {
+        const members = cluster.memberIds
+          .map((id) => renderedPois.find((p) => p.id === id))
+          .filter((p): p is NearbyPoi => !!p);
+        if (members.length === 0) return null;
+
+        if (members.length === 1) {
+          const poi = members[0];
+          return (
+            <MapMarker
+              key={cluster.key}
+              position={poi.coord}
+              image={{
+                src: POI_MARKER_ICON[poi.category],
+                size: { width: 28, height: 36 },
+              }}
+              onClick={() => onSelectPoi?.(selectedPoiId === poi.id ? null : poi.id)}
+            />
+          );
+        }
+
+        return (
+          <CustomOverlayMap
+            key={cluster.key}
+            position={cluster.centerCoord}
+            clickable
+            zIndex={100}
+          >
+            <ClusterBadge
+              members={members}
+              isOpen={openClusterKey === cluster.key}
+              onToggle={() => handleClusterClick(cluster, members)}
+              onSelectMember={(id) => {
+                onSelectPoi?.(id);
+                setOpenClusterKey(null);
+              }}
+            />
+          </CustomOverlayMap>
+        );
+      })}
+    </Map>
+  );
+
+  // CourseResultView처럼 pois를 아예 안 넘기는 "bare" 모드 — 지도만 채우고 카드 chrome·툴바
+  // 없이 부모가 준 컨테이너(h-45 등)를 그대로 채운다. 지금까지의 동작과 동일.
+  if (!isFullMode) {
+    return <div className="relative w-full h-full">{mapElement}</div>;
+  }
+
+  // NearbyPanel의 "풀" 모드 — 카드(radius·border·overflow)와 지도 아래 컨트롤 툴바까지
+  // 이 컴포넌트가 전부 소유한다. 지도 위에는 더 이상 아무것도 띄우지 않는다.
+  return (
+    <div className="w-full rounded-xl border border-border overflow-hidden bg-card">
+      <div className="relative w-full h-72">{mapElement}</div>
+
+      {/* 컨트롤 툴바 — 세그먼트 / 범례 토글 / 길찾기. 더 이상 지도 위에 떠 있지 않고 지도
+          아래 일반 문서 흐름이라 z-index/stacking-context 대응이 필요 없다. */}
+      <div className="flex items-center gap-2 p-2.5 border-t border-border">
+        {pois.length > 0 && (
+          <div className="flex items-center gap-0.5 p-0.75 rounded-full bg-background shrink-0">
+            {DISPLAY_MODE_SEGMENTS.map((seg) => (
+              <button
+                key={seg.id}
+                type="button"
+                onClick={() => setDisplayMode(seg.id)}
+                className={cn(
+                  "h-6.5 px-2.75 rounded-full text-[12px] font-semibold transition-colors active:scale-95",
+                  displayMode === seg.id
+                    ? "bg-primary text-background"
+                    : "text-text-secondary",
+                )}
+              >
+                {seg.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {pois.length > 0 && displayMode !== "hidden" && (
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            className="w-8.5 h-8.5 rounded-full bg-background flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+          >
+            <Palette size={16} strokeWidth={2} />
+          </button>
+        )}
+
+        <div className="flex-1" />
+
+        {/* 카카오맵 길찾기 — 현재 위치 → 선택한 장소(없으면 현재 장소)로의 경로를 새 탭에서 연다. */}
+        <a
+          href={`https://map.kakao.com/link/map/${encodeURIComponent(directionsTarget.name)},${directionsTarget.coord.lat},${directionsTarget.coord.lng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 h-8.5 px-3.5 rounded-full bg-primary text-background text-[12px] font-semibold active:scale-95 transition-transform shrink-0"
+        >
+          <Navigation size={13} strokeWidth={2.2} />
+          길찾기
+        </a>
+      </div>
+
+      {/* 카테고리 범례 — 툴바의 팔레트 버튼으로 펼침/접힘. 필터 칩으로 카테고리를 좁혀도
+          항상 6개 전부 보여준다(색 기준표 역할이라 필터와 무관해야 함). */}
+      {legendOpen && pois.length > 0 && displayMode !== "hidden" && (
+        <div className="grid grid-cols-2 gap-x-3.5 gap-y-1.5 p-2.5 border-t border-border">
+          {legendCategories.map((c) => (
+            <div key={c} className="flex items-center gap-1.5">
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: POI_CATEGORY_COLOR[c] }}
+              />
+              <span className="text-[12px] font-medium text-text-primary">
+                {POI_CATEGORY_LABEL[c]}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 클러스터 배지 — 멤버 카테고리가 전부 같으면 그 카테고리 색(POI_CATEGORY_COLOR, 범례·
+// 개별 핀과 동일 출처), 섞여 있으면 중립색. CustomOverlayMap은 데이터 URI 마커와 달리
+// 실제 DOM이라 text-secondary 테마 토큰 클래스를 그대로 쓸 수 있어 라이트/다크 양쪽에
+// 자동 대응된다(개별 핀의 hex 고정값 제약이 배지에는 적용되지 않음).
+// isOpen이면 배지 아래에 인라인 목록을 펼쳐 개별 장소를 바로 선택할 수 있게 한다 —
+// 부채꼴 펼치기 대신 이 방식을 택해 상태 관리를 단순하게 유지한다.
+function ClusterBadge({
+  members,
+  isOpen,
+  onToggle,
+  onSelectMember,
+}: {
+  members: NearbyPoi[];
+  isOpen: boolean;
+  onToggle: () => void;
+  onSelectMember: (id: string) => void;
+}) {
+  const categories = new Set(members.map((m) => m.category));
+  const uniformCategory = categories.size === 1 ? members[0].category : null;
 
   return (
-    <div className="w-full h-full">
-      <Map
-        center={mainPlace.coord}
-        style={{ width: "100%", height: "100%" }}
-        level={3}
+    <div className="relative flex flex-col items-center">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold text-white shadow-md ring-2 ring-white active:scale-95 transition-transform bg-text-secondary"
+        style={uniformCategory ? { backgroundColor: POI_CATEGORY_COLOR[uniformCategory] } : undefined}
       >
-        <BoundsAdjuster mainCoord={mainPlace.coord} coords={allCoords} />
+        {members.length}
+      </button>
 
-        {/* 현재 장소 마커 — POI 핀이 몰려 있으면 카테고리 핀들 사이에 묻혀 안 보이던 문제.
-            핀과는 다른 halo+dot 실루엣(형태로 구분) + 최상단 zIndex(겹쳐도 항상 위)로 해결한다. */}
-        <MapMarker
-          position={mainPlace.coord}
-          image={{ src: MAIN_PLACE_MARKER_ICON, size: { width: 40, height: 40 } }}
-          zIndex={999}
-        />
-
-        {/* POI 마커 — 클릭 또는 목록 탭 시 이름 표시 */}
-        {renderedPois.map((poi) => (
-          <MapMarker
-            key={poi.id}
-            position={poi.coord}
-            image={{
-              src: POI_MARKER_ICON[poi.category],
-              size: { width: 28, height: 36 },
-            }}
-            onClick={() => onSelectPoi?.(selectedPoiId === poi.id ? null : poi.id)}
-          />
-        ))}
-      </Map>
+      {isOpen && (
+        <div className="absolute top-[calc(100%+6px)] left-1/2 -translate-x-1/2 w-44 rounded-lg border border-border bg-card shadow-lg overflow-hidden z-10">
+          {members.map((poi) => (
+            <button
+              key={poi.id}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectMember(poi.id);
+              }}
+              className="flex items-center gap-2 w-full text-left px-2.5 py-1.5 hover:bg-background transition-colors"
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: POI_CATEGORY_COLOR[poi.category] }}
+              />
+              <span className="flex-1 min-w-0 text-[12px] font-medium text-text-primary truncate">
+                {poi.name}
+              </span>
+              <span className="text-[10px] text-text-secondary shrink-0">{poi.dist}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -180,20 +496,20 @@ function pinMarkerSvg(fill: string, iconPaths: string) {
 const ICON_PATHS = {
   coffee:       `<path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/>`,
   shoppingBag:  `<path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/>`,
-  plus:         `<path d="M5 12h14"/><path d="M12 5v14"/>`,
+  pill:         `<path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/>`,
   utensils:     `<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>`,
   squareParking:`<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>`,
   fuel:         `<path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 4 0v-6.998a2 2 0 0 0-.59-1.42L18 5"/><path d="M14 21V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16"/><path d="M2 21h13"/><path d="M3 9h11"/>`,
 };
 
 // data URI로 렌더되는 마커는 문서의 CSS 변수를 상속받지 못해 테마 반응이 불가능하다 —
-// 라이트 테마 토큰(app/globals.css)의 accent/point/primary 값을 고정 hex로 미러링해
-// CourseActiveView 리스트 아이콘(CATEGORY_META)과 카테고리별 색을 맞춘다.
-const POI_MARKER_ICON: Record<Exclude<import("@/shared/types/course.types").NearbyCategory, "all">, string> = {
-  cafe:         pinMarkerSvg("#3d7a6b", ICON_PATHS.coffee),       // accent
-  convenience:  pinMarkerSvg("#e8936a", ICON_PATHS.shoppingBag),  // point
-  pharmacy:     pinMarkerSvg("#243b55", ICON_PATHS.plus),         // primary
-  restaurant:   pinMarkerSvg("#F97316", ICON_PATHS.utensils),     // orange-500
-  parking:      pinMarkerSvg("#0EA5E9", ICON_PATHS.squareParking),// sky-500
-  gas_station:  pinMarkerSvg("#EAB308", ICON_PATHS.fuel),         // yellow-500
+// 색상은 POI_CATEGORY_COLOR(shared/constants/poiCategory.ts)의 라이트 테마 hex 고정값을
+// 그대로 쓴다. 범례·CourseActiveView 리스트 아이콘과 동일한 단일 출처다.
+const POI_MARKER_ICON: Record<PoiCategory, string> = {
+  cafe:         pinMarkerSvg(POI_CATEGORY_COLOR.cafe, ICON_PATHS.coffee),
+  convenience:  pinMarkerSvg(POI_CATEGORY_COLOR.convenience, ICON_PATHS.shoppingBag),
+  pharmacy:     pinMarkerSvg(POI_CATEGORY_COLOR.pharmacy, ICON_PATHS.pill),
+  restaurant:   pinMarkerSvg(POI_CATEGORY_COLOR.restaurant, ICON_PATHS.utensils),
+  parking:      pinMarkerSvg(POI_CATEGORY_COLOR.parking, ICON_PATHS.squareParking),
+  gas_station:  pinMarkerSvg(POI_CATEGORY_COLOR.gas_station, ICON_PATHS.fuel),
 };
