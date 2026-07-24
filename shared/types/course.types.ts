@@ -22,6 +22,9 @@ export type JourneyPlace = {
   // 이 장소가 취향 추천(stage4 점수화)으로 왔는지, 홈 근처 카드에서 직접 선택했는지.
   // 구버전 localStorage 페이로드엔 없을 수 있어 optional.
   origin?: "recommended" | "selected";
+  // 카카오 로컬 출처 장소만 채워지는 카카오 장소 상세 페이지 URL(place.map.kakao.com).
+  // TourAPI 출처는 카카오 장소 ID가 없어 undefined.
+  placeUrl?: string;
 };
 
 // 선택 진입(origin="selected") 코스의 가용성 스냅샷 — generateCourseFromPlaceAction이
@@ -108,6 +111,8 @@ export type CompletedCourse = {
     badge: { text: string; variant: BadgeVariant };
     availabilityUncertain: boolean;
     coord: { lat: number; lng: number } | null;
+    // 카카오 로컬 출처 장소만 있음 — 없으면 좌표 기반 카카오 지도 검색 링크로 대체한다.
+    placeUrl: string | null;
   }[];
   rating: number;
   review: string;

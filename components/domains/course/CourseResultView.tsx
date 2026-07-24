@@ -10,6 +10,7 @@ import {
   AlertCircle,
   MapPin,
   ThumbsDown,
+  Navigation,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -401,10 +402,21 @@ export function CourseResultView({
           <PlaceDescription key={currentPlace.id} desc={currentPlace.desc} />
         )}
 
-        {/* 장소 지도 미리보기 — 마커 1개, 인터랙션은 SDK 기본값 */}
+        {/* 장소 지도 미리보기 — 마커 1개, 인터랙션은 SDK 기본값.
+            길찾기는 "여기 갈 만한 거리인가"를 커밋 전에 가볍게 가늠해보라는 보조 장치라,
+            주 CTA("여기로 갈게요")보다 눈에 띄지 않게 지도 위 작은 pill로만 둔다. */}
         {placeCoord && (
-          <div className="mt-3 h-45 rounded-xl overflow-hidden border border-border">
+          <div className="relative mt-3 h-45 rounded-xl overflow-hidden border border-border">
             <CourseMap mainPlace={{ name: currentPlace.name, coord: placeCoord }} />
+            <a
+              href={`https://map.kakao.com/link/map/${encodeURIComponent(currentPlace.name)},${placeCoord.lat},${placeCoord.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute z-10 bottom-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-background/95 backdrop-blur-xs border border-border shadow-md text-[11px] font-semibold text-text-secondary active:scale-95 transition-transform"
+            >
+              <Navigation size={12} strokeWidth={2.2} />
+              길찾기
+            </a>
           </div>
         )}
 

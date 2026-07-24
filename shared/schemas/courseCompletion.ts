@@ -22,6 +22,7 @@ export const courseCompletionSchema = z.object({
       description: z.string().default(""),
       badgeText: z.string().default(""),
       badgeVariant: z.string().default("secondary"),
+      placeUrl: z.string().nullable().default(null),
     })
     .refine((p) => p.stayMin <= p.stayMax, {
       message: "stayMin은 stayMax 이하여야 한다",

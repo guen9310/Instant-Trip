@@ -167,6 +167,7 @@ export async function buildCoursePlace(
       estimatedDuration: candidate.estimatedDuration,
       origin,
       hours: "",
+      placeUrl: item.placeUrl,
     };
   }
 
