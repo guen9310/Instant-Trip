@@ -94,7 +94,20 @@ export async function fetchNearbyPoisAction(
     );
     const pois = results.flat();
     pois.sort((a, b) => parseInt(a.dist) - parseInt(b.dist));
-    return { ok: true, pois };
+
+    // 카카오 로컬 DB에 같은 자리 상호가 개명 등으로 구·신 등록 정보가 둘 다 남아있는
+    // 경우가 있다 — place id는 다르지만 좌표가 완전히 같은 별개 문서로 잡힌다(실사용
+    // 확인: 울산 삼산동 한 좌표에 "레드버튼"·"벌턴 파리지앙"이 동일 좌표로 중복 등록).
+    // 그대로 두면 지도 클러스터 배지 숫자가 실제 장소 수보다 부풀려진다.
+    const seenCoordKeys = new Set<string>();
+    const dedupedPois = pois.filter((p) => {
+      const key = `${p.coord.lat.toFixed(5)},${p.coord.lng.toFixed(5)}`;
+      if (seenCoordKeys.has(key)) return false;
+      seenCoordKeys.add(key);
+      return true;
+    });
+
+    return { ok: true, pois: dedupedPois };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "조회 실패" };
   }

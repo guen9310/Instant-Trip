@@ -11,8 +11,23 @@ import { Badge } from "@/components/commons/Badge";
 import { StarRating } from "@/components/domains/profile/StarRating";
 import type { CompletedCourse } from "@/shared/types/course.types";
 
-function mapSearchUrl(coord: { lat: number; lng: number }): string {
-  return `https://www.google.com/maps/search/?api=1&query=${coord.lat},${coord.lng}`;
+// 카카오 로컬 출처 장소는 실제 place.map.kakao.com 상세 페이지로 연결한다.
+// 그 외(TourAPI 출처 등 placeUrl이 없는 경우)는 CourseActiveView의 "길찾기"와 동일하게
+// 좌표 기반 map.kakao.com/link/map 링크로 폴백한다 — 이름+좌표만 있으면 출처 무관하게
+// 정확히 동작해서, 텍스트 검색보다 신뢰도가 높다. 좌표조차 없는 아주 오래된 데이터만
+// 최후 수단으로 이름+주소 검색 링크를 쓴다.
+function kakaoPlaceUrl(place: {
+  name: string;
+  address: string;
+  coord: { lat: number; lng: number } | null;
+  placeUrl: string | null;
+}): string {
+  if (place.placeUrl) return place.placeUrl;
+  if (place.coord) {
+    return `https://map.kakao.com/link/map/${encodeURIComponent(place.name)},${place.coord.lat},${place.coord.lng}`;
+  }
+  const query = place.address ? `${place.name} ${place.address}` : place.name;
+  return `https://map.kakao.com/?q=${encodeURIComponent(query)}`;
 }
 
 type Props = {
@@ -57,24 +72,15 @@ export function CompletedCourseDetailModal({ course, onClose }: Props) {
                     {place.address && (
                       <div className="ml-7 flex items-center gap-1 text-[12px] text-text-secondary">
                         <MapPin size={11} className="shrink-0" />
-                        {place.coord ? (
-                          <a
-                            href={mapSearchUrl(place.coord)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline underline-offset-2"
-                          >
-                            {place.address}
-                          </a>
-                        ) : (
-                          <span>{place.address}</span>
-                        )}
+                        <a
+                          href={kakaoPlaceUrl(place)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline underline-offset-2"
+                        >
+                          {place.address}
+                        </a>
                       </div>
-                    )}
-                    {place.description && (
-                      <p className="ml-7 text-[12px] text-text-secondary">
-                        {place.description}
-                      </p>
                     )}
                     {place.availabilityUncertain && (
                       <p className="ml-7 text-[11px] text-text-secondary/70">

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CourseResultView } from "@/components/domains/course/CourseResultView";
 import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
-import type { PendingCourse } from "@/shared/types/course.types";
+import type { CourseProgress, PendingCourse } from "@/shared/types/course.types";
 
 function readPendingCourse(): PendingCourse | null {
   try {
@@ -20,9 +20,10 @@ function readPendingCourse(): PendingCourse | null {
 
 type Props = {
   isAuthenticated: boolean;
+  activeCourse: CourseProgress | null;
 };
 
-export function CoursePreviewClient({ isAuthenticated }: Props) {
+export function CoursePreviewClient({ isAuthenticated, activeCourse }: Props) {
   const router = useRouter();
   const course = useClientRead(readPendingCourse);
 
@@ -46,6 +47,7 @@ export function CoursePreviewClient({ isAuthenticated }: Props) {
       availability={course.availability}
       generatedAt={course.generatedAt}
       isAuthenticated={isAuthenticated}
+      activeCourse={activeCourse}
     />
   );
 }

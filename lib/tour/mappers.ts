@@ -80,6 +80,7 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     estimatedDuration: p.estimatedDuration,
     tags: p.tags,
     origin: p.origin,
+    placeUrl: p.placeUrl,
   };
 }
 
