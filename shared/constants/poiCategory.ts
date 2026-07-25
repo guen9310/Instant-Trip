@@ -32,3 +32,18 @@ export const POI_CATEGORY_COLOR: Record<PoiCategory, string> = {
   parking: "#0EA5E9", // sky-500
   gas_station: "#EAB308", // yellow-500
 };
+
+// 다크 테마 변형 — app/globals.css의 .dark 블록과 동일한 라이트→다크 대응을 그대로
+// 따른다(accent/point/primary는 .dark의 실제 값을 그대로 미러링). Tailwind 팔레트로
+// 고른 나머지 3개(orange/sky/yellow-500)는 .dark 쪽에 대응 토큰이 없어, globals.css가
+// 라이트→다크에서 일관되게 밝은 쪽으로 옮기는 패턴(예: accent #3d7a6b→#52a88e)을 따라
+// 한 단계 밝은 Tailwind 셰이드(400)를 골랐다 — 어두운 배경(--background: #0f1923)에서
+// 대비를 확보하기 위함.
+export const POI_CATEGORY_COLOR_DARK: Record<PoiCategory, string> = {
+  cafe: "#52a88e", // accent (.dark)
+  convenience: "#f0a882", // point (.dark)
+  pharmacy: "#5b8db8", // primary (.dark)
+  restaurant: "#FB923C", // orange-400
+  parking: "#38BDF8", // sky-400
+  gas_station: "#FACC15", // yellow-400
+};

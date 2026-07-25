@@ -230,9 +230,8 @@ function NearbyPanel({
   selectedPoiId,
   onSelect,
 }: NearbyPanelProps) {
-  // 클러스터링 검증용 임시 상태 — 확인 후 되돌릴 예정. CourseMap이 올려주는 현재
-  // 지도 뷰포트 경계로 하단 리스트를 좁혀, 배지 숫자와 실제 화면에 보이는 장소
-  // 수가 일치하는지 눈으로 비교할 수 있게 한다.
+  // CourseMap이 올려주는 현재 지도 뷰포트 경계 — 하단 리스트를 지금 지도 화면에
+  // 실제로 보이는 장소만으로 좁혀, 지도와 리스트가 항상 같은 내용을 보여주게 한다.
   const [viewportBounds, setViewportBounds] = useState<{
     sw: { lat: number; lng: number };
     ne: { lat: number; lng: number };
@@ -290,7 +289,7 @@ function NearbyPanel({
       </div>
 
       <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide mb-2 mt-1">
-        현재 위치 기준
+        현재 장소 기준
       </p>
 
       {/* 리스트 전용 스크롤 영역 — 페이지 전체 스크롤과 분리해, 장소가 많아도
@@ -352,11 +351,13 @@ function NearbyPanel({
           <div className="flex flex-col items-center gap-2 py-6 mt-1">
             <FilterX size={20} className="text-text-secondary" strokeWidth={1.5} />
             <p className="text-[12px] text-text-secondary">
-              {cat === "all"
-                ? "주변에 표시할 장소가 없어요"
-                : `근처에 ${FILTER_CHIPS.find((c) => c.id === cat)?.label}가 없어요`}
+              {pois.length === 0
+                ? cat === "all"
+                  ? "주변에 표시할 장소가 없어요"
+                  : `근처에 ${FILTER_CHIPS.find((c) => c.id === cat)?.label}가 없어요`
+                : "지도에 보이는 장소가 없어요 · 지도를 움직여보세요"}
             </p>
-            {cat !== "all" && (
+            {pois.length === 0 && cat !== "all" && (
               <button onClick={() => setCat("all")} className="text-[12px] font-semibold text-primary">
                 전체 보기
               </button>
