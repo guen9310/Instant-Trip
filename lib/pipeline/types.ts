@@ -83,6 +83,9 @@ export interface CoursePlace {
   origin: PlaceOrigin;
   // usetime/restdate 원문을 합성한 표시용 문자열. 데이터 없으면 "".
   hours: string;
+  // 카카오 로컬 출처(item.source === "kakao")일 때만 채워지는 카카오 장소 상세 페이지 URL.
+  // TourAPI 출처는 카카오 장소 ID가 없어 undefined.
+  placeUrl?: string;
 }
 
 export interface CourseResult {

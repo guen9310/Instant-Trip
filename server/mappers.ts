@@ -3,7 +3,9 @@ import type {
   CourseProgress,
   CompletedCourse,
   BadgeVariant,
+  JourneyPlace,
 } from "@/shared/types/course.types";
+import { formatDuration, type DurationRange } from "@/shared/utils/duration";
 
 // DB row 타입 — schema에서 직접 추론
 type CourseRow = typeof courses.$inferSelect;
@@ -44,9 +46,41 @@ export function toCompletedCourse(
       availabilityUncertain: p.availabilityUncertain,
       coord:
         p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : null,
+      placeUrl: p.placeUrl,
     })),
     rating: completion.rating ?? 0,
     review: completion.review ?? "",
+  };
+}
+
+// ─── 진행 중인 외출 이어보기(DB fallback) ────────────────────────────────────
+
+// course_places에는 hours/imageUrl/tags가 없다(생성 당시 추천 카드에만 있던 부가 정보라
+// DB엔 저장하지 않음) — 빈 값으로 채운다. CourseActiveView는 이 필드들을 이미 null-safe로 다룬다.
+export function toJourneyPlace(place: PlaceRow): JourneyPlace {
+  const estimatedDuration: DurationRange = { min: place.stayMin, max: place.stayMax };
+  return {
+    id: place.id,
+    cat: place.category,
+    name: place.name,
+    addr: place.address,
+    hours: "",
+    time: "",
+    dur: formatDuration(estimatedDuration),
+    badge: {
+      text: place.badgeText ?? place.category,
+      variant: (place.badgeVariant as BadgeVariant) ?? "secondary",
+    },
+    desc: place.description ?? "",
+    coord:
+      place.lat && place.lng
+        ? { lat: Number(place.lat), lng: Number(place.lng) }
+        : null,
+    imageUrl: null,
+    availabilityUncertain: place.availabilityUncertain,
+    estimatedDuration,
+    tags: [],
+    placeUrl: place.placeUrl ?? undefined,
   };
 }
 

@@ -4,8 +4,14 @@ import { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import {
   toCourseProgress,
   toCompletedCourse,
+  toJourneyPlace,
 } from "@/server/mappers";
-import type { CourseProgress, CompletedCourse } from "@/shared/types/course.types";
+import type {
+  CourseProgress,
+  CompletedCourse,
+  ResumableCourse,
+} from "@/shared/types/course.types";
+import { isUuid } from "@/shared/utils";
 
 function formatDuration(ms: number): string {
   const totalMin = Math.max(0, Math.floor(ms / 60000));
@@ -36,6 +42,47 @@ export async function getActiveCourse(
 
   if (rows.length === 0) return null;
   return toCourseProgress(rows[0].completion, rows[0].course);
+}
+
+// ─── /course/active/[id] DB fallback ─────────────────────────────────────────
+// 프로필 "이어서"는 DB courses.id를 가리키는데, 진행 화면은 localStorage의
+// pendingCourse만 읽는다. 그 localStorage가 없거나(다른 기기·저장소 초기화) 다른
+// 코스로 덮어써졌을 때, 이 courseId로 이 유저의 활성 코스를 복원할 수 있는지 확인한다.
+// userId로 소유자를 검증해 남의 활성 코스를 들여다볼 수 없게 한다.
+export async function getResumableCourse(
+  userId: string,
+  courseId: string,
+): Promise<ResumableCourse | null> {
+  // 코스를 갓 생성했을 때는 /course/active/[id]의 id가 클라이언트에서 만든 courseId(nanoid 등)라
+  // DB courses.id(uuid) 형식이 아니다 — courses.id는 uuid 컬럼이라 그 값을 그대로 비교하면
+  // Postgres가 "invalid input syntax for type uuid"로 쿼리 자체를 실패시킨다. 매칭될 수 없는
+  // 형식이면 DB를 조회할 필요도 없으니 여기서 걸러낸다.
+  if (!isUuid(courseId)) return null;
+
+  const rows = await db
+    .select({ completion: courseCompletions, course: courses, place: coursePlaces })
+    .from(courseCompletions)
+    .innerJoin(courses, eq(courseCompletions.courseId, courses.id))
+    .innerJoin(coursePlaces, eq(coursePlaces.courseId, courses.id))
+    .where(
+      and(
+        eq(courseCompletions.userId, userId),
+        eq(courses.id, courseId),
+        eq(courseCompletions.status, "active"),
+        eq(coursePlaces.orderIndex, 0),
+      ),
+    )
+    .limit(1);
+
+  if (rows.length === 0) return null;
+  const { completion, course, place } = rows[0];
+  return {
+    completionId: completion.id,
+    courseId: course.id,
+    courseName: course.name,
+    scale: course.scale,
+    place: toJourneyPlace(place),
+  };
 }
 
 // ─── TODO 1: 프로필 완료 목록 ─────────────────────────────────────────────────

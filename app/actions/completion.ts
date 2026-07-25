@@ -39,6 +39,18 @@ export async function startCourseAction(
     const { place } = payload;
 
     await db.batch([
+      // 유저당 active는 최대 1개만 유지 — 새 코스를 시작하면 기존에 남아있던
+      // active 행(들)은 자동으로 abandoned 처리한다. 클라이언트의 화면 확인
+      // 여부와 무관하게 서버가 항상 이 불변조건을 강제한다(방어적 처리).
+      db
+        .update(courseCompletions)
+        .set({ status: "abandoned" })
+        .where(
+          and(
+            eq(courseCompletions.userId, session.user.id),
+            eq(courseCompletions.status, "active"),
+          ),
+        ),
       db.insert(courses).values({
         id: dbCourseId,
         name: payload.courseName,
@@ -58,6 +70,7 @@ export async function startCourseAction(
         description: place.desc || null,
         badgeText: place.badge.text || null,
         badgeVariant: place.badge.variant || null,
+        placeUrl: place.placeUrl || null,
       }),
       db.insert(courseCompletions).values({
         id: completionId,
@@ -142,6 +155,7 @@ export async function saveCourseCompletionAction(
         description: d.place.description || null,
         badgeText: d.place.badgeText || null,
         badgeVariant: d.place.badgeVariant || null,
+        placeUrl: d.place.placeUrl || null,
       }),
       db.insert(courseCompletions).values({
         userId: session.user.id,

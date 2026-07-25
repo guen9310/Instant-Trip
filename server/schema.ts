@@ -112,6 +112,8 @@ export const coursePlaces = pgTable(
     description: text("description"),
     badgeText: text("badge_text"),
     badgeVariant: text("badge_variant"),
+    // 카카오 로컬 출처 장소만 채워진다(TourAPI 출처는 카카오 장소 ID 자체가 없음).
+    placeUrl: text("place_url"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

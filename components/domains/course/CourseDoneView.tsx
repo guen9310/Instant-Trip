@@ -22,16 +22,6 @@ const REACTION_TAGS = [
   "또 올래요",
 ];
 
-function formatDuration(ms: number): string {
-  const totalMin = Math.max(0, Math.floor(ms / 60000));
-  const hours = Math.floor(totalMin / 60);
-  const mins = totalMin % 60;
-  if (hours > 0 && mins > 0) return `${hours}시간 ${mins}분`;
-  if (hours > 0) return `${hours}시간`;
-  return `${totalMin}분`;
-}
-
-
 function readPendingCourse(): Partial<PendingCourse> | null {
   try {
     const raw = localStorage.getItem("pendingCourse");
@@ -51,9 +41,6 @@ export function CourseDoneView() {
   // 저장소 읽기 결과에서 직접 도출 — 하이드레이션 중엔 null(기존 초기 상태와 동일 렌더)
   const pending = useClientRead(readPendingCourse);
   const place = pending === HYDRATING ? null : (pending?.place ?? MOCK_PLACES[0]);
-
-  const durationMs =
-    startedAt != null && completedAt != null ? completedAt - startedAt : null;
 
   const toggleReaction = (tag: string) => {
     setReactions((prev) =>
@@ -114,16 +101,6 @@ export function CourseDoneView() {
                 {place.name}
               </p>
             </div>
-          </div>
-        )}
-
-        {/* 소요 시간 카드 */}
-        {durationMs != null && (
-          <div className="rounded-xl bg-card border border-border px-4 py-3.5 mb-6">
-            <p className="text-[11px] text-text-secondary mb-1">총 소요 시간</p>
-            <p className="text-[24px] font-bold text-text-primary">
-              {formatDuration(durationMs)}
-            </p>
           </div>
         )}
 
