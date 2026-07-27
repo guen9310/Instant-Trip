@@ -9,6 +9,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core"
+import type { FestivalProgramInfo } from "@/shared/types/course.types"
 
 // ─── better-auth managed tables ──────────────────────────────────────────────
 // Column names must match what better-auth expects (camelCase TS keys, snake_case DB columns).
@@ -114,6 +115,10 @@ export const coursePlaces = pgTable(
     badgeVariant: text("badge_variant"),
     // 카카오 로컬 출처 장소만 채워진다(TourAPI 출처는 카카오 장소 ID 자체가 없음).
     placeUrl: text("place_url"),
+    // 아래 둘은 축제(Tour API 매칭)만 채워진다. 생성 시점 스냅샷 — description/placeUrl과
+    // 동일하게 다시 조회하지 않고 그대로 저장한다(발행 후 거의 안 바뀌는 정보라 신선도 이슈 적음).
+    programInfo: jsonb("program_info").$type<FestivalProgramInfo>(),
+    organizerUrl: text("organizer_url"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

@@ -149,6 +149,9 @@ export type CompletedCourse = {
     coord: { lat: number; lng: number } | null;
     // 카카오 로컬 출처 장소만 있음 — 없으면 좌표 기반 카카오 지도 검색 링크로 대체한다.
     placeUrl: string | null;
+    // 축제(Tour API 매칭)만 있음.
+    programInfo: FestivalProgramInfo | null;
+    organizerUrl: string | null;
   }[];
   rating: number;
   review: string;

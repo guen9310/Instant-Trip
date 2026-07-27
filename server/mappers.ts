@@ -47,6 +47,8 @@ export function toCompletedCourse(
       coord:
         p.lat && p.lng ? { lat: Number(p.lat), lng: Number(p.lng) } : null,
       placeUrl: p.placeUrl,
+      programInfo: p.programInfo,
+      organizerUrl: p.organizerUrl,
     })),
     rating: completion.rating ?? 0,
     review: completion.review ?? "",
@@ -81,6 +83,8 @@ export function toJourneyPlace(place: PlaceRow): JourneyPlace {
     estimatedDuration,
     tags: [],
     placeUrl: place.placeUrl ?? undefined,
+    programInfo: place.programInfo,
+    organizerUrl: place.organizerUrl,
   };
 }
 

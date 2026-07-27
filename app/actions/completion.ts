@@ -71,6 +71,8 @@ export async function startCourseAction(
         badgeText: place.badge.text || null,
         badgeVariant: place.badge.variant || null,
         placeUrl: place.placeUrl || null,
+        programInfo: place.programInfo ?? null,
+        organizerUrl: place.organizerUrl ?? null,
       }),
       db.insert(courseCompletions).values({
         id: completionId,
@@ -156,6 +158,8 @@ export async function saveCourseCompletionAction(
         badgeText: d.place.badgeText || null,
         badgeVariant: d.place.badgeVariant || null,
         placeUrl: d.place.placeUrl || null,
+        programInfo: d.place.programInfo ?? null,
+        organizerUrl: d.place.organizerUrl ?? null,
       }),
       db.insert(courseCompletions).values({
         userId: session.user.id,

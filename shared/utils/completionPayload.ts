@@ -37,6 +37,8 @@ export function buildCompletionPayload(args: {
       badgeText: p.badge.text,
       badgeVariant: p.badge.variant,
       placeUrl: p.placeUrl ?? null,
+      programInfo: p.programInfo ?? null,
+      organizerUrl: p.organizerUrl ?? null,
     },
     startedAt: args.startedAt,
     completedAt: args.completedAt,
