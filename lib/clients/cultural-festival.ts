@@ -31,6 +31,8 @@ export interface CulturalFestival {
   imageUrl?: string;                      // searchFestival2 firstimage
   sources?: ("public" | "tour")[];        // 데이터 출처 태그
   coordMissMatch?: boolean;               // 좌표 없이 이름만으로 매칭된 경우
+  contentid?: string;                     // Tour API contentId — 매칭/tour 단독일 때만 존재.
+                                           // detailIntro2로 프로그램 상세를 보강할 때 쓴다.
 }
 
 type RawFestival = Omit<CulturalFestival, "latitude" | "longitude" | "imageUrl" | "sources" | "coordMissMatch"> & {

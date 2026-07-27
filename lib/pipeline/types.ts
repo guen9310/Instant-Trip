@@ -1,6 +1,7 @@
 import type { TourItem } from "@/lib/tour/types";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import type { DurationRange } from "@/shared/utils/duration";
+import type { FestivalProgramInfo, FestivalPhase } from "@/shared/types/course.types";
 
 export type TravelScale = "가볍게" | "적당히" | "여유롭게";
 
@@ -86,6 +87,11 @@ export interface CoursePlace {
   // 카카오 로컬 출처(item.source === "kakao")일 때만 채워지는 카카오 장소 상세 페이지 URL.
   // TourAPI 출처는 카카오 장소 ID가 없어 undefined.
   placeUrl?: string;
+  // 축제 + Tour API 매칭된 경우에만 채워진다(lib/pipeline/selectFestival.ts).
+  programInfo?: FestivalProgramInfo | null;
+  organizerUrl?: string | null;
+  festivalPhase?: FestivalPhase;
+  festivalStartLabel?: string;
 }
 
 export interface CourseResult {

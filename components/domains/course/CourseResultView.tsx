@@ -11,12 +11,12 @@ import {
   MapPin,
   ThumbsDown,
   Navigation,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/Dialog";
-import { FestivalDetailSheet } from "@/components/domains/course/FestivalDetailSheet";
 import {
   useCourseProgressStore,
   MAX_REROLLS,
@@ -25,7 +25,6 @@ import { generateCourseAction } from "@/app/actions/course";
 import { startCourseAction } from "@/app/actions/completion";
 import type {
   JourneyPlace,
-  FestivalSummary,
   PendingCourse,
   PlaceAvailabilitySnapshot,
   CourseProgress,
@@ -51,7 +50,6 @@ type Props = {
   courseId: string;
   courseName: string;
   place: JourneyPlace;
-  festivals?: FestivalSummary[];
   isLoading?: boolean;
   mapX?: number;
   mapY?: number;
@@ -82,7 +80,6 @@ export function CourseResultView({
   courseId,
   courseName,
   place,
-  festivals = [],
   isLoading = false,
   mapX,
   mapY,
@@ -93,13 +90,10 @@ export function CourseResultView({
   isAuthenticated,
   activeCourse,
 }: Props) {
-  const [selectedFestival, setSelectedFestival] =
-    useState<FestivalSummary | null>(null);
   const [rerolling, setRerolling] = useState(false);
   const [currentCourseId, setCurrentCourseId] = useState(courseId);
   const [currentPlace, setCurrentPlace] = useState<JourneyPlace>(place);
   const [currentCourseName, setCurrentCourseName] = useState(courseName);
-  const [currentFestivals, setCurrentFestivals] = useState(festivals);
   const [currentGeneratedAt, setCurrentGeneratedAt] = useState(generatedAt);
   // 최초 진입 시점(마운트) 기준 1회만 판단한다 — 리롤 시엔 doReroll이 방금 생성된
   // 신선한 스냅샷임을 알고 있으므로 같은 핸들러에서 false로 직접 갱신한다
@@ -150,7 +144,6 @@ export function CourseResultView({
     setCurrentCourseId(result.courseId);
     setCurrentPlace(result.place);
     setCurrentCourseName(result.courseName);
-    setCurrentFestivals(result.festivals);
     console.log(
       `[festival] 재추천 후 수신 — ${result.festivals.length}건`,
       result.festivals,
@@ -357,36 +350,71 @@ export function CourseResultView({
           )}
         </div>
 
-        {/* 정보 행 — 주소 / 영업시간 / 예상 체류 (드로어를 열지 않아도 바로 판단) */}
-        {(currentPlace.addr || currentPlace.hours?.trim() || currentPlace.dur) && (
-          <div className="flex flex-col gap-2.5">
+        {/* 정보 행 — 장소 / 일정 / 예상 체류 / (축제 전용) 공식 사이트.
+            각 행에 소제목을 붙여 드로어를 열지 않아도 항목이 뭔지 바로 파악되게 한다. */}
+        {(currentPlace.addr ||
+          currentPlace.hours?.trim() ||
+          currentPlace.dur ||
+          currentPlace.organizerUrl) && (
+          <div className="flex flex-col gap-3">
             {currentPlace.addr && (
-              <div className="flex items-center gap-2.5">
-                <MapPin size={16} className="text-text-secondary shrink-0" />
-                <span className="text-[14px] text-text-primary">
-                  {currentPlace.addr}
-                </span>
+              <div className="flex items-start gap-2.5">
+                <MapPin size={16} className="text-text-secondary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-semibold text-text-secondary mb-0.5">
+                    장소
+                  </p>
+                  <p className="text-[14px] text-text-primary">{currentPlace.addr}</p>
+                </div>
               </div>
             )}
             {currentPlace.hours?.trim() && (
               <div className="flex items-start gap-2.5">
                 <Clock size={16} className="text-text-secondary shrink-0 mt-0.5" />
-                <div className="text-[14px] text-text-primary">
-                  {currentPlace.hours.split("\n").map((line, i) => (
-                    <p key={i}>{line}</p>
-                  ))}
+                <div>
+                  <p className="text-[11px] font-semibold text-text-secondary mb-0.5">
+                    일정
+                  </p>
+                  <div className="text-[14px] text-text-primary">
+                    {currentPlace.hours.split("\n").map((line, i) => (
+                      <p key={i}>{line}</p>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
             {currentPlace.dur && (
-              <div className="flex items-center gap-2.5">
-                <Calendar size={16} className="text-text-secondary shrink-0" />
-                <span className="text-[14px] text-text-primary">
-                  {currentPlace.dur}
-                  <span className="ml-1.5 text-[11px] text-text-secondary">
-                    카테고리 평균 기준
-                  </span>
-                </span>
+              <div className="flex items-start gap-2.5">
+                <Calendar size={16} className="text-text-secondary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-semibold text-text-secondary mb-0.5">
+                    예상 체류시간
+                  </p>
+                  <p className="text-[14px] text-text-primary">
+                    {currentPlace.dur}
+                    <span className="ml-1.5 text-[11px] text-text-secondary">
+                      카테고리 평균 기준
+                    </span>
+                  </p>
+                </div>
+              </div>
+            )}
+            {currentPlace.organizerUrl && (
+              <div className="flex items-start gap-2.5">
+                <Globe size={16} className="text-text-secondary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-semibold text-text-secondary mb-0.5">
+                    공식 사이트
+                  </p>
+                  <a
+                    href={currentPlace.organizerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[14px] font-semibold text-primary"
+                  >
+                    홈페이지
+                  </a>
+                </div>
               </div>
             )}
           </div>
@@ -400,6 +428,41 @@ export function CourseResultView({
         {/* 소개 — 2줄 클램프 + 더보기/접기 토글 */}
         {currentPlace.desc?.trim() && (
           <PlaceDescription key={currentPlace.id} desc={currentPlace.desc} />
+        )}
+
+        {/* 축제 전용 — 행사 프로그램. programInfo가 없으면(장소이거나 Tour API 미매칭
+            축제) 섹션 자체를 렌더하지 않는다. */}
+        {currentPlace.programInfo && (
+          <div className="mt-4 pt-4 border-t border-dashed border-border">
+            <p className="text-[13px] font-bold text-text-primary mb-2">행사 프로그램</p>
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="text-[12.5px] font-semibold text-text-secondary mb-1">
+                  주요 프로그램
+                </p>
+                <p className="text-[14px] leading-[1.55] text-text-primary whitespace-pre-line">
+                  {currentPlace.programInfo.main}
+                </p>
+              </div>
+              {currentPlace.programInfo.extra.length > 0 && (
+                <div>
+                  <p className="text-[12.5px] font-semibold text-text-secondary mb-1.5">
+                    부대 행사 및 프로그램
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentPlace.programInfo.extra.map((item, i) => (
+                      <span
+                        key={i}
+                        className="px-2.5 py-0.5 rounded-full border border-border text-[11.5px] font-medium text-text-primary"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* 장소 지도 미리보기 — 마커 1개, 인터랙션은 SDK 기본값.
@@ -420,49 +483,17 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 보조 정보 — 근처 맛집 / 진행중 축제 (단일 장소 추천을 흐리지 않는 보조 수준) */}
-        {(prefs?.food === "matjip" || currentFestivals.length > 0) && (
-          <div className="mt-3 flex flex-col gap-2.5">
-            {prefs?.food === "matjip" && placeCoord && (
-              <NearbyRestaurants
-                placeName={currentPlace.name}
-                addr={currentPlace.addr}
-                coord={placeCoord}
-              />
-            )}
 
-            {/* 주변 축제 섹션 — 렌더만 비활성화 (조회 로직은 그대로 유지, 복원 가능)
-            {currentFestivals.length > 0 && (
-              <div className="p-3.5 rounded-xl bg-card border border-border">
-                <p className="flex items-center gap-1.5 text-xs text-text-secondary mb-2.5">
-                  <PartyPopper size={14} /> 주변 축제
-                </p>
-                <div className="flex flex-col gap-2.5">
-                  {currentFestivals.slice(0, 3).map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => setSelectedFestival(f)}
-                      className="w-full flex items-center justify-between gap-2 text-left active:scale-[0.98] transition-transform duration-150"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-text-primary truncate">
-                          {f.name}
-                        </p>
-                        <p className="text-[11px] text-text-secondary">
-                          {f.period}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={f.status === "ongoing" ? "accent" : "outline"}
-                      >
-                        {f.status === "ongoing" ? "진행중" : "예정"}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            */}
+        {/* 보조 정보 — 근처 맛집 (단일 장소 추천을 흐리지 않는 보조 수준).
+            축제를 다른 장소의 곁다리 정보로 보여주던 옛 섹션은 제거됨 — 이제 축제는
+            홈 화면에서 직접 목적지로 선택 가능하므로 이 화면에 곁다리로 얹을 이유가 없다. */}
+        {prefs?.food === "matjip" && placeCoord && (
+          <div className="mt-3">
+            <NearbyRestaurants
+              placeName={currentPlace.name}
+              addr={currentPlace.addr}
+              coord={placeCoord}
+            />
           </div>
         )}
       </div>
@@ -516,17 +547,30 @@ export function CourseResultView({
           )
         ) : (
           <>
-            <Button size="cta" className="w-full" onClick={handleStart}>
-              여기로 갈게요
-            </Button>
-            <div className="flex items-center justify-center gap-4">
-              <button
-                onClick={() => router.push("/start")}
-                className="h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
-              >
-                <Settings2 size={15} /> 취향 다시 설정
-              </button>
-              {currentPlace.origin !== "selected" && (
+            {/* 예정(시작 전) 축제는 "여기로 갈게요"가 성립하지 않는다 — 진행 화면은
+                "지금 그 장소에 가 있다"를 전제로 하는데 아직 시작도 안 했기 때문이다.
+                버튼 대신 안내문으로 대체하고 액션은 없다(종료된 축제는 목록에 나온 적이
+                없어 여기서 다루지 않는다 — splitOngoingUpcoming이 ongoing/upcoming만 반환). */}
+            {currentPlace.festivalPhase === "upcoming" ? (
+              <div className="w-full h-13 rounded-full bg-muted text-text-secondary text-[15px] font-semibold flex items-center justify-center">
+                {currentPlace.festivalStartLabel}부터 방문할 수 있어요
+              </div>
+            ) : (
+              <Button size="cta" className="w-full" onClick={handleStart}>
+                여기로 갈게요
+              </Button>
+            )}
+            {/* 취향 다시 설정·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
+                사용자가 직접 고른 장소(origin="selected": 홈 인기 장소·주변 축제 선택 둘 다)
+                에는 성립하지 않는다. */}
+            {currentPlace.origin !== "selected" && (
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => router.push("/start")}
+                  className="h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
+                >
+                  <Settings2 size={15} /> 취향 다시 설정
+                </button>
                 <button
                   onClick={() => setRejectPanelOpen(true)}
                   disabled={isMaxRerolls || rerolling}
@@ -537,16 +581,11 @@ export function CourseResultView({
                 >
                   <ThumbsDown size={15} /> 이런 곳은 싫어요
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
       </div>
-
-      <FestivalDetailSheet
-        festival={selectedFestival}
-        onClose={() => setSelectedFestival(null)}
-      />
 
       {/* 진행 중인 외출 종료 확인 모달 */}
       <Dialog open={replaceActiveNotice} onOpenChange={setReplaceActiveNotice}>

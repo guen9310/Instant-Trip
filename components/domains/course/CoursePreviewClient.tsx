@@ -39,7 +39,6 @@ export function CoursePreviewClient({ isAuthenticated, activeCourse }: Props) {
       courseId={course.courseId}
       courseName={course.courseName}
       place={course.place}
-      festivals={course.festivals ?? []}
       mapX={course.mapX}
       mapY={course.mapY}
       scale={course.scale}
