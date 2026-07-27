@@ -96,11 +96,6 @@ export interface TourItem {
   firstimage: string; // 대표 이미지 URL - 없는 경우 많음
   firstimage2: string; // 썸네일 URL - 없는 경우 많음
 
-  // 분류
-  cat1: string; // 대분류 코드 (A, B, C...)
-  cat2: string; // 중분류 코드
-  cat3: string; // 소분류 코드
-
   // 지역
   areacode: string;
   sigungucode: string; // 시군구 코드
@@ -153,9 +148,6 @@ export interface TourDetailCommon {
   // 태그/체류시간 추정에 필요해 추가했다.
   areacode?: string;
   sigungucode?: string;
-  cat1?: string;
-  cat2?: string;
-  cat3?: string;
   lclsSystm1?: string;
   lclsSystm2?: string;
   lclsSystm3?: string;

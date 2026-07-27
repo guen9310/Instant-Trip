@@ -87,6 +87,23 @@ export function CompletedCourseDetailModal({ course, onClose }: Props) {
                         운영시간 확인 불가로 추천됐던 장소예요
                       </p>
                     )}
+                    {/* 축제 전용 — 행사 프로그램/공식 사이트. 둘 다 없으면(장소이거나
+                        Tour API 미매칭 축제) 아무것도 렌더하지 않는다. */}
+                    {place.programInfo && (
+                      <p className="ml-7 text-[12px] text-text-secondary leading-snug">
+                        {place.programInfo.main}
+                      </p>
+                    )}
+                    {place.organizerUrl && (
+                      <a
+                        href={place.organizerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-7 self-start text-[12px] font-semibold text-primary underline underline-offset-2"
+                      >
+                        공식 사이트
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>

@@ -5,6 +5,7 @@ import {
   generateCourse,
   getSearchRadiusM,
   generateCourseFromPlace,
+  generateCourseFromFestival,
 } from "@/lib/pipeline";
 import type { PlaceAvailability } from "@/lib/pipeline";
 import {
@@ -172,6 +173,57 @@ export async function generateCourseFromPlaceAction(
   payload: GenerateCourseFromPlacePayload,
 ): Promise<GenerateCourseFromPlaceActionResult> {
   const result = await generateCourseFromPlace(payload);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  const courseId = nanoid();
+  const place = coursePlaceToJourneyPlace(result.mainPlace);
+  const courseName = result.mainPlace.title;
+  const festivals = courseResultToFestivalSummaries({ festivals: result.festivals });
+
+  return {
+    ok: true,
+    courseId,
+    place,
+    courseName,
+    festivals,
+    availability: result.availability,
+  };
+}
+
+type GenerateCourseFromFestivalActionResult =
+  | {
+      ok: true;
+      courseId: string;
+      place: JourneyPlace;
+      courseName: string;
+      festivals: FestivalSummary[];
+      availability: PlaceAvailability;
+    }
+  | { ok: false; code: "UNKNOWN"; error: string };
+
+// 홈 "주변 축제" 카드에서 사용자가 직접 고른 축제로 코스를 만든다 — generateCourseFromPlaceAction과
+// 대응되는 축제 버전이다. 반환 형태를 동일하게 유지해 프리뷰 화면(CourseResultView)을
+// 그대로 재사용한다. payload는 FestivalSummary 그대로 받는다 — 홈 화면이 이미 갖고 있는
+// 필드만으로 CoursePlace를 조립하므로(공공데이터포털 단독 축제는 재조회 자체가 불가능),
+// 클라이언트가 별도 변환 없이 넘길 수 있게 한다.
+export async function generateCourseFromFestivalAction(
+  payload: FestivalSummary,
+): Promise<GenerateCourseFromFestivalActionResult> {
+  const result = await generateCourseFromFestival({
+    id: payload.id,
+    contentId: payload.contentId,
+    name: payload.name,
+    address: payload.address,
+    lat: payload.lat,
+    lng: payload.lng,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    description: payload.description,
+    imageUrl: payload.imageUrl,
+  });
 
   if (!result.ok) {
     return result;

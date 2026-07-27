@@ -139,6 +139,8 @@ export function mergeFestivals(
         longitude: hasValidCoord(pub.latitude, pub.longitude) ? pub.longitude : tourLng,
         sources: ["public", "tour"],
         coordMissMatch: isCordMiss || undefined,
+        // Tour API와 매칭됐으므로 detailIntro2로 프로그램 상세를 보강할 수 있다.
+        contentid: matched.contentid,
       };
       result.push(merged);
     } else {
@@ -172,6 +174,7 @@ export function mergeFestivals(
       insttNm: "",
       imageUrl: tf.firstimage || tf.firstimage2 || undefined,
       sources: ["tour"],
+      contentid: tf.contentid,
     });
   }
 

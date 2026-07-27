@@ -130,6 +130,34 @@ export function CourseActiveView({ courseId, dbFallback }: Props) {
             </div>
           )}
 
+          {/* 축제 전용 — 행사 프로그램. programInfo 없으면(장소이거나 Tour API 미매칭
+              축제) 렌더하지 않는다. */}
+          {place.programInfo && (
+            <div className="flex flex-col gap-2 rounded-xl bg-card border border-border px-4 py-3">
+              <p className="text-[12px] font-bold text-text-primary">행사 프로그램</p>
+              <div>
+                <p className="text-[11px] font-semibold text-text-secondary mb-0.5">
+                  주요 프로그램
+                </p>
+                <p className="text-[13px] text-text-primary leading-snug whitespace-pre-line">
+                  {place.programInfo.main}
+                </p>
+              </div>
+              {place.programInfo.extra.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {place.programInfo.extra.map((item, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-0.5 rounded-full border border-border text-[11px] font-medium text-text-primary"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 체류 시간 카드 */}
           <div className="flex items-center gap-3 rounded-xl bg-card border border-border px-4 py-3">
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -145,6 +173,19 @@ export function CourseActiveView({ courseId, dbFallback }: Props) {
               </p>
             </div>
           </div>
+
+          {/* 축제 전용 — 공식 사이트 링크. organizerUrl 없으면 숨긴다. */}
+          {place.organizerUrl && (
+            <a
+              href={place.organizerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="self-start flex items-center gap-1.5 text-primary text-[13px] font-semibold"
+            >
+              <ExternalLink size={13} strokeWidth={2} />
+              공식 사이트
+            </a>
+          )}
 
           {/* 태그 칩 */}
           {place.tags.length > 0 && (

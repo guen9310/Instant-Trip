@@ -5,7 +5,11 @@ import type { Region } from "@/lib/tour/regionMap";
 import type { TourItem } from "@/lib/tour/types";
 import type { FestivalSummary } from "@/shared/types/course.types";
 
-const TARGET_CONTENT_TYPES = ["12", "14", "28"] as const;
+// 39(음식점) — 실제 응답 데이터 확인을 위해 임시로 포함.
+// collect.ts(코스 생성 파이프라인)는 중복(주변 정보 API) 이유로 제외하고 있으니,
+// 확인 후에도 홈 필터에 유지할지는 별도로 결정할 것.
+// 15(행사공연축제)는 확인 결과 데이터 신뢰도가 낮아 제외했다(collect.ts와 동일 판단).
+const TARGET_CONTENT_TYPES = ["12", "14", "28", "39"] as const;
 // 화면 미확정이므로 타입당 10건으로 시작 — UI 완성 후 조정
 export const PLACES_PER_TYPE = 10;
 // 좌표 기준 축제 탐색 반경 (km) — 즉흥 나들이 앱 맥락상 20km 이내로 한정

@@ -7,6 +7,7 @@ import type {
   FestivalSummary,
 } from "@/shared/types/course.types";
 import { formatDuration } from "@/shared/utils/duration";
+import { cleanFestivalText } from "@/lib/tour/festivalDetail";
 
 type EnglishScale = "light" | "moderate" | "leisurely";
 
@@ -19,6 +20,7 @@ const SCALE_MAP: Record<EnglishScale, TravelScale> = {
 const CAT_LABEL: Record<string, string> = {
   "12": "관광지",
   "14": "문화시설",
+  "15": "축제",
   "28": "레포츠",
 };
 
@@ -81,6 +83,10 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     tags: p.tags,
     origin: p.origin,
     placeUrl: p.placeUrl,
+    programInfo: p.programInfo,
+    organizerUrl: p.organizerUrl,
+    festivalPhase: p.festivalPhase,
+    festivalStartLabel: p.festivalStartLabel,
   };
 }
 
@@ -104,6 +110,12 @@ function toFestivalSummary(
     period: `${formatFestivalDate(f.fstvlStartDate)} ~ ${formatFestivalDate(f.fstvlEndDate)}`,
     address: f.rdnmadr || f.lnmadr || "",
     imageUrl: f.imageUrl ?? null,
+    description: cleanFestivalText(f.fstvlCo),
+    contentId: f.contentid ?? null,
+    lat: f.latitude,
+    lng: f.longitude,
+    startDate: f.fstvlStartDate,
+    endDate: f.fstvlEndDate,
   };
 }
 

@@ -33,6 +33,11 @@ export type {
   GenerateCourseFromPlaceResult,
   PlaceAvailability,
 } from "@/lib/pipeline/selectPlace";
+export { generateCourseFromFestival } from "@/lib/pipeline/selectFestival";
+export type {
+  GenerateCourseFromFestivalInput,
+  GenerateCourseFromFestivalResult,
+} from "@/lib/pipeline/selectFestival";
 
 function elapsed(ms: number): string {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;

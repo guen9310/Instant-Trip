@@ -196,7 +196,7 @@ function extractTimeRanges(line: string): { open: number; close: number }[] {
 }
 
 // 자정을 넘는 운영시간(close < open)을 포함해 현재 시각이 범위 안인지 확인한다.
-function isWithinRange(
+export function isWithinRange(
   range: { open: number; close: number },
   curMinutes: number,
 ): boolean {

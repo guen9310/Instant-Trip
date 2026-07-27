@@ -64,7 +64,7 @@ export async function generateCourseFromPlace(
 
     // detailCommon2 응답 + 입력 좌표로 TourItem 형태를 구성한다.
     // 좌표는 호출부(홈 근처 카드)가 이미 알고 있는 input.lat/lng를 신뢰한다.
-    // lclsSystm1~3/cat1~3은 detailCommon2 실응답엔 포함되지만 기존 TourDetailCommon
+    // lclsSystm1~3은 detailCommon2 실응답엔 포함되지만 기존 TourDetailCommon
     // 타입 선언엔 없던 필드라 lib/tour/types.ts에 optional로 추가했다.
     const item: TourItem = {
       contentid: detail.contentid,
@@ -76,9 +76,6 @@ export async function generateCourseFromPlace(
       mapy: String(lat),
       firstimage: detail.firstimage,
       firstimage2: detail.firstimage2,
-      cat1: detail.cat1 ?? "",
-      cat2: detail.cat2 ?? "",
-      cat3: detail.cat3 ?? "",
       areacode: detail.areacode ?? "",
       sigungucode: detail.sigungucode ?? "",
       createdtime: detail.createdtime,

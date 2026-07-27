@@ -3,18 +3,31 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw, PartyPopper, Trees, Landmark, Bike, MapPin, Loader2 } from "lucide-react";
+import {
+  RefreshCw,
+  PartyPopper,
+  Trees,
+  Landmark,
+  Bike,
+  Utensils,
+  MapPin,
+  Loader2,
+} from "lucide-react";
 import type { ElementType } from "react";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { getHomeDataAction, getHomeDataByRegionAction } from "@/app/actions/home";
-import { generateCourseFromPlaceAction } from "@/app/actions/course";
+import {
+  generateCourseFromPlaceAction,
+  generateCourseFromFestivalAction,
+} from "@/app/actions/course";
 import { HomeLocationCard } from "@/components/domains/home/HomeLocationCard";
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import { ImagePlaceholder } from "@/components/commons/ImagePlaceholder";
 import type { HomeData } from "@/lib/home/core";
-import type { FestivalSummary, PendingCourse } from "@/shared/types/course.types";
+import type { FestivalSummary, PendingCourse, JourneyPlace } from "@/shared/types/course.types";
 import type { TourItem } from "@/lib/tour/types";
+import type { PlaceAvailability } from "@/lib/pipeline";
 import { cn, isBlank } from "@/shared/utils";
 
 // 콘텐츠 타입 → 표시 라벨
@@ -22,19 +35,22 @@ const TYPE_LABEL: Record<string, string> = {
   "12": "관광지",
   "14": "문화시설",
   "28": "레포츠",
+  "39": "음식점",
 };
 
 const TYPE_ICON: Record<string, ElementType> = {
   "12": Trees,
   "14": Landmark,
   "28": Bike,
+  "39": Utensils,
 };
-const FILTER_CHIPS = ["전체", "관광지", "문화시설", "레포츠"] as const;
+const FILTER_CHIPS = ["전체", "관광지", "문화시설", "레포츠", "음식점"] as const;
 type FilterChip = (typeof FILTER_CHIPS)[number];
 const CHIP_TO_TYPE: Partial<Record<FilterChip, string>> = {
   관광지: "12",
   문화시설: "14",
   레포츠: "28",
+  음식점: "39",
 };
 
 export function HomeView() {
@@ -58,6 +74,36 @@ export function HomeView() {
     const timer = setTimeout(() => setToastMsg(null), 3000);
     return () => clearTimeout(timer);
   }, [toastMsg]);
+
+  // 장소/축제 선택 공통 후처리 — 새 pendingCourse를 저장하고 프리뷰로 이동한다.
+  // 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다(리롤 자체는 이 경로를
+  // 타지 않으므로 rejectedPlaceIds가 유지된다).
+  const startPendingCourse = (
+    result: {
+      courseId: string;
+      place: JourneyPlace;
+      courseName: string;
+      festivals: FestivalSummary[];
+      availability: PlaceAvailability;
+    },
+    lat: number,
+    lng: number,
+  ) => {
+    useCourseProgressStore.getState().resetRerolls();
+
+    const pending: PendingCourse = {
+      courseId: result.courseId,
+      place: result.place,
+      courseName: result.courseName,
+      festivals: result.festivals,
+      mapX: lng,
+      mapY: lat,
+      availability: result.availability,
+      generatedAt: Date.now(),
+    };
+    localStorage.setItem("pendingCourse", JSON.stringify(pending));
+    router.push("/course/preview");
+  };
 
   // 홈 지역 인기 장소 카드 탭 → 시트 없이 바로 코스 생성 후 프리뷰로 이동
   const handleSelectPlace = async (place: TourItem) => {
@@ -84,22 +130,25 @@ export function HomeView() {
       return;
     }
 
-    // 새 코스 생성 — 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다.
-    // 리롤(같은 코스 내 재추천)에서는 이 경로를 타지 않으므로 rejectedPlaceIds가 유지된다.
-    useCourseProgressStore.getState().resetRerolls();
+    startPendingCourse(result, lat, lng);
+  };
 
-    const pending: PendingCourse = {
-      courseId: result.courseId,
-      place: result.place,
-      courseName: result.courseName,
-      festivals: result.festivals,
-      mapX: lng,
-      mapY: lat,
-      availability: result.availability,
-      generatedAt: Date.now(),
-    };
-    localStorage.setItem("pendingCourse", JSON.stringify(pending));
-    router.push("/course/preview");
+  // 홈 주변 축제 카드 탭 — 장소와 동일하게 시트 없이 바로 코스 생성 후 프리뷰로 이동.
+  // 축제도 "지금 갈 만한 한 곳"이 될 수 있다는 판단 — 다른 장소를 경유하지 않고
+  // 축제 자체를 목적지로 바로 선택할 수 있게 한다.
+  const handleSelectFestival = async (festival: FestivalSummary) => {
+    if (startingId) return;
+    setStartingId(festival.id);
+
+    const result = await generateCourseFromFestivalAction(festival);
+
+    if (!result.ok) {
+      setStartingId(null);
+      setToastMsg("갈 곳을 찾는 중 문제가 생겼어요. 다시 시도해주세요.");
+      return;
+    }
+
+    startPendingCourse(result, festival.lat, festival.lng);
   };
 
   // "restored"(새로고침 직후 재확인 전 위치)는 확정된 위치가 아니므로 쿼리를 막는다.
@@ -194,7 +243,11 @@ export function HomeView() {
         <>
           {/* 3. 축제 섹션 — 0건이면 렌더 안 함 */}
           {!festivalError && allFestivals.length > 0 && (
-            <FestivalSection festivals={allFestivals} />
+            <FestivalSection
+              festivals={allFestivals}
+              startingId={startingId}
+              onSelectFestival={handleSelectFestival}
+            />
           )}
 
           {/* 4. 지역 인기 장소 목록 — 거리순이 아니라 시/도 단위 카테고리별 인기순 top10 */}
@@ -255,48 +308,70 @@ function HomeSkeleton() {
 
 /* ─────────────────────────────── 축제 섹션 ─────────────────────────── */
 
-function FestivalSection({ festivals }: { festivals: FestivalSummary[] }) {
+function FestivalSection({
+  festivals,
+  startingId,
+  onSelectFestival,
+}: {
+  festivals: FestivalSummary[];
+  startingId: string | null;
+  onSelectFestival: (festival: FestivalSummary) => void;
+}) {
   return (
     <section className="mb-6">
       <h2 className="text-[15px] font-bold text-text-primary tracking-tight mb-3">
         주변 축제
       </h2>
       <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-        {festivals.map((f) => (
-          <div
-            key={f.id}
-            className="flex-shrink-0 w-48 rounded-xl overflow-hidden border border-border bg-card"
-          >
-            {!isBlank(f.imageUrl) ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={f.imageUrl!}
-                alt={f.name}
-                className="w-full aspect-video object-cover"
-              />
-            ) : (
-              <ImagePlaceholder icon={PartyPopper} className="w-full aspect-video" />
-            )}
-            <div className="px-3 pt-2 pb-3">
-              <div className="mb-1.5">
-                <span
-                  className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                    f.status === "ongoing"
-                      ? "bg-accent/15 text-accent"
-                      : "bg-secondary/15 text-secondary",
-                  )}
-                >
-                  {f.status === "ongoing" ? "진행중" : "예정"}
-                </span>
+        {festivals.map((f) => {
+          const loading = startingId === f.id;
+          const disabled = startingId !== null;
+          return (
+            <button
+              key={f.id}
+              onClick={() => onSelectFestival(f)}
+              disabled={disabled}
+              className={cn(
+                "relative flex-shrink-0 w-48 text-left rounded-xl overflow-hidden border border-border bg-card active:scale-[0.98] transition-transform duration-150",
+                disabled && !loading && "opacity-40",
+              )}
+            >
+              {!isBlank(f.imageUrl) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={f.imageUrl!}
+                  alt={f.name}
+                  className="w-full aspect-video object-cover"
+                />
+              ) : (
+                <ImagePlaceholder icon={PartyPopper} className="w-full aspect-video" />
+              )}
+              <div className="px-3 pt-2 pb-3">
+                <div className="mb-1.5">
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                      f.status === "ongoing"
+                        ? "bg-accent/15 text-accent"
+                        : "bg-secondary/15 text-secondary",
+                    )}
+                  >
+                    {f.status === "ongoing" ? "진행중" : "예정"}
+                  </span>
+                </div>
+                <p className="text-[13px] font-semibold text-text-primary leading-snug line-clamp-2">
+                  {f.name}
+                </p>
+                <p className="text-[11px] text-text-secondary mt-1">{f.period}</p>
               </div>
-              <p className="text-[13px] font-semibold text-text-primary leading-snug line-clamp-2">
-                {f.name}
-              </p>
-              <p className="text-[11px] text-text-secondary mt-1">{f.period}</p>
-            </div>
-          </div>
-        ))}
+              {loading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-card/80">
+                  <Loader2 size={20} className="animate-spin text-primary" />
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
     </section>
   );

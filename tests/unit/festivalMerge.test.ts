@@ -84,9 +84,6 @@ const baseTour: TourFestivalItem = {
   sigungucode: "1",
   eventstartdate: "20260724",
   eventenddate: "20260726",
-  cat1: "A",
-  cat2: "A02",
-  cat3: "A0207",
   tel: "052-000-9999",
 };
 
