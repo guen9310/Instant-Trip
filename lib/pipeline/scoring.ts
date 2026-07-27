@@ -48,7 +48,7 @@ export function calcBudgetFitness(
 }
 
 interface TagMappingRule {
-  code_type: "contenttypeid" | "cat1" | "lclssystm1" | "lclssystm2" | "kakao_category";
+  code_type: "contenttypeid" | "lclssystm1" | "lclssystm2" | "kakao_category";
   code_value: string;
   tag: TagKey;
   score: number;
@@ -65,7 +65,6 @@ export const TAG_MAPPING_RULES: TagMappingRule[] = [
   { code_type: "contenttypeid", code_value: "14", tag: "실내", score: 1.0 },
   { code_type: "contenttypeid", code_value: "14", tag: "1인여행", score: 0.5 },
   { code_type: "contenttypeid", code_value: "28", tag: "도보친화", score: 0.5 }, // 레포츠 — 실외
-  // cat1 기반 (음식점 A05는 코스에서 제외되므로 규칙 없음)
   // lclssystm1 기반
   { code_type: "lclssystm1", code_value: "NA", tag: "조용함", score: 1.0 },
   { code_type: "lclssystm1", code_value: "NA", tag: "도보친화", score: 1.0 },
@@ -102,7 +101,6 @@ export function applyMappingRules(item: TourItem): Record<TagKey, number> {
       (rule.code_type === "contenttypeid" &&
         !isKakao &&
         item.contenttypeid === rule.code_value) ||
-      (rule.code_type === "cat1" && item.cat1 === rule.code_value) ||
       (rule.code_type === "lclssystm1" && item.lclsSystm1 === rule.code_value) ||
       (rule.code_type === "lclssystm2" && item.lclsSystm2 === rule.code_value) ||
       (rule.code_type === "kakao_category" &&
@@ -170,7 +168,7 @@ function calcTimeBonus(item: TourItem): number {
 //           = 0.5 × [0,1] + 0.25 × [0,1] + 0.1 × [0,1] + 0.15 × [0,1]
 //           → 범위: [0, 1.0]
 //
-// 이 4개 컴포넌트는 전부 stage1 필드(mapx/mapy, cat1/lclsSystm*, contenttypeid)만으로
+// 이 4개 컴포넌트는 전부 stage1 필드(mapx/mapy, lclsSystm*, contenttypeid)만으로
 // 계산되며 운영시간 데이터를 쓰지 않는다. 따라서 이 시점엔 가용성(hours/restDayNote/
 // availabilityUncertain)을 아직 모르며, 정직하게 null/null/false 기본값을 채운다 —
 // 이후 순차 가용성 게이트(availabilityGate.ts의 selectAvailableCandidate)가 채택된

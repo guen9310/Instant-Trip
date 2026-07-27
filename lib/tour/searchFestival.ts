@@ -17,9 +17,6 @@ export interface TourFestivalItem {
   sigungucode: string;
   eventstartdate: string;  // YYYYMMDD
   eventenddate: string;    // YYYYMMDD
-  cat1: string;
-  cat2: string;
-  cat3: string;
   tel: string;
 }
 
