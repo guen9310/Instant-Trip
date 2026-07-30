@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { ProfileView } from "@/components/domains/profile/ProfileView";
-import { getSession } from "@/server/session";
+import { getFreshSession } from "@/server/session";
 import { toPrefs } from "@/server/prefs";
 import { getActiveCourse, getCompletedCourses } from "@/server/queries";
 
 export default async function ProfilePage() {
-  const session = await getSession();
+  const session = await getFreshSession();
   if (!session) redirect("/sign-in");
 
   const [inProgress, completed] = await Promise.all([

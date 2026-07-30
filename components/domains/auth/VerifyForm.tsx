@@ -39,26 +39,32 @@ export function VerifyForm() {
   });
 
   const onSubmit = async (data: FormValues) => {
-    const { data: result, error } = await authClient.signIn.emailOtp({
-      email,
-      otp: data.code,
-    });
-    if (error) {
-      reset();
-      const message =
-        error.code === "OTP_EXPIRED"
-          ? "코드가 만료됐어요. 재발송해 주세요."
-          : error.code === "TOO_MANY_ATTEMPTS"
-            ? "시도 횟수를 초과했어요. 재발송해 주세요."
-            : "코드가 올바르지 않아요.";
-      setError("code", { message });
-      return;
-    }
-    const user = result?.user;
-    if (user?.onboardingDone) {
-      router.push("/");
-    } else {
-      router.push("/onboarding");
+    try {
+      const { data: result, error } = await authClient.signIn.emailOtp({
+        email,
+        otp: data.code,
+      });
+      if (error) {
+        reset();
+        const message =
+          error.code === "OTP_EXPIRED"
+            ? "코드가 만료됐어요. 재발송해 주세요."
+            : error.code === "TOO_MANY_ATTEMPTS"
+              ? "시도 횟수를 초과했어요. 재발송해 주세요."
+              : "코드가 올바르지 않아요.";
+        setError("code", { message });
+        return;
+      }
+      const user = result?.user;
+      if (user?.onboardingDone) {
+        router.push("/");
+      } else {
+        router.push("/onboarding");
+      }
+    } catch {
+      // authClient는 정상적으로는 throw하지 않고 {data,error}를 반환하지만,
+      // 네트워크 단절 등 fetch 자체가 실패하는 경우를 대비한 최후 방어선.
+      setError("code", { message: "네트워크 연결을 확인해주세요." });
     }
   };
 

@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 const SESSION_COOKIES = ["better-auth.session_token", "__Secure-better-auth.session_token"];
 
 const PROTECTED = ["/profile", "/settings", "/start", "/course", "/onboarding"];
-const AUTH_ONLY = ["/sign-in"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,12 +12,6 @@ export function proxy(request: NextRequest) {
   if (!isLoggedIn && PROTECTED.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
-    return NextResponse.redirect(url);
-  }
-
-  if (isLoggedIn && AUTH_ONLY.some((p) => pathname.startsWith(p))) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

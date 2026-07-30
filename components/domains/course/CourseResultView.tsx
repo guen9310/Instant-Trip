@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Settings2,
   Clock,
@@ -112,6 +113,7 @@ export function CourseResultView({
   const [replaceActiveNotice, setReplaceActiveNotice] = useState(false);
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const startCourse = useCourseProgressStore((s) => s.start);
   const { rejectedPlaceIds, rerollCount, addRejection } =
     useCourseProgressStore();
@@ -233,7 +235,11 @@ export function CourseResultView({
     }).then((result) => {
       // 세션 만료 등 엣지 — 이미 이동한 뒤라 되돌리진 않되 기존 안내 처리는 유지한다.
       if (!result.ok) {
-        if (result.reason === "unauthenticated") setAuthNotice(true);
+        if (result.reason === "unauthenticated") {
+          setAuthNotice(true);
+          queryClient.clear();
+          router.push("/sign-in");
+        }
         return;
       }
 

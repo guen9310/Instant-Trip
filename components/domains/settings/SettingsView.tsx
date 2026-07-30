@@ -39,9 +39,25 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
         prefFood:   prefs.food,
         prefIndoor: prefs.indoor,
       });
-      if (error) throw error;
-      router.push("/profile");
+
+      if (!error) {
+        router.push("/profile");
+        return;
+      }
+
+      // 세션이 DB에서 무효화된 상태(유저 삭제 등) — 일반 저장 실패와 구분해
+      // 로컬 상태를 정리하고 로그인 화면으로 보낸다.
+      if (error.status === 401) {
+        setSaveError("세션이 만료됐어요. 다시 로그인해 주세요.");
+        queryClient.clear();
+        router.push("/sign-in");
+        return;
+      }
+
+      setSaveError("저장에 실패했어요. 다시 시도해 주세요.");
     } catch {
+      // authClient.updateUser는 정상적으로는 throw하지 않고 {data,error}를
+      // 반환하지만, 네트워크 단절 등 fetch 자체가 실패하는 경우를 대비한 최후 방어선.
       setSaveError("저장에 실패했어요. 다시 시도해 주세요.");
     }
   };

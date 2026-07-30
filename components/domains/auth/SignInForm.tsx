@@ -51,59 +51,78 @@ export function SignInForm() {
     if (!emailValid || submitting) return;
     setSubmitting(true);
     setError(null);
-    const { error: err } = await authClient.emailOtp.sendVerificationOtp({
-      email,
-      type: "sign-in",
-    });
-    setSubmitting(false);
-    if (err) {
-      setError("코드 발송에 실패했어요. 다시 시도해 주세요.");
-      return;
+    try {
+      const { error: err } = await authClient.emailOtp.sendVerificationOtp({
+        email,
+        type: "sign-in",
+      });
+      if (err) {
+        setError("코드 발송에 실패했어요. 다시 시도해 주세요.");
+        return;
+      }
+      setCodeSent(true);
+      startCountdown();
+      setTimeout(() => codeRef.current?.focus(), 480);
+    } catch {
+      setError("네트워크 연결을 확인해주세요.");
+    } finally {
+      setSubmitting(false);
     }
-    setCodeSent(true);
-    startCountdown();
-    setTimeout(() => codeRef.current?.focus(), 480);
   };
 
   const resendCode = async () => {
     if (countdown > 0 || submitting) return;
     setSubmitting(true);
     setError(null);
-    const { error: err } = await authClient.emailOtp.sendVerificationOtp({
-      email,
-      type: "sign-in",
-    });
-    setSubmitting(false);
-    if (err) {
-      setError("재발송에 실패했어요. 다시 시도해 주세요.");
-      return;
+    try {
+      const { error: err } = await authClient.emailOtp.sendVerificationOtp({
+        email,
+        type: "sign-in",
+      });
+      if (err) {
+        setError("재발송에 실패했어요. 다시 시도해 주세요.");
+        return;
+      }
+      setCode("");
+      startCountdown();
+      setTimeout(() => codeRef.current?.focus(), 100);
+    } catch {
+      setError("네트워크 연결을 확인해주세요.");
+    } finally {
+      setSubmitting(false);
     }
-    setCode("");
-    startCountdown();
-    setTimeout(() => codeRef.current?.focus(), 100);
   };
 
   const verify = async () => {
     if (!codeComplete || submitting) return;
     setSubmitting(true);
     setError(null);
-    const { data, error: err } = await authClient.signIn.emailOtp({
-      email,
-      otp: code,
-    });
-    setSubmitting(false);
-    if (err) {
-      setError(
-        err.code === "OTP_EXPIRED"
-          ? "코드가 만료됐어요. 재발송해 주세요."
-          : err.code === "TOO_MANY_ATTEMPTS"
-            ? "시도 횟수를 초과했어요. 재발송해 주세요."
-            : "코드가 올바르지 않아요.",
-      );
-      setCode("");
-      return;
+    try {
+      const { data, error: err } = await authClient.signIn.emailOtp({
+        email,
+        otp: code,
+      });
+      if (err) {
+        setError(
+          err.code === "OTP_EXPIRED"
+            ? "코드가 만료됐어요. 재발송해 주세요."
+            : err.code === "TOO_MANY_ATTEMPTS"
+              ? "시도 횟수를 초과했어요. 재발송해 주세요."
+              : "코드가 올바르지 않아요.",
+        );
+        setCode("");
+        return;
+      }
+      router.push(data?.user?.onboardingDone ? "/" : "/onboarding");
+    } catch {
+      // authClient는 정상적으로는 throw하지 않고 {data,error}를 반환하지만,
+      // 네트워크 단절 등 fetch 자체가 실패하는 경우를 대비한 최후 방어선 —
+      // 이게 없으면 setSubmitting(false)가 실행되지 않아 버튼이 영구히
+      // "로그인 중..."에 멈춘다.
+      setError("네트워크 연결을 확인해주세요.");
+    } finally {
+      setSubmitting(false);
     }
-    router.push(data?.user?.onboardingDone ? "/" : "/onboarding");
   };
 
   const goBack = () => {
