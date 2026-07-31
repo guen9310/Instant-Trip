@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   MapPin,
   Footprints,
@@ -18,11 +17,7 @@ import { CourseLoadingOverlay } from "@/components/domains/course/CourseLoadingO
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import { NoNearbyView } from "@/components/domains/course/NoNearbyView";
 import { useLocationStore } from "@/client/stores/useLocationStore";
-import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
-import { generateCourseAction } from "@/app/actions/course";
-import { saveCourseCompletionAction } from "@/app/actions/completion";
-import { buildCompletionPayload } from "@/shared/utils/completionPayload";
-import type { PendingCourse } from "@/shared/types/course.types";
+import { useGenerateCourse } from "@/client/hooks/useGenerateCourse";
 import type { Prefs } from "@/shared/constants/preferences";
 
 const SCALES = [
@@ -54,96 +49,17 @@ const SCALES = [
 
 type ScaleId = (typeof SCALES)[number]["id"];
 
-// 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체될 때 abandoned로 기록한다.
-// 조건: 진행 스토어의 courseId가 덮어써질 pendingCourse와 일치할 때만 — 중복 기록 방지.
-function recordAbandonedIfAny() {
-  try {
-    const raw = localStorage.getItem("pendingCourse");
-    if (!raw) return;
-    const prev = JSON.parse(raw) as Partial<PendingCourse>;
-    const { courseId, startedAt, completedAt } =
-      useCourseProgressStore.getState();
-    if (!startedAt || completedAt || !courseId || courseId !== prev.courseId)
-      return;
-    const payload = buildCompletionPayload({
-      pending: prev,
-      status: "abandoned",
-      startedAt,
-      completedAt: null,
-    });
-    if (payload) void saveCourseCompletionAction(payload).catch(() => {});
-  } catch {
-    // 텔레메트리 — 실패해도 코스 생성 흐름은 그대로 진행
-  }
-}
-
 // prefs: DB에 저장된 취향 — 서버 컴포넌트(start/page.tsx)에서 세션으로 읽어 주입한다
 export function StartView({ prefs }: { prefs: Prefs }) {
   const [selected, setSelected] = useState<ScaleId>("moderate");
-  const [loading, setLoading] = useState(false);
-  const [noNearby, setNoNearby] = useState(false);
-  // 마지막 생성 시도에 실제 사용된 검색 반경(m) — NoNearbyView 문구·확장 반경 계산용
-  const [searchRadiusM, setSearchRadiusM] = useState<number | null>(null);
   const [showManualPicker, setShowManualPicker] = useState(false);
-  const router = useRouter();
   const { state, requestPermission } = useLocationStore();
+  const { loading, noNearby, setNoNearby, searchRadiusM, generate } = useGenerateCourse(prefs);
 
   useEffect(() => {
     if (state.status === "idle") requestPermission();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const generate = async (radiusM?: number) => {
-    if (state.status !== "granted" || !state.lat || !state.lng) {
-      console.warn("[StartView] coords 없음 — 코스 생성 중단");
-      return;
-    }
-    const coords = { lat: state.lat, lng: state.lng };
-
-    setLoading(true);
-
-    const result = await generateCourseAction({
-      mapX: coords.lng,
-      mapY: coords.lat,
-      scale: selected,
-      prefs,
-      radiusM,
-    });
-
-    if (!result.ok) {
-      setLoading(false);
-      if (result.code === "NO_PLACE") {
-        setSearchRadiusM(result.radiusM);
-        setNoNearby(true);
-      }
-      return;
-    }
-
-    console.log(`[festival] 클라이언트 수신 — ${result.festivals.length}건`, result.festivals);
-
-    // 암묵 abandoned — 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체되는 순간,
-    // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
-    recordAbandonedIfAny();
-
-    // 새 코스 생성 — 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다.
-    // 리롤(같은 코스 내 재추천)에서는 이 경로를 타지 않으므로 rejectedPlaceIds가 유지된다.
-    useCourseProgressStore.getState().resetRerolls();
-
-    const pending: PendingCourse = {
-      courseId: result.courseId,
-      place: result.place,
-      courseName: result.courseName,
-      festivals: result.festivals,
-      mapX: coords.lng,
-      mapY: coords.lat,
-      scale: selected,
-      // 생성 시점 취향 스냅샷 — 결과 화면의 칩·맛집 섹션·재추천이 이 값을 읽는다
-      prefs,
-      generatedAt: Date.now(),
-    };
-    localStorage.setItem("pendingCourse", JSON.stringify(pending));
-    router.push("/course/preview");
-  };
 
   const isDenied =
     state.status === "denied" ||
@@ -182,7 +98,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
           radiusKm={searchRadiusKm}
           expandedRadiusKm={expandedRadiusKm}
           onExpandRadius={() => {
-            if (expandedRadiusKm !== null) generate(expandedRadiusKm * 1000);
+            if (expandedRadiusKm !== null) generate(selected, expandedRadiusKm * 1000);
           }}
           onChangeScale={() => setNoNearby(false)}
           onChangeRegion={() => setShowManualPicker(true)}
@@ -191,7 +107,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
     );
   }
 
-  const handleStart = () => generate();
+  const handleStart = () => generate(selected);
 
   return (
     <>
