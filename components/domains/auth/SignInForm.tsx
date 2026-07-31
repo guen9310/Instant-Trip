@@ -1,139 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, CheckCircle, Compass, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { authClient } from "@/client/auth-client";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const RESEND_SECONDS = 30;
+import { useSignInOtp } from "@/client/hooks/useSignInOtp";
 
 export function SignInForm() {
-  const router = useRouter();
+  const {
+    email,
+    setEmail,
+    code,
+    setCode,
+    codeSent,
+    countdown,
+    submitting,
+    error,
+    emailValid,
+    codeComplete,
+    sendCode,
+    resendCode,
+    verify,
+    goBack,
+  } = useSignInOtp();
 
-  const [email, setEmail] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
   const [emailFocused, setEmailFocused] = useState(false);
   const [otpFocused, setOtpFocused] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const codeRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const emailValid = EMAIL_RE.test(email);
-  const codeComplete = code.length === 6;
-
-  const startCountdown = () => {
-    setCountdown(RESEND_SECONDS);
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setCountdown((n) => {
-        if (n <= 1) {
-          clearInterval(timerRef.current!);
-          return 0;
-        }
-        return n - 1;
-      });
-    }, 1000);
-  };
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    },
-    [],
-  );
-
-  const sendCode = async () => {
-    if (!emailValid || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const { error: err } = await authClient.emailOtp.sendVerificationOtp({
-        email,
-        type: "sign-in",
-      });
-      if (err) {
-        setError("코드 발송에 실패했어요. 다시 시도해 주세요.");
-        return;
-      }
-      setCodeSent(true);
-      startCountdown();
-      setTimeout(() => codeRef.current?.focus(), 480);
-    } catch {
-      setError("네트워크 연결을 확인해주세요.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const resendCode = async () => {
-    if (countdown > 0 || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const { error: err } = await authClient.emailOtp.sendVerificationOtp({
-        email,
-        type: "sign-in",
-      });
-      if (err) {
-        setError("재발송에 실패했어요. 다시 시도해 주세요.");
-        return;
-      }
-      setCode("");
-      startCountdown();
-      setTimeout(() => codeRef.current?.focus(), 100);
-    } catch {
-      setError("네트워크 연결을 확인해주세요.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const verify = async () => {
-    if (!codeComplete || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      const { data, error: err } = await authClient.signIn.emailOtp({
-        email,
-        otp: code,
-      });
-      if (err) {
-        setError(
-          err.code === "OTP_EXPIRED"
-            ? "코드가 만료됐어요. 재발송해 주세요."
-            : err.code === "TOO_MANY_ATTEMPTS"
-              ? "시도 횟수를 초과했어요. 재발송해 주세요."
-              : "코드가 올바르지 않아요.",
-        );
-        setCode("");
-        return;
-      }
-      router.push(data?.user?.onboardingDone ? "/" : "/onboarding");
-    } catch {
-      // authClient는 정상적으로는 throw하지 않고 {data,error}를 반환하지만,
-      // 네트워크 단절 등 fetch 자체가 실패하는 경우를 대비한 최후 방어선 —
-      // 이게 없으면 setSubmitting(false)가 실행되지 않아 버튼이 영구히
-      // "로그인 중..."에 멈춘다.
-      setError("네트워크 연결을 확인해주세요.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const goBack = () => {
-    if (codeSent) {
-      setCodeSent(false);
-      setCode("");
-      setError(null);
-    } else {
-      router.back();
-    }
-  };
+  // 발송/재발송 성공 직후 코드 입력창으로 포커스를 옮긴다 — 타이밍(480ms/100ms)은
+  // 각 스테이지 전환 트랜지션 길이에 맞춘 값이라 DOM ref와 함께 화면 층이 소유한다.
+  const handleSendCode = () => sendCode(() => setTimeout(() => codeRef.current?.focus(), 480));
+  const handleResendCode = () => resendCode(() => setTimeout(() => codeRef.current?.focus(), 100));
 
   const activeBtnStyle: React.CSSProperties = {
     background: "var(--auth-btn-active)",
@@ -238,10 +134,7 @@ export function SignInForm() {
               inputMode="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError(null);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
               placeholder="you@email.com"
@@ -360,7 +253,6 @@ export function SignInForm() {
               onChange={(e) => {
                 const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                 setCode(val);
-                if (error) setError(null);
               }}
               onFocus={() => setOtpFocused(true)}
               onBlur={() => setOtpFocused(false)}
@@ -377,7 +269,7 @@ export function SignInForm() {
             </span>
             <button
               type="button"
-              onClick={resendCode}
+              onClick={handleResendCode}
               disabled={countdown > 0 || submitting}
               className="font-medium transition-colors"
               style={{
@@ -404,7 +296,7 @@ export function SignInForm() {
       <div className="shrink-0 px-5 pb-7 pt-4">
         <button
           type="button"
-          onClick={codeSent ? verify : sendCode}
+          onClick={codeSent ? verify : handleSendCode}
           disabled={
             codeSent ? !codeComplete || submitting : !emailValid || submitting
           }
