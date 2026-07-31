@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 import { useMap } from "react-kakao-maps-sdk";
 
