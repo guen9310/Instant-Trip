@@ -13,6 +13,7 @@ export function SignInForm() {
     codeSent,
     countdown,
     submitting,
+    resending,
     error,
     emailValid,
     codeComplete,
@@ -270,7 +271,7 @@ export function SignInForm() {
             <button
               type="button"
               onClick={handleResendCode}
-              disabled={countdown > 0 || submitting}
+              disabled={countdown > 0 || resending || submitting}
               className="font-medium transition-colors"
               style={{
                 fontSize: "14px",
@@ -280,7 +281,7 @@ export function SignInForm() {
                     : "var(--auth-resend-active)",
               }}
             >
-              {countdown > 0 ? `...${countdown}초 후` : "코드 재전송"}
+              {resending ? "재전송 중..." : countdown > 0 ? `...${countdown}초 후` : "코드 재전송"}
             </button>
           </div>
 
@@ -298,13 +299,15 @@ export function SignInForm() {
           type="button"
           onClick={codeSent ? verify : handleSendCode}
           disabled={
-            codeSent ? !codeComplete || submitting : !emailValid || submitting
+            codeSent
+              ? !codeComplete || submitting || resending
+              : !emailValid || submitting
           }
           className="h-14.5 w-full text-[16px] font-semibold"
           style={{
             borderRadius: "15px",
             ...(codeSent
-              ? codeComplete && !submitting
+              ? codeComplete && !submitting && !resending
                 ? activeBtnStyle
                 : disabledBtnStyle
               : emailValid && !submitting

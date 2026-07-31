@@ -17,7 +17,11 @@ export function useSignInOtp() {
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCodeState] = useState("");
   const [countdown, setCountdown] = useState(0);
+  // sendCode(최초 발송)·verify(로그인)가 공유하는 상태 — 하단 CTA 버튼의 문구/비활성화를 구동한다.
   const [submitting, setSubmitting] = useState(false);
+  // resendCode 전용 상태 — submitting과 분리하지 않으면 재전송 중에 하단 CTA가
+  // "로그인 중..."으로 잘못 바뀐다(재전송은 별도 버튼의 동작이라 그 버튼만 반응해야 함).
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -80,8 +84,8 @@ export function useSignInOtp() {
   };
 
   const resendCode = async (onSuccess?: () => void) => {
-    if (countdown > 0 || submitting) return;
-    setSubmitting(true);
+    if (countdown > 0 || resending || submitting) return;
+    setResending(true);
     setError(null);
     try {
       const { error: err } = await authClient.emailOtp.sendVerificationOtp({
@@ -98,12 +102,12 @@ export function useSignInOtp() {
     } catch {
       setError("네트워크 연결을 확인해주세요.");
     } finally {
-      setSubmitting(false);
+      setResending(false);
     }
   };
 
   const verify = async () => {
-    if (!codeComplete || submitting) return;
+    if (!codeComplete || submitting || resending) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -152,6 +156,7 @@ export function useSignInOtp() {
     codeSent,
     countdown,
     submitting,
+    resending,
     error,
     emailValid,
     codeComplete,
