@@ -10,7 +10,7 @@ import {
 } from "@/shared/schemas/courseCompletion";
 import type { JourneyPlace } from "@/shared/types/course.types";
 
-// ─── TODO 1: 코스 시작 시 DB 행 생성 ──────────────────────────────────────────
+// ─── 코스 시작 시 DB 행 생성 ───────────────────────────────────────────────────
 // 프리뷰 화면에서 "이 코스로 갈게요" 탭 시 호출.
 // courses + course_places + course_completions(status='active')를 원자적으로 삽입하고
 // 생성된 ID를 반환한다 — 클라이언트는 이를 localStorage에 저장해 완료 시 UPDATE에 사용.
@@ -91,7 +91,7 @@ export async function startCourseAction(
 }
 
 // ─── 완료/포기 기록 저장 ────────────────────────────────────────────────────────
-// completionId + dbCourseId가 있으면 기존 행을 UPDATE (TODO 1 연동).
+// completionId + dbCourseId가 있으면 코스 시작 시 생성한 기존 행을 UPDATE한다.
 // 없으면 INSERT fallback — startCourseAction 실패/미호출 시 기존 동작 유지.
 // 어떤 실패도 사용자 흐름으로 전파하지 않는다(조용히 skip).
 export async function saveCourseCompletionAction(

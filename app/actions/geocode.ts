@@ -46,18 +46,34 @@ export async function fetchCityAction(
     "https://api.vworld.kr/req/address?service=address&request=GetAddress" +
     `&key=${VWORLD_KEY}&point=${lon},${lat}&crs=EPSG:4326&type=BOTH&format=json`;
 
-  const res = await fetch(url);
+  const FALLBACK: GeocodedCity = { displayName: "현재 위치", sidoName: null };
+
+  let res: Response;
+  try {
+    // VWorld가 응답을 지연시키면 getCurrentPosition의 10초 타임아웃과 별개로
+    // 이 fetch 자체가 무한 대기할 수 있으므로 별도 타임아웃을 둔다.
+    res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  } catch (err) {
+    console.log("[geocode] fetch 실패:", err);
+    return FALLBACK;
+  }
 
   if (!res.ok) {
     console.log("[geocode] HTTP error:", res.status, res.statusText);
-    return { displayName: "현재 위치", sidoName: null };
+    return FALLBACK;
   }
 
-  const data: VWorldResponse = await res.json();
+  let data: VWorldResponse;
+  try {
+    data = await res.json();
+  } catch (err) {
+    console.log("[geocode] JSON 파싱 실패:", err);
+    return FALLBACK;
+  }
 
   if (data.response?.status !== "OK" || !data.response.result?.length) {
     console.log("[geocode] status:", data.response?.status);
-    return { displayName: "현재 위치", sidoName: null };
+    return FALLBACK;
   }
 
   // road 결과를 우선하고 없으면 parcel로 대체 — level4A(행정동)는 둘 다 동일해서

@@ -21,24 +21,12 @@ import type {
   NearbyPoi,
   FestivalSummary,
 } from "@/shared/types/course.types";
-
-type Scale = "light" | "moderate" | "leisurely";
-
-interface GenerateCoursePayload {
-  mapX: number;
-  mapY: number;
-  scale: Scale;
-  prefs: {
-    travel: string;
-    party: string;
-    vibe: string;
-    food: string;
-    indoor: string;
-  };
-  excludeIds?: string[];
-  // 검색 반경(m) 오버라이드 — NoNearbyView의 반경 확장 재시도용
-  radiusM?: number;
-}
+import {
+  generateCourseFromFestivalInputSchema,
+  generateCourseFromPlaceInputSchema,
+  generateCourseInputSchema,
+  nearbyPoisInputSchema,
+} from "@/shared/schemas/actionInputs";
 
 type GenerateCourseResult =
   | {
@@ -69,6 +57,11 @@ export async function fetchNearbyPoisAction(
   lat: number,
   lng: number,
 ): Promise<FetchNearbyPoisResult> {
+  const parsed = nearbyPoisInputSchema.safeParse({ lat, lng });
+  if (!parsed.success) {
+    return { ok: false, error: "잘못된 위치 정보입니다." };
+  }
+
   try {
     const entries = Object.entries(NEARBY_CAT_CODE) as [
       Exclude<NearbyCategory, "all">,
@@ -76,7 +69,12 @@ export async function fetchNearbyPoisAction(
     ][];
     const results = await Promise.all(
       entries.map(async ([cat, code]) => {
-        const places = await fetchNearby(lat, lng, code, 500).catch((e) => {
+        const places = await fetchNearby(
+          parsed.data.lat,
+          parsed.data.lng,
+          code,
+          500,
+        ).catch((e) => {
           console.error(`[nearby] ${cat}(${code}) 실패:`, e);
           return [];
         });
@@ -115,10 +113,15 @@ export async function fetchNearbyPoisAction(
 }
 
 export async function generateCourseAction(
-  payload: GenerateCoursePayload,
+  input: unknown,
 ): Promise<GenerateCourseResult> {
+  const parsed = generateCourseInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "UNKNOWN", error: "잘못된 추천 요청입니다." };
+  }
+
   try {
-    const { mapX, mapY, scale, prefs, excludeIds, radiusM } = payload;
+    const { mapX, mapY, scale, prefs, excludeIds, radiusM } = parsed.data;
     const profile = {
       ...prefsToProfile(prefs, { mapX, mapY }, scale),
       radiusOverrideM: radiusM,
@@ -146,13 +149,6 @@ export async function generateCourseAction(
   }
 }
 
-interface GenerateCourseFromPlacePayload {
-  contentId: string;
-  contentTypeId: string;
-  lat: number;
-  lng: number;
-}
-
 type GenerateCourseFromPlaceActionResult =
   | {
       ok: true;
@@ -170,9 +166,13 @@ type GenerateCourseFromPlaceActionResult =
 // 유지해 프리뷰 화면(CourseResultView)을 그대로 재사용할 수 있게 하고, availability를
 // 추가로 얹는다. place.origin="selected"로 진입 경로를 구분한다.
 export async function generateCourseFromPlaceAction(
-  payload: GenerateCourseFromPlacePayload,
+  input: unknown,
 ): Promise<GenerateCourseFromPlaceActionResult> {
-  const result = await generateCourseFromPlace(payload);
+  const parsed = generateCourseFromPlaceInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "UNKNOWN", error: "잘못된 장소 요청입니다." };
+  }
+  const result = await generateCourseFromPlace(parsed.data);
 
   if (!result.ok) {
     return result;
@@ -210,8 +210,13 @@ type GenerateCourseFromFestivalActionResult =
 // 필드만으로 CoursePlace를 조립하므로(공공데이터포털 단독 축제는 재조회 자체가 불가능),
 // 클라이언트가 별도 변환 없이 넘길 수 있게 한다.
 export async function generateCourseFromFestivalAction(
-  payload: FestivalSummary,
+  input: unknown,
 ): Promise<GenerateCourseFromFestivalActionResult> {
+  const parsed = generateCourseFromFestivalInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, code: "UNKNOWN", error: "잘못된 축제 요청입니다." };
+  }
+  const payload = parsed.data;
   const result = await generateCourseFromFestival({
     id: payload.id,
     contentId: payload.contentId,

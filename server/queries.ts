@@ -22,7 +22,7 @@ function formatDuration(ms: number): string {
   return `${totalMin}분`;
 }
 
-// ─── TODO 1: 프로필 진행 중인 코스 ───────────────────────────────────────────
+// ─── 프로필 진행 중인 코스 ────────────────────────────────────────────────────
 
 export async function getActiveCourse(
   userId: string,
@@ -85,7 +85,7 @@ export async function getResumableCourse(
   };
 }
 
-// ─── TODO 1: 프로필 완료 목록 ─────────────────────────────────────────────────
+// ─── 프로필 완료 목록 ──────────────────────────────────────────────────────────
 
 export async function getCompletedCourses(
   userId: string,
@@ -129,4 +129,3 @@ export async function getCompletedCourses(
     return result;
   });
 }
-
