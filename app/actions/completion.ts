@@ -3,7 +3,7 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { courses, coursePlaces, courseCompletions } from "@/server/schema";
-import { getSession } from "@/server/session";
+import { getFreshSession } from "@/server/session";
 import {
   courseCompletionSchema,
   type CourseCompletionPayload,
@@ -31,7 +31,7 @@ export async function startCourseAction(
   payload: StartCoursePayload,
 ): Promise<StartCourseResult> {
   try {
-    const session = await getSession();
+    const session = await getFreshSession();
     if (!session?.user) return { ok: false, reason: "unauthenticated" };
 
     const dbCourseId = crypto.randomUUID();
@@ -98,7 +98,7 @@ export async function saveCourseCompletionAction(
   payload: CourseCompletionPayload,
 ): Promise<{ ok: boolean }> {
   try {
-    const session = await getSession();
+    const session = await getFreshSession();
     if (!session?.user) return { ok: false };
 
     const parsed = courseCompletionSchema.safeParse(payload);

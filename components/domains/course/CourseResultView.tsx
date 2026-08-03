@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Settings2,
   Clock,
   Calendar,
-  ChevronRight,
   AlertCircle,
   MapPin,
   ThumbsDown,
@@ -17,11 +17,9 @@ import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/Dialog";
-import {
-  useCourseProgressStore,
-  MAX_REROLLS,
-} from "@/client/stores/useCourseProgressStore";
-import { generateCourseAction } from "@/app/actions/course";
+import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
+import { useCourseResult } from "@/client/hooks/useCourseResult";
+import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { startCourseAction } from "@/app/actions/completion";
 import type {
   JourneyPlace,
@@ -33,6 +31,9 @@ import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
 import { CourseMap } from "@/components/domains/course/CourseMap";
+import { HoursInfoCard } from "@/components/domains/course/HoursInfoCard";
+import { PlaceDescription } from "@/components/domains/course/PlaceDescription";
+import { CourseResultSkeleton } from "@/components/domains/course/CourseResultSkeleton";
 
 const TRAVEL_REASON: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -72,10 +73,6 @@ type Props = {
   activeCourse: CourseProgress | null;
 };
 
-// 운영시간 배지 스냅샷 유효 시간 — 이보다 오래된 generatedAt은 배지를 숨긴다.
-// 판정 자체는 코스 생성 시점의 실시간 계산이라 그 이후 시간이 흐르면 더 이상 유효하지 않다.
-const BADGE_SNAPSHOT_MAX_AGE_MS = 30 * 60 * 1000;
-
 export function CourseResultView({
   courseId,
   courseName,
@@ -90,105 +87,30 @@ export function CourseResultView({
   isAuthenticated,
   activeCourse,
 }: Props) {
-  const [rerolling, setRerolling] = useState(false);
-  const [currentCourseId, setCurrentCourseId] = useState(courseId);
-  const [currentPlace, setCurrentPlace] = useState<JourneyPlace>(place);
-  const [currentCourseName, setCurrentCourseName] = useState(courseName);
-  const [currentGeneratedAt, setCurrentGeneratedAt] = useState(generatedAt);
-  // 최초 진입 시점(마운트) 기준 1회만 판단한다 — 리롤 시엔 doReroll이 방금 생성된
-  // 신선한 스냅샷임을 알고 있으므로 같은 핸들러에서 false로 직접 갱신한다
-  // (effect로 다른 state 변화에 반응해 setState하는 캐스케이드 패턴을 피한다).
-  const [isBadgeSnapshotStale, setIsBadgeSnapshotStale] = useState(
-    () =>
-      !currentGeneratedAt ||
-      Date.now() - currentGeneratedAt > BADGE_SNAPSHOT_MAX_AGE_MS,
-  );
-  const [rerollExhausted, setRerollExhausted] = useState(false);
-  const [newPlaceId, setNewPlaceId] = useState<string | null>(null);
   const [authNotice, setAuthNotice] = useState(false);
-  const [rejectPanelOpen, setRejectPanelOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState<string | null>(null);
   // 기존 진행 중인 외출을 종료하고 새로 시작하는 것을 확인받는 패널
   const [replaceActiveNotice, setReplaceActiveNotice] = useState(false);
 
   const router = useRouter();
+  const queryClient = useQueryClient();
   const startCourse = useCourseProgressStore((s) => s.start);
-  const { rejectedPlaceIds, rerollCount, addRejection } =
-    useCourseProgressStore();
 
-  const isMaxRerolls = rerollCount >= MAX_REROLLS;
-
-  const doReroll = async (excludeIds: string[]) => {
-    // prefs 없음 = 구버전 localStorage 페이로드 — 생성 시점 취향을 모르니 재추천 불가
-    if (!mapX || !mapY || !scale || !prefs) return;
-    setRerolling(true);
-    setRerollExhausted(false);
-
-    const prevId = currentPlace.id;
-
-    const result = await generateCourseAction({
-      mapX,
-      mapY,
-      scale: scale as "light" | "moderate" | "leisurely",
-      prefs,
-      excludeIds,
-    });
-
-    setRerolling(false);
-
-    if (!result.ok) {
-      setRerollExhausted(true);
-      return;
-    }
-
-    setCurrentCourseId(result.courseId);
-    setCurrentPlace(result.place);
-    setCurrentCourseName(result.courseName);
-    console.log(
-      `[festival] 재추천 후 수신 — ${result.festivals.length}건`,
-      result.festivals,
-    );
-
-    if (result.place.id !== prevId) {
-      setNewPlaceId(result.place.id);
-      setTimeout(() => setNewPlaceId(null), 3000);
-    }
-
-    const generatedAt = Date.now();
-    setCurrentGeneratedAt(generatedAt);
-    setIsBadgeSnapshotStale(false); // 방금 생성한 신선한 스냅샷
-
-    const pending: PendingCourse = {
-      courseId: result.courseId,
-      place: result.place,
-      courseName: result.courseName,
-      festivals: result.festivals,
-      mapX,
-      mapY,
-      scale,
-      prefs,
-      generatedAt,
-    };
-    localStorage.setItem("pendingCourse", JSON.stringify(pending));
-  };
-
-  const handleReject = async (
-    placeId: string,
-    reason: string,
-  ): Promise<void> => {
-    console.log(`[reroll] 거절 — placeId: ${placeId}, reason: ${reason}`);
-    addRejection(placeId);
-    await doReroll([...rejectedPlaceIds, placeId]);
-  };
-
-  // 거절 이유 확정 — 원래 PlaceDetailSheet(드로어)의 "여기 말고 다른 곳으로"와 동일하게,
-  // 리롤 성공/실패 여부와 무관하게 완료 후 패널을 닫는다(실패 시엔 rerollExhausted 배너가 안내).
-  const handleConfirmReject = async () => {
-    if (!rejectReason) return;
-    await handleReject(currentPlace.id, rejectReason);
-    setRejectPanelOpen(false);
-    setRejectReason(null);
-  };
+  const {
+    currentCourseId,
+    currentPlace,
+    currentCourseName,
+    isBadgeSnapshotStale,
+    rerollExhausted,
+    newPlaceId,
+    rerolling,
+    isMaxRerolls,
+    rejectPanelOpen,
+    openRejectPanel,
+    closeRejectPanel,
+    rejectReason,
+    setRejectReason,
+    confirmReject,
+  } = useCourseResult({ courseId, courseName, place, generatedAt, mapX, mapY, scale, prefs });
 
   // 비로그인 안내 후 로그인 화면으로 이동 — HomeView의 토스트 자동 소멸 패턴과 동일하게
   // 일정 시간 노출 후 전환한다(안내를 보여줄 틈 없이 즉시 이동하지 않도록).
@@ -231,9 +153,14 @@ export function CourseResultView({
       scale: scale ?? "moderate",
       place: currentPlace,
     }).then((result) => {
-      // 세션 만료 등 엣지 — 이미 이동한 뒤라 되돌리진 않되 기존 안내 처리는 유지한다.
+      // 세션 만료 등 엣지 — 이미 다른 화면(코스 진행)으로 낙관적 이동한 뒤라 이 컴포넌트는
+      // 대부분 이미 언마운트된 상태다. 그래서 로컬 토스트(authNotice)로는 안내가 보이지
+      // 않을 수 있어, 로그인 화면 쪽에서 사유를 읽어 배너로 보여주는 redirectToSignIn을 쓴다.
       if (!result.ok) {
-        if (result.reason === "unauthenticated") setAuthNotice(true);
+        if (result.reason === "unauthenticated") {
+          queryClient.clear();
+          redirectToSignIn("session_expired");
+        }
         return;
       }
 
@@ -259,20 +186,28 @@ export function CourseResultView({
     return <CourseResultSkeleton />;
   }
 
-  // 상태 배지 3분기 — 선택 진입(직접 고른 장소)은 실측 운영 여부(availability.isOpenNow)로,
-  // 추천 진입은 파싱 성공 여부(availabilityUncertain)로 판정한다. 판단 불가하면 배지 자체를 숨긴다.
-  const availabilityBadge: { text: string; variant: "accent" | "point" } | null =
+  // 상태 배지 — 선택 진입(직접 고른 장소)은 실측 운영 여부(availability.isOpenNow)로,
+  // 추천 진입은 파싱 성공 여부(availabilityUncertain)로 열림 판정한다(둘 다 "확정 열림"이면 true로 통일).
+  // "판단 불가"(isOpenNow===null / uncertain===true)는 원인에 따라 다시 나뉜다: hours 원문 자체가
+  // 있는데 파서가 이해 못한 "진짜 파싱 실패"만 완곡한 배지로 알리고, hours가 아예 없는 경우
+  // (API 오류·데이터 미비)는 처리 실패가 아니므로 파이프라인의 관대 통과 철학과 같게 열림으로 본다.
+  const isSelectedEntry = currentPlace.origin === "selected";
+  const isConfidentlyOpen = isSelectedEntry
+    ? availability?.isOpenNow === true
+    : !currentPlace.availabilityUncertain;
+  const isConfidentlyClosed = isSelectedEntry && availability?.isOpenNow === false;
+  const uncertainHours = isSelectedEntry ? availability?.hours : currentPlace.hours;
+
+  const availabilityBadge: { text: string; variant: "accent" | "point" | "outline" } | null =
     isBadgeSnapshotStale
       ? null
-      : currentPlace.origin === "selected"
-        ? availability?.isOpenNow === false
-          ? { text: "운영시간 확인 필요", variant: "point" }
-          : availability?.isOpenNow === true
-            ? { text: "지금 출발 가능", variant: "accent" }
-            : null
-        : currentPlace.availabilityUncertain
-          ? null
-          : { text: "지금 출발 가능", variant: "accent" };
+      : isConfidentlyClosed
+        ? { text: "운영시간 확인 필요", variant: "point" }
+        : isConfidentlyOpen
+          ? { text: "지금 출발 가능", variant: "accent" }
+          : uncertainHours?.trim()
+            ? { text: "운영 여부 확인 권장", variant: "outline" }
+            : { text: "지금 출발 가능", variant: "accent" };
 
   // 장소 좌표 — 지도 미리보기·근처 맛집 검색이 공유한다.
   // currentPlace.coord가 없는 구버전 페이로드는 검색 원점(mapX=경도, mapY=위도)으로 대체한다.
@@ -291,6 +226,8 @@ export function CourseResultView({
             <Badge variant={availabilityBadge.variant} className="shrink-0 mt-0.5">
               {availabilityBadge.variant === "accent" ? (
                 <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block mr-1" />
+              ) : availabilityBadge.variant === "outline" ? (
+                <Clock size={11} className="inline-block mr-1" />
               ) : (
                 <AlertCircle size={11} className="inline-block mr-1" />
               )}
@@ -420,7 +357,7 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 영업시간 안내 링크 — 파싱 실패 장소에만 노출 */}
+        {/* 운영시간 안내 링크 — 파싱 실패 장소에만 노출 */}
         {currentPlace.availabilityUncertain && currentPlace.name?.trim() && (
           <HoursInfoCard placeName={currentPlace.name} />
         )}
@@ -531,14 +468,11 @@ export function CourseResultView({
                   );
                 })}
               </div>
-              <Button size="cta" disabled={!rejectReason} onClick={handleConfirmReject}>
+              <Button size="cta" disabled={!rejectReason} onClick={confirmReject}>
                 여기 말고 다른 곳으로
               </Button>
               <button
-                onClick={() => {
-                  setRejectPanelOpen(false);
-                  setRejectReason(null);
-                }}
+                onClick={closeRejectPanel}
                 className="w-full h-10 text-[13px] font-medium text-text-secondary"
               >
                 취소
@@ -572,7 +506,7 @@ export function CourseResultView({
                   <Settings2 size={15} /> 취향 다시 설정
                 </button>
                 <button
-                  onClick={() => setRejectPanelOpen(true)}
+                  onClick={openRejectPanel}
                   disabled={isMaxRerolls || rerolling}
                   className={cn(
                     "h-12 text-[15px] font-medium text-point flex items-center justify-center gap-1.5",
@@ -637,77 +571,5 @@ export function CourseResultView({
         </div>
       )}
     </>
-  );
-}
-
-function HoursInfoCard({ placeName }: { placeName: string }) {
-  return (
-    <a
-      href={`https://www.google.com/search?q=${encodeURIComponent(`${placeName} 운영시간`)}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-3 flex items-center gap-3.5 py-3.5 px-4 rounded-xl bg-card active:scale-[0.98] transition-transform duration-200"
-    >
-      <div className="w-9.5 h-9.5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-        <Clock size={18} className="text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[12px] text-text-secondary leading-none mb-0.5">
-          영업시간 정보
-        </p>
-        <p className="text-[14px] font-semibold text-text-primary leading-snug">
-          방문 전 영업시간을 확인해보세요
-        </p>
-      </div>
-      <ChevronRight size={16} className="text-text-secondary shrink-0" />
-    </a>
-  );
-}
-
-// 소개 2줄 클램프 + 더보기/접기 — key={place.id}로 장소가 바뀔 때마다 새로 마운트되어
-// expanded/hasMore 상태가 항상 새 장소 기준으로 초기화된다(PlaceDetailSheet가 쓰던 방식과 동일).
-function PlaceDescription({ desc }: { desc: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const ref = useRef<HTMLParagraphElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (el) setHasMore(el.scrollHeight > el.clientHeight);
-  }, []);
-
-  return (
-    <div className="mt-3 flex flex-col gap-1">
-      <p
-        ref={ref}
-        className={cn(
-          "text-[14px] text-text-primary leading-[1.55]",
-          !expanded && "line-clamp-2",
-        )}
-      >
-        {desc}
-      </p>
-      {hasMore && (
-        <div className="flex justify-end">
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="text-primary text-xs font-semibold hover:underline"
-          >
-            {expanded ? "접기" : "더보기"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CourseResultSkeleton() {
-  return (
-    <div className="flex-1 px-4 pt-5 pb-4 animate-pulse">
-      <div className="h-7 w-48 rounded-lg bg-muted mb-2" />
-      <div className="h-4 w-32 rounded bg-muted mb-5" />
-      <div className="h-20 rounded-xl bg-muted" />
-      <div className="mt-6 h-16 rounded-xl bg-muted" />
-    </div>
   );
 }

@@ -1,18 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { CheckCircle } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { Badge } from "@/components/commons/Badge";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
-import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
-import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
-import { MOCK_PLACES } from "@/shared/constants/courseMock";
-import { saveCourseCompletionAction } from "@/app/actions/completion";
-import { buildCompletionPayload } from "@/shared/utils/completionPayload";
-import type { PendingCourse } from "@/shared/types/course.types";
+import { useCourseDone } from "@/client/hooks/useCourseDone";
 
 const REACTION_TAGS = [
   "분위기 좋아요",
@@ -22,51 +15,8 @@ const REACTION_TAGS = [
   "또 올래요",
 ];
 
-function readPendingCourse(): Partial<PendingCourse> | null {
-  try {
-    const raw = localStorage.getItem("pendingCourse");
-    if (!raw) return null;
-    return JSON.parse(raw) as Partial<PendingCourse>;
-  } catch {
-    return null;
-  }
-}
-
 export function CourseDoneView() {
-  const router = useRouter();
-  const { startedAt, completedAt, reset } = useCourseProgressStore();
-  const [stars, setStars] = useState(0);
-  const [reactions, setReactions] = useState<string[]>([]);
-
-  // 저장소 읽기 결과에서 직접 도출 — 하이드레이션 중엔 null(기존 초기 상태와 동일 렌더)
-  const pending = useClientRead(readPendingCourse);
-  const place = pending === HYDRATING ? null : (pending?.place ?? MOCK_PLACES[0]);
-
-  const toggleReaction = (tag: string) => {
-    setReactions((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-    );
-  };
-
-  const handleDone = () => {
-    // 완료 기록 저장 — reset()이 타임스탬프를 지우므로 그 전에 페이로드를 만든다.
-    // 실제 pendingCourse가 있을 때만 저장(MOCK fallback 데이터는 기록하지 않음).
-    const payload = buildCompletionPayload({
-      pending: readPendingCourse(),
-      status: "completed",
-      startedAt,
-      completedAt,
-      rating: stars > 0 ? stars : null,
-      reactions,
-    });
-    if (payload) {
-      // 텔레메트리 — 실패해도 완료 흐름은 그대로 진행
-      void saveCourseCompletionAction(payload).catch(() => {});
-    }
-    reset();
-    localStorage.removeItem("pendingCourse");
-    router.push("/");
-  };
+  const { place, stars, setStars, reactions, toggleReaction, handleDone } = useCourseDone();
 
   return (
     <>
