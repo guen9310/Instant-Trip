@@ -4,8 +4,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SignInForm } from "@/components/domains/auth/SignInForm";
 
 const mockPush = vi.fn();
+let mockSearchParams = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, back: vi.fn() }),
+  useSearchParams: () => mockSearchParams,
 }));
 
 const { mockSendVerificationOtp } = vi.hoisted(() => ({
@@ -21,6 +23,7 @@ describe("SignInForm", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockSendVerificationOtp.mockClear();
+    mockSearchParams = new URLSearchParams();
   });
 
   it("초기 상태에서 CTA가 비활성이다", () => {
@@ -80,5 +83,22 @@ describe("SignInForm", () => {
         screen.getByText("코드 발송에 실패했어요. 다시 시도해 주세요."),
       ).toBeInTheDocument();
     });
+  });
+
+  it("reason=session_expired 파라미터가 있으면 세션 만료 안내 배너를 보여준다", () => {
+    mockSearchParams = new URLSearchParams("reason=session_expired");
+    render(<SignInForm />);
+
+    expect(
+      screen.getByText("세션이 만료됐어요. 다시 로그인해 주세요."),
+    ).toBeInTheDocument();
+  });
+
+  it("reason 파라미터가 없으면 세션 만료 안내 배너를 보여주지 않는다", () => {
+    render(<SignInForm />);
+
+    expect(
+      screen.queryByText("세션이 만료됐어요. 다시 로그인해 주세요."),
+    ).not.toBeInTheDocument();
   });
 });

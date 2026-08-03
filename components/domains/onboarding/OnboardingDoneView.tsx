@@ -1,26 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Map } from "lucide-react";
 import { Button } from "@/components/commons/Button";
-import { LocationPermissionSheet } from "@/components/domains/location/LocationPermissionSheet";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { buildProfileSummary } from "@/shared/utils/prefsText";
 
 export function OnboardingDoneView() {
-  const [sheetOpen, setSheetOpen] = useState(false);
   const router = useRouter();
 
   const prefs = usePrefsStore((s) => s.prefs);
   const profile = buildProfileSummary(prefs);
-
-  const handleAllow = () => {
-    setSheetOpen(false);
-    // TODO: 실제 위치 권한 요청 (navigator.geolocation.requestPermission)
-    router.push("/start");
-  };
 
   return (
     <div className="flex min-h-svh flex-col bg-background px-6">
@@ -67,7 +58,7 @@ export function OnboardingDoneView() {
         <Button
           size="cta"
           className="w-full"
-          onClick={() => setSheetOpen(true)}
+          onClick={() => router.push("/start")}
         >
           지금 떠나보기
         </Button>
@@ -78,12 +69,6 @@ export function OnboardingDoneView() {
           둘러보기
         </Link>
       </div>
-
-      <LocationPermissionSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        onAllow={handleAllow}
-      />
     </div>
   );
 }

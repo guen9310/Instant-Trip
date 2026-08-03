@@ -234,5 +234,4 @@ When discussing UI screens, use the canonical names below. Both parties must use
 
 | 정식 명칭 | 컴포넌트 | 진입 경로 |
 |---|---|---|
-| 장소 상세 시트 | `PlaceDetailSheet` | 코스 추천 화면 → 장소 카드 탭 |
-| 주변 정보 시트 | `NearbyPanel` (in `CourseActiveView`) | 코스 진행 화면 → 주변 정보 보기 탭 |
+| 주변 정보 시트 | `NearbyPanel` | 코스 진행 화면 → 주변 정보 보기 탭 |

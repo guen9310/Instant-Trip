@@ -1,120 +1,41 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle, Compass, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { authClient } from "@/client/auth-client";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const RESEND_SECONDS = 30;
+import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle, ArrowLeft, CheckCircle, Compass, Mail } from "lucide-react";
+import { useSignInOtp } from "@/client/hooks/useSignInOtp";
 
 export function SignInForm() {
-  const router = useRouter();
+  // 세션 만료/삭제로 강제 로그아웃된 경우 redirectToSignIn이 이 파라미터를 실어 보낸다 —
+  // 그 화면(설정·코스 프리뷰 등)은 이미 언마운트됐을 수 있어, 여기서 안내를 대신 보여준다.
+  const sessionExpired = useSearchParams().get("reason") === "session_expired";
 
-  const [email, setEmail] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
+  const {
+    email,
+    setEmail,
+    code,
+    setCode,
+    codeSent,
+    countdown,
+    submitting,
+    resending,
+    error,
+    emailValid,
+    codeComplete,
+    sendCode,
+    resendCode,
+    verify,
+    goBack,
+  } = useSignInOtp();
+
   const [emailFocused, setEmailFocused] = useState(false);
   const [otpFocused, setOtpFocused] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const codeRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const emailValid = EMAIL_RE.test(email);
-  const codeComplete = code.length === 6;
-
-  const startCountdown = () => {
-    setCountdown(RESEND_SECONDS);
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      setCountdown((n) => {
-        if (n <= 1) {
-          clearInterval(timerRef.current!);
-          return 0;
-        }
-        return n - 1;
-      });
-    }, 1000);
-  };
-
-  useEffect(
-    () => () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    },
-    [],
-  );
-
-  const sendCode = async () => {
-    if (!emailValid || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    const { error: err } = await authClient.emailOtp.sendVerificationOtp({
-      email,
-      type: "sign-in",
-    });
-    setSubmitting(false);
-    if (err) {
-      setError("코드 발송에 실패했어요. 다시 시도해 주세요.");
-      return;
-    }
-    setCodeSent(true);
-    startCountdown();
-    setTimeout(() => codeRef.current?.focus(), 480);
-  };
-
-  const resendCode = async () => {
-    if (countdown > 0 || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    const { error: err } = await authClient.emailOtp.sendVerificationOtp({
-      email,
-      type: "sign-in",
-    });
-    setSubmitting(false);
-    if (err) {
-      setError("재발송에 실패했어요. 다시 시도해 주세요.");
-      return;
-    }
-    setCode("");
-    startCountdown();
-    setTimeout(() => codeRef.current?.focus(), 100);
-  };
-
-  const verify = async () => {
-    if (!codeComplete || submitting) return;
-    setSubmitting(true);
-    setError(null);
-    const { data, error: err } = await authClient.signIn.emailOtp({
-      email,
-      otp: code,
-    });
-    setSubmitting(false);
-    if (err) {
-      setError(
-        err.code === "OTP_EXPIRED"
-          ? "코드가 만료됐어요. 재발송해 주세요."
-          : err.code === "TOO_MANY_ATTEMPTS"
-            ? "시도 횟수를 초과했어요. 재발송해 주세요."
-            : "코드가 올바르지 않아요.",
-      );
-      setCode("");
-      return;
-    }
-    router.push(data?.user?.onboardingDone ? "/" : "/onboarding");
-  };
-
-  const goBack = () => {
-    if (codeSent) {
-      setCodeSent(false);
-      setCode("");
-      setError(null);
-    } else {
-      router.back();
-    }
-  };
+  // 발송/재발송 성공 직후 코드 입력창으로 포커스를 옮긴다 — 타이밍(480ms/100ms)은
+  // 각 스테이지 전환 트랜지션 길이에 맞춘 값이라 DOM ref와 함께 화면 층이 소유한다.
+  const handleSendCode = () => sendCode(() => setTimeout(() => codeRef.current?.focus(), 480));
+  const handleResendCode = () => resendCode(() => setTimeout(() => codeRef.current?.focus(), 100));
 
   const activeBtnStyle: React.CSSProperties = {
     background: "var(--auth-btn-active)",
@@ -144,6 +65,15 @@ export function SignInForm() {
 
       {/* Body */}
       <div className="flex flex-1 flex-col justify-center overflow-y-auto px-7">
+        {sessionExpired && (
+          <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-point/25 bg-point/10 px-4 py-3">
+            <AlertCircle size={16} className="shrink-0 text-point" strokeWidth={2} />
+            <p className="text-[13px] leading-snug text-point">
+              세션이 만료됐어요. 다시 로그인해 주세요.
+            </p>
+          </div>
+        )}
+
         {/* Brand mark */}
         <div
           className="mb-8 flex h-18 w-18 shrink-0 items-center justify-center"
@@ -219,10 +149,7 @@ export function SignInForm() {
               inputMode="email"
               autoComplete="email"
               value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError(null);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
               placeholder="you@email.com"
@@ -341,7 +268,6 @@ export function SignInForm() {
               onChange={(e) => {
                 const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                 setCode(val);
-                if (error) setError(null);
               }}
               onFocus={() => setOtpFocused(true)}
               onBlur={() => setOtpFocused(false)}
@@ -358,8 +284,8 @@ export function SignInForm() {
             </span>
             <button
               type="button"
-              onClick={resendCode}
-              disabled={countdown > 0 || submitting}
+              onClick={handleResendCode}
+              disabled={countdown > 0 || resending || submitting}
               className="font-medium transition-colors"
               style={{
                 fontSize: "14px",
@@ -369,7 +295,7 @@ export function SignInForm() {
                     : "var(--auth-resend-active)",
               }}
             >
-              {countdown > 0 ? `...${countdown}초 후` : "코드 재전송"}
+              {resending ? "재전송 중..." : countdown > 0 ? `...${countdown}초 후` : "코드 재전송"}
             </button>
           </div>
 
@@ -385,15 +311,17 @@ export function SignInForm() {
       <div className="shrink-0 px-5 pb-7 pt-4">
         <button
           type="button"
-          onClick={codeSent ? verify : sendCode}
+          onClick={codeSent ? verify : handleSendCode}
           disabled={
-            codeSent ? !codeComplete || submitting : !emailValid || submitting
+            codeSent
+              ? !codeComplete || submitting || resending
+              : !emailValid || submitting
           }
           className="h-14.5 w-full text-[16px] font-semibold"
           style={{
             borderRadius: "15px",
             ...(codeSent
-              ? codeComplete && !submitting
+              ? codeComplete && !submitting && !resending
                 ? activeBtnStyle
                 : disabledBtnStyle
               : emailValid && !submitting

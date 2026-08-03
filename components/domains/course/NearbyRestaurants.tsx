@@ -2,32 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { UtensilsCrossed, ExternalLink } from "lucide-react";
-import { cn } from "@/shared/utils";
+import { extractRegion } from "@/components/domains/course/extractRegion";
+import { FallbackLink } from "@/components/domains/course/FallbackLink";
+import { LoadingSkeleton } from "@/components/domains/course/LoadingSkeleton";
 
 type PlaceItem = kakao.maps.services.PlacesSearchResultItem;
-
-function extractRegion(addr: string): string {
-  const parts = addr.trim().split(/\s+/);
-  if (parts.length < 2) return addr;
-
-  const lvl1 = parts[0];
-
-  // 특별시/광역시/특별자치시: "울산광역시 중구 ..." → "울산 중구"
-  const metroMatch = lvl1.match(/^(.+?)(?:특별시|광역시|특별자치시)$/);
-  if (metroMatch) {
-    return `${metroMatch[1]} ${parts[1]}`;
-  }
-
-  // 도: "경기도 수원시 영통구 ..." → "수원시 영통구", "강원도 춘천시 ..." → "춘천시"
-  if (lvl1.endsWith("도")) {
-    if (parts.length >= 3 && /[구군]$/.test(parts[2])) {
-      return `${parts[1]} ${parts[2]}`;
-    }
-    return parts[1];
-  }
-
-  return `${parts[0]} ${parts[1]}`;
-}
 
 type Props = {
   placeName: string;
@@ -123,53 +102,6 @@ export function NearbyRestaurants({ placeName, addr, coord }: Props) {
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function FallbackLink({ placeName, addr }: { placeName: string; addr: string }) {
-  const region = extractRegion(addr);
-  return (
-    <a
-      href={`https://map.kakao.com/?q=${encodeURIComponent(region + " 맛집")}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-3 p-3.5 rounded-xl bg-card border border-border"
-    >
-      <div className="w-9 h-9 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
-        <UtensilsCrossed size={16} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-text-secondary">근처 맛집 찾기</p>
-        <p className="text-[14px] font-semibold text-text-primary truncate">
-          {placeName} 주변 음식점 보기
-        </p>
-      </div>
-      <ExternalLink size={14} className="text-text-secondary shrink-0" />
-    </a>
-  );
-}
-
-function LoadingSkeleton() {
-  return (
-    <div className="rounded-xl bg-card border border-border p-3.5 animate-pulse">
-      <div className="h-3 w-16 bg-muted rounded mb-3" />
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className={cn(
-            "flex items-center gap-3 py-2.5",
-            i < 2 && "border-b border-border/60",
-          )}
-        >
-          <div className="w-5 h-3 bg-muted rounded shrink-0" />
-          <div className="flex-1">
-            <div className="h-3 w-2/3 bg-muted rounded mb-1.5" />
-            <div className="h-2.5 w-1/3 bg-muted rounded" />
-          </div>
-          <div className="h-2.5 w-8 bg-muted rounded" />
-        </div>
-      ))}
     </div>
   );
 }
