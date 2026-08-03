@@ -68,3 +68,26 @@ export function resolveRegion(cityName: string): Region | null {
   }
   return null;
 }
+
+// 지오코딩이 시·도 이름을 못 주거나(NOT_FOUND, 키 누락, 네트워크 실패 등) resolveRegion이
+// 매칭하지 못했을 때의 최후 폴백 — 좌표만으로 가장 가까운 시청/도청을 골라준다.
+// 이렇게 하지 않으면 위치 권한을 허용한 사용자만 region=null이 되어 인기 장소를 못 받는다
+// (수동으로 지역을 선택하면 REGIONS 테이블과 직접 매칭되어 이 문제가 없다).
+export function nearestRegion(lat: number, lng: number): Region {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  let closest = REGIONS[0];
+  let minDist = Infinity;
+  for (const region of REGIONS) {
+    const dLat = toRad(region.lat - lat);
+    const dLng = toRad(region.lng - lng);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat)) * Math.cos(toRad(region.lat)) * Math.sin(dLng / 2) ** 2;
+    const dist = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); // 단위: 라디안, 상대 비교만 하므로 반지름 곱 불필요
+    if (dist < minDist) {
+      minDist = dist;
+      closest = region;
+    }
+  }
+  return closest;
+}
