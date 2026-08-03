@@ -36,20 +36,37 @@ export const useLocationStore = create<LocationStore>()(
         set({ state: { status: "requesting" } });
         navigator.geolocation.getCurrentPosition(
           async (pos) => {
-            const { displayName, sidoName } = await fetchCityAction(
-              pos.coords.latitude,
-              pos.coords.longitude
-            );
-            set({
-              state: {
-                status: "granted",
-                city: displayName,
-                sidoName,
-                source: "geo",
-                lat: pos.coords.latitude,
-                lng: pos.coords.longitude,
-              },
-            });
+            // fetchCityAction은 실패해도 항상 폴백 값을 반환하도록 되어 있지만,
+            // 예기치 못한 예외까지 여기서 잡아두지 않으면 이 Promise가 아무도
+            // await하지 않는 콜백이라 status가 "requesting"에 영구히 멈춘다.
+            try {
+              const { displayName, sidoName } = await fetchCityAction(
+                pos.coords.latitude,
+                pos.coords.longitude
+              );
+              set({
+                state: {
+                  status: "granted",
+                  city: displayName,
+                  sidoName,
+                  source: "geo",
+                  lat: pos.coords.latitude,
+                  lng: pos.coords.longitude,
+                },
+              });
+            } catch (err) {
+              console.log("[location] 지오코딩 실패 — 좌표만으로 진행:", err);
+              set({
+                state: {
+                  status: "granted",
+                  city: "현재 위치",
+                  sidoName: null,
+                  source: "geo",
+                  lat: pos.coords.latitude,
+                  lng: pos.coords.longitude,
+                },
+              });
+            }
           },
           (err) => {
             set({ state: { status: err.code === err.TIMEOUT ? "timeout" : "denied" } });
