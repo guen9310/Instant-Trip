@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { SignInForm } from "@/components/domains/auth/SignInForm";
 import { getFreshSession } from "@/server/session";
@@ -8,7 +9,9 @@ export default async function SignInPage() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <SignInForm />
+      <Suspense>
+        <SignInForm />
+      </Suspense>
     </div>
   );
 }

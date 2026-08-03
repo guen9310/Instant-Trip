@@ -1,10 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowLeft, CheckCircle, Compass, Mail } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle, ArrowLeft, CheckCircle, Compass, Mail } from "lucide-react";
 import { useSignInOtp } from "@/client/hooks/useSignInOtp";
 
 export function SignInForm() {
+  // 세션 만료/삭제로 강제 로그아웃된 경우 redirectToSignIn이 이 파라미터를 실어 보낸다 —
+  // 그 화면(설정·코스 프리뷰 등)은 이미 언마운트됐을 수 있어, 여기서 안내를 대신 보여준다.
+  const sessionExpired = useSearchParams().get("reason") === "session_expired";
+
   const {
     email,
     setEmail,
@@ -60,6 +65,15 @@ export function SignInForm() {
 
       {/* Body */}
       <div className="flex flex-1 flex-col justify-center overflow-y-auto px-7">
+        {sessionExpired && (
+          <div className="mb-6 flex items-center gap-2.5 rounded-xl border border-point/25 bg-point/10 px-4 py-3">
+            <AlertCircle size={16} className="shrink-0 text-point" strokeWidth={2} />
+            <p className="text-[13px] leading-snug text-point">
+              세션이 만료됐어요. 다시 로그인해 주세요.
+            </p>
+          </div>
+        )}
+
         {/* Brand mark */}
         <div
           className="mb-8 flex h-18 w-18 shrink-0 items-center justify-center"

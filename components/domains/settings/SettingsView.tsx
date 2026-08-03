@@ -7,6 +7,7 @@ import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { PREF_KEYS, PREF_META, type Prefs } from "@/shared/constants/preferences";
 import { authClient } from "@/client/auth-client";
+import { redirectToSignIn } from "@/client/redirectToSignIn";
 
 const OPTION_TITLES: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -46,11 +47,12 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
       }
 
       // 세션이 DB에서 무효화된 상태(유저 삭제 등) — 일반 저장 실패와 구분해
-      // 로컬 상태를 정리하고 로그인 화면으로 보낸다.
+      // 로컬 상태를 정리하고 로그인 화면으로 보낸다. 안내 문구는 이 화면이 아니라
+      // 로그인 화면에서 보여준다 — 여기서 setSaveError로 띄워도 곧바로 리다이렉트가
+      // 실행돼 사용자가 볼 틈이 없다.
       if (error.status === 401) {
-        setSaveError("세션이 만료됐어요. 다시 로그인해 주세요.");
         queryClient.clear();
-        router.push("/sign-in");
+        redirectToSignIn("session_expired");
         return;
       }
 
@@ -65,7 +67,11 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
   const handleSignOut = async () => {
     await authClient.signOut();
     queryClient.clear();
-    router.push("/sign-in");
+    // router.push(소프트 네비게이션)는 방문했던 페이지의 클라이언트 캐시를 그대로
+    // 남긴다 — 로그아웃 후 뒤로가기를 누르면 서버 재검증 없이 그 캐시가 재사용돼
+    // 로그인 화면이 다시 보이는 문제가 있었다. 하드 네비게이션으로 캐시를 통째로
+    // 비운다(Next.js 공식 문서: 클라이언트 캐시는 페이지 새로고침 시에만 비워짐).
+    window.location.href = "/sign-in";
   };
 
   return (

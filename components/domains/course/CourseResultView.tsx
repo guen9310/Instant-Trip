@@ -19,6 +19,7 @@ import { Button } from "@/components/commons/Button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/Dialog";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { useCourseResult } from "@/client/hooks/useCourseResult";
+import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { startCourseAction } from "@/app/actions/completion";
 import type {
   JourneyPlace,
@@ -152,12 +153,13 @@ export function CourseResultView({
       scale: scale ?? "moderate",
       place: currentPlace,
     }).then((result) => {
-      // 세션 만료 등 엣지 — 이미 이동한 뒤라 되돌리진 않되 기존 안내 처리는 유지한다.
+      // 세션 만료 등 엣지 — 이미 다른 화면(코스 진행)으로 낙관적 이동한 뒤라 이 컴포넌트는
+      // 대부분 이미 언마운트된 상태다. 그래서 로컬 토스트(authNotice)로는 안내가 보이지
+      // 않을 수 있어, 로그인 화면 쪽에서 사유를 읽어 배너로 보여주는 redirectToSignIn을 쓴다.
       if (!result.ok) {
         if (result.reason === "unauthenticated") {
-          setAuthNotice(true);
           queryClient.clear();
-          router.push("/sign-in");
+          redirectToSignIn("session_expired");
         }
         return;
       }
