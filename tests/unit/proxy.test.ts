@@ -2,8 +2,12 @@ import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 
-function makeRequest(pathname: string, cookies: Record<string, string> = {}) {
-  const headers = new Headers();
+function makeRequest(
+  pathname: string,
+  cookies: Record<string, string> = {},
+  extraHeaders: Record<string, string> = {},
+) {
+  const headers = new Headers(extraHeaders);
   const cookieHeader = Object.entries(cookies)
     .map(([name, value]) => `${name}=${value}`)
     .join("; ");
@@ -45,6 +49,17 @@ describe("proxy — 인증 게이트 (해피 패스)", () => {
 
   it("보호 경로가 아니면 쿠키 없이도 통과시킨다", () => {
     const res = proxy(makeRequest("/feed"));
+
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("세션 쿠키 없이도 서버 액션(next-action 헤더) 요청은 리다이렉트하지 않고 통과시킨다", () => {
+    // 서버 액션은 그 액션이 쓰인 페이지 경로로의 POST로 온다 — 여기서 리다이렉트를
+    // 반환하면 클라이언트 액션 호출부가 응답을 파싱하지 못해 무한 로딩에 빠진다
+    // (실제 재현: /start에서 쿠키 삭제 후 "시작" 클릭). 인증 체크는 액션 자신이 한다.
+    const res = proxy(
+      makeRequest("/start", {}, { "next-action": "abcdef1234567890" }),
+    );
 
     expect(res.headers.get("location")).toBeNull();
   });
