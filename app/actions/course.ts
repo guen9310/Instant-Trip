@@ -15,6 +15,7 @@ import {
 } from "@/lib/tour/mappers";
 import { fetchNearby } from "@/lib/clients/kakao-local";
 import type { NearbyCategoryCode } from "@/lib/clients/kakao-local";
+import { getAuthState } from "@/server/session";
 import type {
   JourneyPlace,
   NearbyCategory,
@@ -27,6 +28,7 @@ import {
   generateCourseInputSchema,
   nearbyPoisInputSchema,
 } from "@/shared/schemas/actionInputs";
+import type { AuthFailureReason } from "@/shared/types/auth.types";
 
 type GenerateCourseResult =
   | {
@@ -38,6 +40,10 @@ type GenerateCourseResult =
     }
   // NO_PLACE: 반경 내 적합한 장소 없음 — radiusM은 실제 검색에 사용된 반경
   | { ok: false; code: "NO_PLACE"; error: string; radiusM: number }
+  // UNAUTHENTICATED: /start(보호 경로)가 이 액션의 유일한 호출부라, proxy.ts가
+  // 더 이상 서버 액션 요청 자체를 막지 않는 대신(막으면 클라이언트 액션 호출부가
+  // 리다이렉트 응답을 파싱하지 못해 무한 로딩에 빠진다) 이 액션이 직접 판별한다.
+  | { ok: false; code: "UNAUTHENTICATED"; reason: AuthFailureReason }
   | { ok: false; code: "UNKNOWN"; error: string };
 
 const NEARBY_CAT_CODE: Record<Exclude<NearbyCategory, "all">, NearbyCategoryCode> = {
@@ -115,6 +121,11 @@ export async function fetchNearbyPoisAction(
 export async function generateCourseAction(
   input: unknown,
 ): Promise<GenerateCourseResult> {
+  const authState = await getAuthState();
+  if (authState.status !== "authenticated") {
+    return { ok: false, code: "UNAUTHENTICATED", reason: authState.status };
+  }
+
   const parsed = generateCourseInputSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, code: "UNKNOWN", error: "잘못된 추천 요청입니다." };

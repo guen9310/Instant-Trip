@@ -20,10 +20,12 @@ function readPendingCourse(): PendingCourse | null {
 
 type Props = {
   isAuthenticated: boolean;
+  // page.tsx가 getAuthState()로 미리 판정 — 세션이 서버에서 무효화된 경우에만 true.
+  sessionExpired: boolean;
   activeCourse: CourseProgress | null;
 };
 
-export function CoursePreviewClient({ isAuthenticated, activeCourse }: Props) {
+export function CoursePreviewClient({ isAuthenticated, sessionExpired, activeCourse }: Props) {
   const router = useRouter();
   const course = useClientRead(readPendingCourse);
 
@@ -46,6 +48,7 @@ export function CoursePreviewClient({ isAuthenticated, activeCourse }: Props) {
       availability={course.availability}
       generatedAt={course.generatedAt}
       isAuthenticated={isAuthenticated}
+      sessionExpired={sessionExpired}
       activeCourse={activeCourse}
     />
   );
