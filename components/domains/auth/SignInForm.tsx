@@ -152,6 +152,9 @@ export function SignInForm() {
               onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setEmailFocused(true)}
               onBlur={() => setEmailFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && emailValid && !submitting) handleSendCode();
+              }}
               placeholder="you@email.com"
               className="auth-email-input flex-1 bg-transparent text-[15px] text-text-primary outline-none"
             />
@@ -271,6 +274,9 @@ export function SignInForm() {
               }}
               onFocus={() => setOtpFocused(true)}
               onBlur={() => setOtpFocused(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && codeComplete && !submitting && !resending) verify();
+              }}
               autoComplete="one-time-code"
               aria-label="6자리 인증 코드"
               className="absolute left-0 top-0 h-px w-px opacity-0"
