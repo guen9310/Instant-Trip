@@ -10,7 +10,7 @@ import { HomeLocationCard } from "@/components/domains/home/HomeLocationCard";
 import { HomeSkeleton } from "@/components/domains/home/HomeSkeleton";
 import { FestivalSection } from "@/components/domains/home/FestivalSection";
 import { PlacesSection } from "@/components/domains/home/PlacesSection";
-import { CHIP_TO_TYPE, type FilterChip } from "@/components/domains/home/homeFilters";
+import type { FilterChip } from "@/components/domains/home/homeFilters";
 import { LocationDeniedView } from "@/components/domains/location/LocationDeniedView";
 import type { HomeData } from "@/lib/home/core";
 
@@ -120,10 +120,6 @@ export function HomeView() {
     ...(homeData?.ongoingFestivals ?? []),
     ...(homeData?.upcomingFestivals ?? []),
   ];
-  const typeId = CHIP_TO_TYPE[filter];
-  const filteredPlaces = (homeData?.places ?? []).filter((p) =>
-    typeId ? p.contenttypeid === typeId : true,
-  );
   const showSectionSkeletons =
     state.status !== "granted" || (homePending && !homeData);
 
@@ -158,7 +154,7 @@ export function HomeView() {
             {/* 4. 지역 인기 장소 목록 — 거리순이 아니라 시/도 단위 카테고리별 인기순 top10 */}
             {!placesError && (
               <PlacesSection
-                places={filteredPlaces}
+                places={homeData?.places ?? []}
                 hasPlaces={(homeData?.places ?? []).length > 0}
                 regionName={homeData?.region?.name}
                 filter={filter}
