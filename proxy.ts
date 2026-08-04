@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-
-// HTTPS 배포 환경에서 better-auth는 __Secure- 접두사를 자동으로 붙임
-const SESSION_COOKIES = ["better-auth.session_token", "__Secure-better-auth.session_token"];
+import { SESSION_COOKIE_NAMES } from "@/shared/constants/auth";
 
 const PROTECTED = ["/profile", "/settings", "/start", "/course", "/onboarding"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isLoggedIn = SESSION_COOKIES.some((name) => request.cookies.has(name));
+  const hasSessionCookie = SESSION_COOKIE_NAMES.some((name) => request.cookies.has(name));
 
-  if (!isLoggedIn && PROTECTED.some((p) => pathname.startsWith(p))) {
+  // 쿠키 자체가 없으면 최초 방문이거나 직접 로그아웃한 경우다 — 이 시점엔 세션이
+  // "무효화"됐다고 말할 근거가 없으므로 reason 없이 보낸다. 쿠키는 있지만 서버에서
+  // 실제로 무효화된 경우(invalid_session)는 DB 조회가 필요해 여기(엣지 이전 단계)서
+  // 판별하지 않는다 — 각 보호된 페이지·서버 액션이 getAuthState()/getFreshAuthState()로
+  // 정확히 구분한다.
+  if (!hasSessionCookie && PROTECTED.some((p) => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = "/sign-in";
-    // 로그인한 적 없는 사용자가 보호된 URL로 바로 들어온 경우도 포함해 무조건 붙인다 —
-    // 두 경우를 쿠키 유무만으로는 구분할 수 없고, 어느 쪽이든 실질적으로는 "로그인이
-    // 필요하다"는 같은 상황이라 문구가 약간 부정확해도 감수하기로 했다(SignInForm 참고).
-    url.searchParams.set("reason", "session_expired");
     return NextResponse.redirect(url);
   }
 

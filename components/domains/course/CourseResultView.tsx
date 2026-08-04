@@ -63,9 +63,14 @@ type Props = {
   // 코스 생성 시점(epoch ms) — 운영시간 배지가 참조하는 판정은 이 시점의 스냅샷이라
   // 오래되면(30분 초과) 배지를 숨기는 데 쓴다. 구버전 localStorage 페이로드엔 없을 수 있다.
   generatedAt?: number;
-  // 서버 컴포넌트(page.tsx)에서 getSession()으로 미리 판정 — 탭 시 서버 왕복 없이
+  // 서버 컴포넌트(page.tsx)에서 getAuthState()로 미리 판정 — 탭 시 서버 왕복 없이
   // 즉시 분기하기 위함 (비로그인은 안내 후 이동, 로그인은 낙관적 이동).
   isAuthenticated: boolean;
+  // page.tsx가 getAuthState()로 미리 판정 — 이 화면은 proxy.ts가 /course를 보호 경로로
+  // 걸러낸 뒤라 !isAuthenticated는 항상 세션이 서버에서 무효화된 경우(invalid_session)뿐이다.
+  // 그래도 계약을 명시적으로 분리해, 로그인 자체가 필요한 안내(authNotice)와 세션 만료
+  // 배너를 혼동하지 않게 한다.
+  sessionExpired: boolean;
   // page.tsx가 getActiveCourse()로 미리 조회해둔, 이미 진행 중인 외출(있다면).
   // "여기로 갈게요" 탭 시 이 값이 있으면 곧바로 시작하지 않고 먼저 확인을 받는다 —
   // 새 외출을 시작하면 서버가 기존 active 기록을 abandoned로 종료하기 때문
@@ -85,6 +90,7 @@ export function CourseResultView({
   availability,
   generatedAt,
   isAuthenticated,
+  sessionExpired,
   activeCourse,
 }: Props) {
   const [authNotice, setAuthNotice] = useState(false);
@@ -124,6 +130,13 @@ export function CourseResultView({
   // 그 결과에 따라 분기만 한다 (서버 왕복을 기다리지 않기 위함).
   const handleStart = () => {
     if (!isAuthenticated) {
+      // 세션이 무효화된 경우엔 "로그인하면~" 안내가 아니라 로그인 화면의 만료 배너로
+      // 곧바로 보낸다 — redirectToSignIn은 하드 네비게이션이라 이 컴포넌트 언마운트
+      // 여부와 무관하게 항상 배너가 뜬다.
+      if (sessionExpired) {
+        redirectToSignIn("session_expired");
+        return;
+      }
       setAuthNotice(true);
       return;
     }
@@ -157,7 +170,10 @@ export function CourseResultView({
       // 대부분 이미 언마운트된 상태다. 그래서 로컬 토스트(authNotice)로는 안내가 보이지
       // 않을 수 있어, 로그인 화면 쪽에서 사유를 읽어 배너로 보여주는 redirectToSignIn을 쓴다.
       if (!result.ok) {
-        if (result.reason === "unauthenticated") {
+        // "anonymous"는 이 화면에 이론상 나타나지 않는다(위 handleStart의 isAuthenticated
+        // 체크가 이미 막음) — 그래도 서버 액션의 계약을 그대로 존중해 invalid_session만
+        // 로그인 화면 배너로 연결한다.
+        if (result.reason === "invalid_session") {
           queryClient.clear();
           redirectToSignIn("session_expired");
         }

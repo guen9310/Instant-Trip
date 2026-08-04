@@ -3,12 +3,13 @@
 import { eq, and } from "drizzle-orm";
 import { db } from "@/server/db";
 import { courses, coursePlaces, courseCompletions } from "@/server/schema";
-import { getFreshSession } from "@/server/session";
+import { getFreshAuthState } from "@/server/session";
 import {
   courseCompletionSchema,
   type CourseCompletionPayload,
 } from "@/shared/schemas/courseCompletion";
 import type { JourneyPlace } from "@/shared/types/course.types";
+import type { AuthFailureReason } from "@/shared/types/auth.types";
 
 // ─── 코스 시작 시 DB 행 생성 ───────────────────────────────────────────────────
 // 프리뷰 화면에서 "이 코스로 갈게요" 탭 시 호출.
@@ -23,16 +24,19 @@ type StartCoursePayload = {
 
 type StartCourseResult =
   | { ok: true; completionId: string; dbCourseId: string }
-  // reason: "unauthenticated" — 비로그인 상태. 호출부(CourseResultView)가 이를
-  // 다른 실패(DB 오류 등)와 구분해 로그인 안내로 분기한다.
-  | { ok: false; reason?: "unauthenticated" };
+  // reason: "anonymous" | "invalid_session" — 호출부(CourseResultView)가 이를
+  // 다른 실패(DB 오류 등)와 구분해, invalid_session만 로그인 화면의 만료 배너로 보낸다.
+  | { ok: false; reason?: AuthFailureReason };
 
 export async function startCourseAction(
   payload: StartCoursePayload,
 ): Promise<StartCourseResult> {
   try {
-    const session = await getFreshSession();
-    if (!session?.user) return { ok: false, reason: "unauthenticated" };
+    const authState = await getFreshAuthState();
+    if (authState.status !== "authenticated") {
+      return { ok: false, reason: authState.status };
+    }
+    const { session } = authState;
 
     const dbCourseId = crypto.randomUUID();
     const completionId = crypto.randomUUID();
@@ -96,10 +100,13 @@ export async function startCourseAction(
 // 어떤 실패도 사용자 흐름으로 전파하지 않는다(조용히 skip).
 export async function saveCourseCompletionAction(
   payload: CourseCompletionPayload,
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: boolean; reason?: AuthFailureReason }> {
   try {
-    const session = await getFreshSession();
-    if (!session?.user) return { ok: false };
+    const authState = await getFreshAuthState();
+    if (authState.status !== "authenticated") {
+      return { ok: false, reason: authState.status };
+    }
+    const { session } = authState;
 
     const parsed = courseCompletionSchema.safeParse(payload);
     if (!parsed.success) return { ok: false };
