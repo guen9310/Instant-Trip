@@ -15,6 +15,7 @@
     "pipeline": "tsx --tsconfig tsconfig.json scripts/pipeline-run.ts",
     "home": "tsx --tsconfig tsconfig.json scripts/home-run.ts",
     "place": "tsx --tsconfig tsconfig.json scripts/place-run.ts",
+    "qa:login": "tsx --tsconfig tsconfig.json scripts/qa-login.ts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
