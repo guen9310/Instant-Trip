@@ -1,4 +1,4 @@
-import { useMemo, useRef, type PointerEvent, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type PointerEvent, type RefObject } from "react";
 import { PlaceCard } from "@/components/domains/home/PlaceCard";
 import { CHIP_TO_TYPE, FILTER_CHIPS, type FilterChip } from "@/components/domains/home/homeFilters";
 import type { TourItem } from "@/lib/tour/types";
@@ -41,19 +41,21 @@ export function PlacesSection({
   // 동일하게 onFilter를 호출한다. 그 결과 다른 칩의 항목 수(특히 "전체"처럼
   // 카테고리를 합산해 훨씬 긴 목록)가 현재 화면 높이에 영향을 주지 않는다.
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const abortSwipeRef = useRef<(() => void) | null>(null);
 
-  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    pointerStartRef.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
+  // 언마운트 시점에 스와이프 도중이었다면 window에 걸어둔 리스너가 남지
+  // 않도록 정리한다.
+  useEffect(() => {
+    return () => abortSwipeRef.current?.();
+  }, []);
 
-  const handlePointerUp = (e: PointerEvent<HTMLDivElement>) => {
+  const resolveSwipe = (endX: number, endY: number) => {
     const start = pointerStartRef.current;
     pointerStartRef.current = null;
     if (!start) return;
 
-    const dx = e.clientX - start.x;
-    const dy = e.clientY - start.y;
+    const dx = endX - start.x;
+    const dy = endY - start.y;
     if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) return;
 
     const currentIndex = FILTER_CHIPS.indexOf(filter);
@@ -61,8 +63,36 @@ export function PlacesSection({
     if (nextChip) onFilter(nextChip);
   };
 
-  const handlePointerCancel = () => {
-    pointerStartRef.current = null;
+  // 스와이프 종료(pointerup)를 놓치지 않으려면 손가락이 카드 그리드 경계
+  // 밖으로 나가도 이벤트를 받아야 한다. 예전엔 setPointerCapture로 이를
+  // 해결했지만, 그 방식은 캡처 대상 밖 요소(장소 카드 버튼)로 향해야 할
+  // click 이벤트까지 캡처 요소로 리다이렉트시켜 카드를 눌러도 프리뷰가
+  // 열리지 않는 버그를 냈다. 대신 window에 일회성 리스너를 걸어 click
+  // 라우팅에 영향을 주지 않으면서 동일한 효과를 낸다.
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+
+    const controller = new AbortController();
+    abortSwipeRef.current = () => controller.abort();
+
+    window.addEventListener(
+      "pointerup",
+      (upEvent) => {
+        controller.abort();
+        abortSwipeRef.current = null;
+        resolveSwipe(upEvent.clientX, upEvent.clientY);
+      },
+      { signal: controller.signal },
+    );
+    window.addEventListener(
+      "pointercancel",
+      () => {
+        controller.abort();
+        abortSwipeRef.current = null;
+        pointerStartRef.current = null;
+      },
+      { signal: controller.signal },
+    );
   };
 
   if (!hasPlaces) return null;
@@ -121,12 +151,7 @@ export function PlacesSection({
         touch-pan-y — 세로 스크롤은 브라우저 네이티브 제스처로 그대로 두고,
         가로 방향 움직임만 우리 포인터 핸들러가 판정하게 한다.
       */}
-      <div
-        className="touch-pan-y"
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-      >
+      <div className="touch-pan-y" onPointerDown={handlePointerDown}>
         {filteredPlaces.length === 0 ? null : (
           <div className="grid grid-cols-2 gap-3">
             {filteredPlaces.map((place) => (
