@@ -134,6 +134,17 @@ describe("toCompletedCourse", () => {
     expect(result.date).toMatch(/^\d{4}\.\d{2}\.\d{2}$/);
   });
 
+  it("completedAt이 UTC 자정 부근(KST 00~09시)이어도 서버 런타임 타임존과 무관하게 KST 날짜로 표기한다", () => {
+    // UTC 23:30 = KST 다음날 08:30 — 서버가 UTC로 돌면 timeZone 미지정 포맷팅에서
+    // 하루 전으로 잘못 표시되던 버그(formatDate가 getKstDateString을 안 쓰던 시절) 재발 방지.
+    const result = toCompletedCourse(
+      makeCompletionRow({ completedAt: new Date("2026-08-05T23:30:00Z") }),
+      makeCourseRow(),
+      [],
+    );
+    expect(result.date).toBe("2026.08.06");
+  });
+
   it("completedAt이 null이면 빈 문자열", () => {
     const result = toCompletedCourse(
       makeCompletionRow({ completedAt: null }),

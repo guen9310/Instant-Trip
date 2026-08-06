@@ -6,6 +6,7 @@ import type {
   JourneyPlace,
 } from "@/shared/types/course.types";
 import { formatDuration, type DurationRange } from "@/shared/utils/duration";
+import { getKstDateString } from "@/shared/utils/kst";
 
 // DB row 타입 — schema에서 직접 추론
 type CourseRow = typeof courses.$inferSelect;
@@ -105,12 +106,7 @@ export function toJourneyPlace(place: PlaceRow): JourneyPlace {
 
 function formatDate(date: Date | null): string {
   if (!date) return "";
-  return date
-    .toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-    .replace(/\. /g, ".")
-    .replace(/\.$/, "");
+  // 서버 런타임 타임존(프로덕션은 UTC)에 의존하지 않고 항상 KST 기준으로
+  // 포맷한다 — 프로젝트 표준 방식(shared/utils/kst.ts)과 통일.
+  return getKstDateString(date).replace(/-/g, ".");
 }
