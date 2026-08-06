@@ -131,6 +131,9 @@ export type ResumableCourse = {
 export type CourseProgress = {
   name: string;
   courseId: string;
+  // 경과 시간이 코스의 예상 소요 시간을 넘었는가 — 넘었다면 "아직 진행 중"이라기보다
+  // "다녀왔는데 완료를 안 눌렀을 가능성"으로 보고 재시작 확인 UI에서 다르게 안내한다.
+  likelyForgotten: boolean;
 };
 
 // 프로필 — 완료된 코스 기록

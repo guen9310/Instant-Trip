@@ -268,17 +268,18 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 대표 이미지 — 이미지 없으면 슬롯 자체를 렌더하지 않는다 */}
-        {currentPlace.imageUrl && (
-          <div className="w-full h-44 rounded-xl overflow-hidden mb-3">
-            <PlaceThumbnail
-              imageUrl={currentPlace.imageUrl}
-              cat={currentPlace.cat}
-              className="w-full h-full"
-              sizes="100vw"
-            />
-          </div>
-        )}
+        {/* 대표 이미지 — imageUrl이 없어도 슬롯 높이는 항상 유지한다. 후보 사이를
+            오갈 때(재추천·리롤) 이미지 유무에 따라 슬롯이 생겼다 사라지며
+            아래 콘텐츠가 들썩이는 레이아웃 시프트를 막기 위함. PlaceThumbnail이
+            imageUrl==null이면 카테고리 아이콘 플레이스홀더로 자체 폴백한다. */}
+        <div className="w-full h-44 rounded-xl overflow-hidden mb-3">
+          <PlaceThumbnail
+            imageUrl={currentPlace.imageUrl}
+            cat={currentPlace.cat}
+            className="w-full h-full"
+            sizes="100vw"
+          />
+        </div>
 
         {/* 카테고리·태그 칩 행 */}
         <div className="w-full flex items-center gap-1.5 flex-wrap mb-3">
@@ -510,16 +511,19 @@ export function CourseResultView({
                 여기로 갈게요
               </Button>
             )}
-            {/* 취향 다시 설정·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
+            {/* 외출 다시 정하기·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
                 사용자가 직접 고른 장소(origin="selected": 홈 인기 장소·주변 축제 선택 둘 다)
-                에는 성립하지 않는다. */}
+                에는 성립하지 않는다. "외출 다시 정하기"는 /start(여유 시간 재선택)로
+                보낼 뿐 취향(travel/party/vibe/food/indoor) 자체는 그대로 재사용된다 —
+                취향 편집은 설정/온보딩에만 있으므로 "취향 다시 설정"이라는 이전 문구는
+                이 화면이 실제로 하는 일과 어긋났다. */}
             {currentPlace.origin !== "selected" && (
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => router.push("/start")}
                   className="h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
                 >
-                  <Settings2 size={15} /> 취향 다시 설정
+                  <Settings2 size={15} /> 다시 정하기
                 </button>
                 <button
                   onClick={openRejectPanel}
@@ -547,20 +551,32 @@ export function CourseResultView({
             <AlertCircle size={20} className="text-point" />
           </div>
           <DialogTitle className="text-[17px] font-extrabold text-text-primary text-center">
-            진행 중인 외출이 있어요
+            {activeCourse?.likelyForgotten
+              ? "혹시 이미 다녀오셨나요?"
+              : "진행 중인 외출이 있어요"}
           </DialogTitle>
           <p className="text-[13px] leading-[1.55] text-text-secondary text-center">
             <span className="font-bold text-point">{activeCourse?.name}</span>{" "}
-            외출이 아직 진행 중이에요. 새로 시작하면 이 기록은 종료돼요.
+            {activeCourse?.likelyForgotten
+              ? "외출을 완료 처리하지 않으신 것 같아요. 새로 시작하면 이 기록은 종료돼요."
+              : "외출이 아직 진행 중이에요. 새로 시작하면 이 기록은 종료돼요."}
           </p>
           <div className="flex flex-col gap-2.5 mt-1">
             {activeCourse && (
+              // "다녀오신 것 같은" 경우에도 곧장 완료 화면으로 보내지 않고 진행 화면으로
+              // 보낸다 — 완료 화면(useCourseDone)은 localStorage(pendingCourse)에
+              // 의존하는데, 다른 기기이거나 저장소가 비었으면 완료 기록이 저장되지
+              // 않고 조용히 홈으로 넘어가버릴 수 있다. 진행 화면은 이미 DB
+              // fallback(getResumableCourse)이 있어 기기와 무관하게 복원되고,
+              // "방문 완료" 버튼 한 번이면 끝나므로 이쪽이 더 안전하다.
               <Button
                 size="cta"
                 variant="accent"
                 onClick={() => router.push(`/course/active/${activeCourse.courseId}`)}
               >
-                {activeCourse.name} 이어가기
+                {activeCourse.likelyForgotten
+                  ? "확인하고 완료하기"
+                  : `${activeCourse.name} 이어가기`}
               </Button>
             )}
             <Button

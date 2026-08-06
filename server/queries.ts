@@ -41,7 +41,14 @@ export async function getActiveCourse(
     .limit(1);
 
   if (rows.length === 0) return null;
-  return toCourseProgress(rows[0].completion, rows[0].course);
+  const { completion, course } = rows[0];
+
+  const places = await db
+    .select()
+    .from(coursePlaces)
+    .where(eq(coursePlaces.courseId, course.id));
+
+  return toCourseProgress(completion, course, places);
 }
 
 // ─── /course/active/[id] DB fallback ─────────────────────────────────────────
