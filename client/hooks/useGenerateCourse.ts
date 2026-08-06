@@ -60,12 +60,16 @@ export function useGenerateCourse(prefs: Prefs) {
     // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면 아래 로직이
     // 전혀 실행되지 않고 setLoading(false)도 못 돌아 무한 로딩에 빠진다 — 반드시 감싼다.
     try {
+      // "이런 곳은 싫어요"로 거절했던 장소는 /start를 거쳐 새로 생성해도 다시 뜨면
+      // 안 된다 — 누적된 거절 이력을 그대로 excludeIds로 넘긴다.
+      const { rejectedPlaceIds } = useCourseProgressStore.getState();
       const result = await generateCourseAction({
         mapX: coords.lng,
         mapY: coords.lat,
         scale,
         prefs,
         radiusM,
+        excludeIds: rejectedPlaceIds,
       });
 
       if (!result.ok) {
@@ -88,9 +92,11 @@ export function useGenerateCourse(prefs: Prefs) {
       // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
       recordAbandonedIfAny();
 
-      // 새 코스 생성 — 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다.
-      // 리롤(같은 코스 내 재추천)에서는 이 경로를 타지 않으므로 rejectedPlaceIds가 유지된다.
-      useCourseProgressStore.getState().resetRerolls();
+      // 새 추천을 받았으니 리롤 소진 카운트는 다시 채워준다. 거절 이력
+      // (rejectedPlaceIds)은 지우지 않는다 — 방금 excludeIds로 넘겨 반영한 거절이
+      // "이번 탐색이 끝날 때까지"(실제 출발/새 취향 설정 전까지) 계속 지켜지도록,
+      // 이 시점엔 리셋하지 않고 CourseResultView의 "여기로 갈게요"에서 끊는다.
+      useCourseProgressStore.getState().resetRerollCount();
 
       const pending: PendingCourse = {
         courseId: result.courseId,

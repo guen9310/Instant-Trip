@@ -100,6 +100,7 @@ export function CourseResultView({
   const router = useRouter();
   const queryClient = useQueryClient();
   const startCourse = useCourseProgressStore((s) => s.start);
+  const resetRerolls = useCourseProgressStore((s) => s.resetRerolls);
 
   const {
     currentCourseId,
@@ -159,6 +160,10 @@ export function CourseResultView({
   const proceedStart = () => {
     // 낙관적 이동 — startCourseAction 완료를 기다리지 않고 즉시 진행 화면으로 전환한다.
     startCourse(currentCourseId);
+    // 실제로 출발을 확정하는 지점 — 이번 탐색에서 쌓인 거절 이력을 여기서 끊는다.
+    // (재추천 시점(useGenerateCourse)엔 일부러 안 지운다 — 거절한 장소가 같은 탐색
+    // 안에서 계속 제외되게 하려는 목적이라, 실제 출발해야만 다음 탐색을 위해 리셋한다.)
+    resetRerolls();
     router.push(`/course/active/${currentCourseId}`);
 
     void startCourseAction({
