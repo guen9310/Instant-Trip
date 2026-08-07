@@ -96,10 +96,10 @@ function baseProfile(overrides: Partial<UserProfile> = {}): UserProfile {
 }
 
 function openResult(hours = "09:00~18:00") {
-  return { open: true, uncertain: false, label: "통과(영업중)", hours, restDayNote: null };
+  return { status: "open", reason: "지금 입장 가능합니다.", hours, restDayNote: null };
 }
 function closedResult() {
-  return { open: false, uncertain: false, label: "제외(운영종료)", hours: null, restDayNote: null };
+  return { status: "closed_hours", reason: "지금은 이용시간이 아닙니다.", hours: null, restDayNote: null };
 }
 
 describe("generateCourse — stage2/4 순서 반전", () => {

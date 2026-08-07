@@ -1,5 +1,6 @@
 import type { DurationRange } from "@/shared/utils/duration";
 import type { Prefs } from "@/shared/constants/preferences";
+import type { AvailabilityStatus } from "@/lib/tour/hours";
 
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
 
@@ -51,9 +52,10 @@ export type JourneyPlace = {
 };
 
 // 선택 진입(origin="selected") 코스의 가용성 스냅샷 — generateCourseFromPlaceAction이
-// 반환하는 형태와 동일하게 유지한다. isOpenNow가 null이면 판단 불가(경고 대상 아님).
+// 반환하는 형태와 동일하게 유지한다. status가 "open"이 아니어도 경고 대상인지는
+// 화면 층(CourseResultView)이 status 값으로 직접 분기한다.
 export type PlaceAvailabilitySnapshot = {
-  isOpenNow: boolean | null;
+  status: AvailabilityStatus;
   hours: string | null;
   restDayNote: string | null;
 };

@@ -1,9 +1,10 @@
 import { toShortAddress, fetchDetail, stripHtml } from "@/lib/pipeline/course";
 import { getFestivalIntro, cleanFestivalText, parseFestivalProgram } from "@/lib/tour/festivalDetail";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
-import { parseTimeRange, isWithinRange } from "@/lib/pipeline/availability";
+import { checkOpenByDayAwareHours } from "@/lib/tour/hours";
+import type { AvailabilityStatus } from "@/lib/tour/hours";
 import { STAY_DURATION_DEFAULT } from "@/lib/pipeline/stayDuration";
-import { getKstDateString, getKstHour, getKstMinute } from "@/shared/utils/kst";
+import { getKstDateString } from "@/shared/utils/kst";
 import { isBlank } from "@/shared/utils";
 import type { CoursePlace } from "@/lib/pipeline/types";
 import type { PlaceAvailability } from "@/lib/pipeline/selectPlace";
@@ -42,7 +43,11 @@ export type GenerateCourseFromFestivalResult =
 // [축제 선택 진입 — 데이터 층] 홈 "주변 축제" 카드에서 사용자가 직접 고른 축제로 코스를
 // 만든다. 장소 선택 진입(generateCourseFromPlace)과 대응되지만, 축제는 요일별 영업시간이
 // 아니라 기간(startDate~endDate) + 당일 운영시간(playtime)으로 가용성을 판정하므로
-// checkPlaceAvailability(요일 인지 판정)를 재사용하지 않고 별도 로직을 둔다.
+// checkPlaceAvailability(요일 인지 판정, detailIntro2의 usetime/restdate 기반)를 그대로
+// 재사용하진 않는다. 다만 당일 시간대 판정 자체는 checkPlaceAvailability와 동일하게
+// lib/tour/hours.ts의 checkOpenByDayAwareHours를 호출해 같은 status 체계(open/no_data/
+// uncertain/...)로 통일한다 — restdate 개념이 없어 null로 넘기고, 기간 밖(시작 전)은
+// 시간대 판정 없이 closed_hours로 고정한다.
 //
 // 공공데이터포털 단독 축제(contentId 없음)는 detailCommon2/detailIntro2를 호출할 수 없어
 // (Tour API에 대응 항목 자체가 없음) 입력 페이로드(이미 홈 화면이 갖고 있던 FestivalSummary
@@ -87,16 +92,18 @@ export async function generateCourseFromFestival(
     }
     const programInfo: FestivalProgramInfo | null = program ? parseFestivalProgram(program) : null;
 
-    // 날짜 범위 안이고 playtime(당일 운영시간)까지 있으면 현재 시각도 그 안인지 확인한다.
-    // playtime이 없거나 파싱 실패하면 날짜 판정만으로 관대 처리(다른 장소들의 "관대 처리
-    // 원칙"과 동일한 태도 — 시각 단위 정보가 없다고 차단하지 않는다).
-    let isOpenNow = inDateRange;
-    if (inDateRange && playtime) {
-      const range = parseTimeRange(playtime);
-      if (range) {
-        const curMinutes = getKstHour() * 60 + getKstMinute();
-        isOpenNow = isWithinRange(range, curMinutes);
-      }
+    // 날짜 범위 밖이면(시작 전) 시간대 정보와 무관하게 닫힌 상태다 — festivalPhase가
+    // CTA 문구로 별도 안내하므로 여기선 "실제로 닫혀 있다"는 근거가 있는 상태(closed_hours)로
+    // 표시한다. 날짜 범위 안이고 playtime(당일 운영시간)이 있으면 lib/tour/hours.ts로
+    // 같은 status 체계에서 당일 시간대를 판정한다(요일 개념이 없어 restdate는 null로
+    // 넘긴다). playtime이 없으면 시각 단위 정보가 없다는 뜻이므로 no_data.
+    let dayStatus: AvailabilityStatus;
+    if (!inDateRange) {
+      dayStatus = "closed_hours";
+    } else if (!playtime) {
+      dayStatus = "no_data";
+    } else {
+      dayStatus = checkOpenByDayAwareHours(playtime, null).status;
     }
 
     const period = `${formatShortDate(startDate)} ~ ${formatShortDate(endDate)}`;
@@ -113,7 +120,9 @@ export async function generateCourseFromFestival(
       coord: { lat, lng },
       tags: [],
       score: 0,
-      // 날짜(YYYY-MM-DD)는 항상 확실한 값이라 "판단 불가" 상태가 없다.
+      // 이 플래그는 날짜(YYYY-MM-DD) 기준 확실성만 본다 — 날짜는 항상 확실한 값이라
+      // false로 고정한다. playtime(당일 시간대) 판정의 no_data/uncertain 여부는 아래
+      // availability.status가 별도로 담당한다(HoursInfoCard 등은 이 필드를 보지 않음).
       availabilityUncertain: false,
       estimatedDuration: STAY_DURATION_DEFAULT,
       origin: "selected",
@@ -125,7 +134,7 @@ export async function generateCourseFromFestival(
     };
 
     const availability: PlaceAvailability = {
-      isOpenNow,
+      status: dayStatus,
       hours: hours || null,
       restDayNote: null,
     };

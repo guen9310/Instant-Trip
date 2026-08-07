@@ -45,13 +45,13 @@ function makeCandidate(
 }
 
 function openResult(hours = "09:00~18:00") {
-  return { open: true, uncertain: false, label: "통과(영업중)", hours, restDayNote: null };
+  return { status: "open", reason: "지금 입장 가능합니다.", hours, restDayNote: null };
 }
 function closedResult() {
-  return { open: false, uncertain: false, label: "제외(운영종료)", hours: null, restDayNote: null };
+  return { status: "closed_hours", reason: "지금은 이용시간이 아닙니다.", hours: null, restDayNote: null };
 }
 function uncertainOpenResult() {
-  return { open: true, uncertain: true, label: "통과(API오류)", hours: null, restDayNote: null };
+  return { status: "uncertain", reason: "운영시간 조회 중 오류가 발생했습니다.", hours: null, restDayNote: null };
 }
 
 describe("selectAvailableCandidate", () => {

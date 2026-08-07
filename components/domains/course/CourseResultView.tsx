@@ -207,28 +207,54 @@ export function CourseResultView({
     return <CourseResultSkeleton />;
   }
 
-  // 상태 배지 — 선택 진입(직접 고른 장소)은 실측 운영 여부(availability.isOpenNow)로,
-  // 추천 진입은 파싱 성공 여부(availabilityUncertain)로 열림 판정한다(둘 다 "확정 열림"이면 true로 통일).
-  // "판단 불가"(isOpenNow===null / uncertain===true)는 원인에 따라 다시 나뉜다: hours 원문 자체가
-  // 있는데 파서가 이해 못한 "진짜 파싱 실패"만 완곡한 배지로 알리고, hours가 아예 없는 경우
-  // (API 오류·데이터 미비)는 처리 실패가 아니므로 파이프라인의 관대 통과 철학과 같게 열림으로 본다.
+  // 상태 배지 — lib/tour/hours.ts의 status 체계를 그대로 반영한다.
+  // 추천 진입은 CoursePlace/PlaceCandidate가 status 필드 자체를 갖지 않는다 — 게이트
+  // (availabilityGate.ts)를 거치며 이미 boolean(availabilityUncertain)으로 축약된
+  // 값만 여기까지 전달된다. 정상 채택 경로(open/no_data/uncertain 채택)는 이 boolean이
+  // 실제 status와 1:1로 대응하지만, 상한 소진·전 후보 거부 시의 1위 폴백 경로는 실제
+  // status(예: closed_hours로 거부됐던 후보일 수 있음)를 버리고 무조건 true로 덮어쓴다
+  // (availabilityGate.ts의 해당 주석 참고) — 그래서 여기서 신뢰할 수 있는 건 이 boolean
+  // 하나뿐이고, "status가 open/no_data/uncertain 중 하나로 좁혀져 있다"고 가정하면 안 된다.
+  // 선택 진입(직접 고른 장소·축제)은 게이트를 거치지 않아(의도적 비차단) status 원본이
+  // 그대로 넘어온다 — closed_restday/closed_hours/past_admission_cutoff/insufficient_time도
+  // 실제로 올라올 수 있어 이 경우만 "확정적으로 닫혀 있음"을 point 배지로 구분해서 보여준다.
   const isSelectedEntry = currentPlace.origin === "selected";
-  const isConfidentlyOpen = isSelectedEntry
-    ? availability?.isOpenNow === true
-    : !currentPlace.availabilityUncertain;
-  const isConfidentlyClosed = isSelectedEntry && availability?.isOpenNow === false;
-  const uncertainHours = isSelectedEntry ? availability?.hours : currentPlace.hours;
 
   const availabilityBadge: { text: string; variant: "accent" | "point" | "outline" } | null =
-    isBadgeSnapshotStale
-      ? null
-      : isConfidentlyClosed
-        ? { text: "운영시간 확인 필요", variant: "point" }
-        : isConfidentlyOpen
-          ? { text: "지금 출발 가능", variant: "accent" }
-          : uncertainHours?.trim()
-            ? { text: "운영 여부 확인 권장", variant: "outline" }
-            : { text: "지금 출발 가능", variant: "accent" };
+    (() => {
+      if (isBadgeSnapshotStale) return null;
+
+      if (!isSelectedEntry) {
+        return currentPlace.availabilityUncertain
+          ? { text: "운영시간 확인 필요", variant: "outline" }
+          : { text: "지금 출발 가능", variant: "accent" };
+      }
+
+      // availability 자체가 없는 경우 — 구버전 localStorage 페이로드(이 필드 도입 전에
+      // 저장된 선택 진입 코스)에서만 발생한다. no_data/uncertain은 "확인을 시도했지만
+      // 알 수 없었다"는 근거라도 있지만, 이쪽은 신뢰할 스냅샷 자체가 없다 — "닫혀 있다"는
+      // 근거는 물론 "확인이 필요하다"고 단정할 근거도 없으므로, isBadgeSnapshotStale과
+      // 같은 태도로 배지 자체를 숨긴다(잘못된 확신을 주는 것보다 안전).
+      if (!availability) return null;
+
+      switch (availability.status) {
+        case "open":
+          return { text: "지금 출발 가능", variant: "accent" };
+        case "no_data":
+        case "uncertain":
+          return { text: "운영시간 확인 필요", variant: "outline" };
+        default:
+          // closed_restday/closed_hours/past_admission_cutoff/insufficient_time —
+          // 실제로 닫혀 있다는 근거가 있는 상태(게이트가 없어 여기까지 올라옴).
+          return { text: "운영시간 확인 필요", variant: "point" };
+      }
+    })();
+
+  // outline(no_data/uncertain)은 "확정 정보 아님"을 accent와 시각적으로 분명히
+  // 구분하기 위해 중립색(Text Secondary)을 쓴다 — Badge의 outline 기본값은
+  // text-primary라 그대로 두면 accent와 무게감 차이가 잘 드러나지 않는다.
+  const availabilityBadgeClassName =
+    availabilityBadge?.variant === "outline" ? "text-text-secondary" : undefined;
 
   // 장소 좌표 — 지도 미리보기·근처 맛집 검색이 공유한다.
   // currentPlace.coord가 없는 구버전 페이로드는 검색 원점(mapX=경도, mapY=위도)으로 대체한다.
@@ -244,7 +270,10 @@ export function CourseResultView({
             {currentCourseName}
           </h1>
           {availabilityBadge && (
-            <Badge variant={availabilityBadge.variant} className="shrink-0 mt-0.5">
+            <Badge
+              variant={availabilityBadge.variant}
+              className={cn("shrink-0 mt-0.5", availabilityBadgeClassName)}
+            >
               {availabilityBadge.variant === "accent" ? (
                 <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block mr-1" />
               ) : availabilityBadge.variant === "outline" ? (
