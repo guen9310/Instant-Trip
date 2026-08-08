@@ -60,12 +60,16 @@ export function useGenerateCourse(prefs: Prefs) {
     // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면 아래 로직이
     // 전혀 실행되지 않고 setLoading(false)도 못 돌아 무한 로딩에 빠진다 — 반드시 감싼다.
     try {
+      // "이런 곳은 싫어요"로 거절했던 장소는 /start를 거쳐 새로 생성해도 다시 뜨면
+      // 안 된다 — 누적된 거절 이력을 그대로 excludeIds로 넘긴다.
+      const { rejectedPlaceIds } = useCourseProgressStore.getState();
       const result = await generateCourseAction({
         mapX: coords.lng,
         mapY: coords.lat,
         scale,
         prefs,
         radiusM,
+        excludeIds: rejectedPlaceIds,
       });
 
       if (!result.ok) {
@@ -88,8 +92,13 @@ export function useGenerateCourse(prefs: Prefs) {
       // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
       recordAbandonedIfAny();
 
-      // 새 코스 생성 — 이전 코스에서 쌓인 리롤 소진/거절 이력은 여기서 끊는다.
-      // 리롤(같은 코스 내 재추천)에서는 이 경로를 타지 않으므로 rejectedPlaceIds가 유지된다.
+      // 방금 받은 추천에는 위에서 넘긴 excludeIds가 이미 반영돼 있어 직전 거절 장소가
+      // 다시 나올 일은 없다 — 그러니 여기서 거절 이력을 지워도 "거절한 곳이 재추천됨"
+      // 버그는 재발하지 않는다. 반대로 지우지 않으면 /start를 오갈 때마다 거절 이력이
+      // 끝없이 쌓여, 후보가 적은 지역에서는 이번 라운드 첫 거절만으로 근처 후보가
+      // 고갈된 것처럼 보일 수 있다(리롤 소진 카운트는 새로 채워지는데 실제 제외
+      // 목록은 계속 불어나는 불일치). /start 왕복 자체가 "새 탐색"으로 간주할 만한
+      // 마찰(재조건 설정)이 있으므로, 여기서 거절 이력까지 함께 새로 시작한다.
       useCourseProgressStore.getState().resetRerolls();
 
       const pending: PendingCourse = {

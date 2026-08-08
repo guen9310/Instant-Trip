@@ -62,7 +62,7 @@ async function main() {
   console.log(`  예상 체류: ${mainPlace.estimatedDuration.min}~${mainPlace.estimatedDuration.max}분`);
 
   sep("가용성 (availability)");
-  console.log(`  isOpenNow: ${availability.isOpenNow === null ? "null (판단 불가)" : availability.isOpenNow}`);
+  console.log(`  status: ${availability.status}`);
   console.log(`  hours: ${availability.hours ?? "(없음)"}`);
   console.log(`  restDayNote: ${availability.restDayNote ?? "(없음)"}`);
 

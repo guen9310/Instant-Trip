@@ -15,3 +15,9 @@ export function haversineKm(
       Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+// 좌표를 "같은 장소" 판정용 키로 정규화한다. 소수 5자리 ≈ 1.1m 정밀도 —
+// app/actions/course.ts의 카카오 근처 POI 중복 제거와 동일한 정밀도를 쓴다.
+export function coordKey(lat: number, lng: number): string {
+  return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+}

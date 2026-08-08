@@ -11,6 +11,14 @@ config({ path: path.resolve(__dirname, '.env.local') });
 process.env.TOUR_API_KEY ??= 'dummy-tour-api-key';
 process.env.DATABASE_URL ??= 'postgresql://dummy:dummy@localhost:5432/dummy';
 
+// CI(ubuntu-latest)는 TZ 미지정 시 UTC로 돈다. 이 프로젝트는 KST(Asia/Seoul) 전용 서비스라
+// 테스트 코드 곳곳(lib/tour/hours.test.ts 등)이 오프셋 없는 로컬 Date 리터럴("2026-08-06T16:00:00")을
+// "그 시각의 KST"로 가정한다 — 런타임 TZ를 고정하지 않으면 로컬(Asia/Seoul)에선 통과하고
+// CI(UTC)에선 요일·시각이 어긋나 실패한다. 프로덕션 코드 자체는 이 값에 의존하지 않는다
+// (shared/utils/kst.ts, lib/tour/hours.ts 모두 Intl로 Asia/Seoul을 명시해 서버 TZ와 무관하게 동작함) —
+// 이 TZ 고정은 순수하게 테스트 결정성·로컬-CI 일치를 위한 것이다.
+process.env.TZ = 'Asia/Seoul';
+
 export default defineConfig({
   plugins: [react()],
   test: {

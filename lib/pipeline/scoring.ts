@@ -37,14 +37,28 @@ const TIME_BUDGET: Record<TravelScale, number> = {
   여유롭게: 240,
 };
 
-// 시간 예산 적합도. 범위 중앙값이 예산 이내면 1.0, 초과분만큼 선형 감쇠(바닥 0).
-// max(최악값) 기준은 범위의 부정확함을 한쪽 끝만 믿는 셈이라 중앙값을 쓴다.
+// 시간 예산 적합도 — 예산의 BUDGET_TARGET_RATIO(75%)를 "이 scale에 가장 잘
+// 어울리는 체류시간"으로 보고, 거기서 멀어질수록(짧든 길든) 감점하는 봉우리형
+// 함수. max(최악값) 기준은 범위의 부정확함을 한쪽 끝만 믿는 셈이라 중앙값을 쓴다.
+//
+// "예산 이내는 전부 1.0"(구 방식, 이후 "짧을수록 감점" 방식으로 한 번 더 수정했었음)
+// 둘 다 실패하는 지점이 있었다: 예산에 대한 순수 비율(mid/budget)은 예산이
+// N배 커져도 후보 간 순위를 절대 안 바꾼다(모든 값이 균일하게 N배 스케일되므로).
+// 그래서 "적당히"(120분)와 "여유롭게"(240분)처럼 예산이 정확히 배수 관계면,
+// 실제 체류시간이 둘 다의 예산 이내인 후보들 사이에서는 두 scale의 결과가
+// 수학적으로 항상 동일했다(테마공원처럼 한쪽 예산을 넘는 예외적 카테고리가
+// 후보에 없으면 더더욱). 목표치를 "예산 자체"가 아니라 "예산의 일정 비율"로
+// 두면 스케일별 목표 지속시간이 서로 다른 절대값이 되어, 이 스케일-불변성이
+// 깨지고 실제로 scale마다 다른 후보가 유리해질 수 있다.
+const BUDGET_TARGET_RATIO = 0.75;
+
 export function calcBudgetFitness(
   dur: DurationRange,
   budgetMin: number,
 ): number {
   const mid = (dur.min + dur.max) / 2;
-  return mid <= budgetMin ? 1.0 : Math.max(0, 1 - (mid - budgetMin) / budgetMin);
+  const target = budgetMin * BUDGET_TARGET_RATIO;
+  return Math.max(0, 1 - Math.abs(mid - target) / target);
 }
 
 interface TagMappingRule {

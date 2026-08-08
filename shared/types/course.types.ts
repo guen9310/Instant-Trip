@@ -1,5 +1,6 @@
 import type { DurationRange } from "@/shared/utils/duration";
 import type { Prefs } from "@/shared/constants/preferences";
+import type { AvailabilityStatus } from "@/lib/tour/hours";
 
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
 
@@ -51,9 +52,10 @@ export type JourneyPlace = {
 };
 
 // 선택 진입(origin="selected") 코스의 가용성 스냅샷 — generateCourseFromPlaceAction이
-// 반환하는 형태와 동일하게 유지한다. isOpenNow가 null이면 판단 불가(경고 대상 아님).
+// 반환하는 형태와 동일하게 유지한다. status가 "open"이 아니어도 경고 대상인지는
+// 화면 층(CourseResultView)이 status 값으로 직접 분기한다.
 export type PlaceAvailabilitySnapshot = {
-  isOpenNow: boolean | null;
+  status: AvailabilityStatus;
   hours: string | null;
   restDayNote: string | null;
 };
@@ -131,6 +133,9 @@ export type ResumableCourse = {
 export type CourseProgress = {
   name: string;
   courseId: string;
+  // 경과 시간이 코스의 예상 소요 시간을 넘었는가 — 넘었다면 "아직 진행 중"이라기보다
+  // "다녀왔는데 완료를 안 눌렀을 가능성"으로 보고 재시작 확인 UI에서 다르게 안내한다.
+  likelyForgotten: boolean;
 };
 
 // 프로필 — 완료된 코스 기록

@@ -6,11 +6,12 @@ import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import type { CulturalFestival } from "@/lib/clients/cultural-festival";
 import type { TourItem } from "@/lib/tour/types";
 import type { CoursePlace, PlaceCandidate, TagKey } from "@/lib/pipeline/types";
+import type { AvailabilityStatus } from "@/lib/tour/hours";
 
 export type PlaceAvailability = {
-  // uncertain(API 오류·intro 없음·파싱 실패)한 경우 null — "판단 불가"를 있는 그대로 노출한다.
-  // 차단 여부·경고 표시는 화면 층(7-B)의 몫이다.
-  isOpenNow: boolean | null;
+  // lib/tour/hours.ts의 판정 상태를 그대로 노출한다 — "판단 불가"(no_data/uncertain)도
+  // 있는 그대로 넘긴다. 차단 여부·경고 표시는 화면 층(CourseResultView)의 몫이다.
+  status: AvailabilityStatus;
   hours: string | null; // usetime 원문
   restDayNote: string | null; // restdate 원문
 };
@@ -105,7 +106,7 @@ export async function generateCourseFromPlace(
       // 직접 선택된 장소라 순위가 없다 — score는 추천 점수와 비교되지 않는 "적용 불가" 값.
       score: 0,
       available: true,
-      availabilityUncertain: availabilityCheck.uncertain,
+      availabilityUncertain: availabilityCheck.status !== "open",
       estimatedDuration,
       hours: availabilityCheck.hours,
       restDayNote: availabilityCheck.restDayNote,
@@ -117,7 +118,7 @@ export async function generateCourseFromPlace(
     const mainPlace = await buildCoursePlace(candidate, "[선택]", "selected");
 
     const availability: PlaceAvailability = {
-      isOpenNow: availabilityCheck.uncertain ? null : availabilityCheck.open,
+      status: availabilityCheck.status,
       hours: availabilityCheck.hours,
       restDayNote: availabilityCheck.restDayNote,
     };

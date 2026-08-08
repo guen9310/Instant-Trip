@@ -56,13 +56,13 @@ describe("generateCourseFromFestival", () => {
   });
 
   describe("festivalPhase 판정 (날짜 비교)", () => {
-    it("오늘(KST)이 시작일 이전이면 upcoming, isOpenNow는 false", async () => {
+    it("오늘(KST)이 시작일 이전이면 upcoming, status는 closed_hours", async () => {
       vi.setSystemTime(new Date("2026-07-27T12:00:00+09:00"));
       const result = await generateCourseFromFestival(baseInput());
       if (!result.ok) throw new Error("expected ok:true");
       expect(result.mainPlace.festivalPhase).toBe("upcoming");
       expect(result.mainPlace.festivalStartLabel).toBe("07.29");
-      expect(result.availability.isOpenNow).toBe(false);
+      expect(result.availability.status).toBe("closed_hours");
     });
 
     it("오늘이 시작일~종료일 사이면 ongoing", async () => {
@@ -181,8 +181,8 @@ describe("generateCourseFromFestival", () => {
       expect(result.mainPlace.organizerUrl).toBeNull();
     });
 
-    describe("playtime 기반 당일 운영시간 판정", () => {
-      it("날짜 범위 안이라도 playtime 시간대 밖이면 isOpenNow는 false", async () => {
+    describe("playtime 기반 당일 운영시간 판정 (lib/tour/hours.ts로 통일)", () => {
+      it("날짜 범위 안이라도 playtime 시간대 밖이면 status는 closed_hours", async () => {
         // 08:00 — playtime(18:00~22:00) 밖
         vi.setSystemTime(new Date("2026-08-01T08:00:00+09:00"));
         mockedFetchDetail.mockResolvedValue({ overview: "", homepage: "" });
@@ -195,11 +195,11 @@ describe("generateCourseFromFestival", () => {
         const result = await generateCourseFromFestival(baseInput({ contentId: "12345" }));
         if (!result.ok) throw new Error("expected ok:true");
         expect(result.mainPlace.festivalPhase).toBe("ongoing");
-        expect(result.availability.isOpenNow).toBe(false);
+        expect(result.availability.status).toBe("closed_hours");
         expect(result.mainPlace.hours).toBe("07.29 ~ 08.29 · 18:00~22:00");
       });
 
-      it("날짜 범위 + playtime 시간대 안이면 isOpenNow는 true", async () => {
+      it("날짜 범위 + playtime 시간대 안이면 status는 open", async () => {
         vi.setSystemTime(new Date("2026-08-01T19:00:00+09:00"));
         mockedFetchDetail.mockResolvedValue({ overview: "", homepage: "" });
         mockedGetFestivalIntro.mockResolvedValue({
@@ -210,10 +210,10 @@ describe("generateCourseFromFestival", () => {
 
         const result = await generateCourseFromFestival(baseInput({ contentId: "12345" }));
         if (!result.ok) throw new Error("expected ok:true");
-        expect(result.availability.isOpenNow).toBe(true);
+        expect(result.availability.status).toBe("open");
       });
 
-      it("playtime이 파싱 불가능한 형식이면 날짜 판정만으로 관대 처리한다", async () => {
+      it("playtime이 파싱 불가능한 형식이면 status는 uncertain이다 (과거엔 날짜 판정만으로 관대하게 open 취급했으나, lib/tour/hours.ts로 통일되며 '판정 불가'가 명시적으로 드러난다)", async () => {
         vi.setSystemTime(new Date("2026-08-01T03:00:00+09:00"));
         mockedFetchDetail.mockResolvedValue({ overview: "", homepage: "" });
         mockedGetFestivalIntro.mockResolvedValue({
@@ -224,7 +224,7 @@ describe("generateCourseFromFestival", () => {
 
         const result = await generateCourseFromFestival(baseInput({ contentId: "12345" }));
         if (!result.ok) throw new Error("expected ok:true");
-        expect(result.availability.isOpenNow).toBe(true); // 날짜만으로 판정 → ongoing이므로 true
+        expect(result.availability.status).toBe("uncertain");
       });
     });
   });

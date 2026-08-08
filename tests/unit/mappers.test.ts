@@ -134,6 +134,17 @@ describe("toCompletedCourse", () => {
     expect(result.date).toMatch(/^\d{4}\.\d{2}\.\d{2}$/);
   });
 
+  it("completedAt이 UTC 자정 부근(KST 00~09시)이어도 서버 런타임 타임존과 무관하게 KST 날짜로 표기한다", () => {
+    // UTC 23:30 = KST 다음날 08:30 — 서버가 UTC로 돌면 timeZone 미지정 포맷팅에서
+    // 하루 전으로 잘못 표시되던 버그(formatDate가 getKstDateString을 안 쓰던 시절) 재발 방지.
+    const result = toCompletedCourse(
+      makeCompletionRow({ completedAt: new Date("2026-08-05T23:30:00Z") }),
+      makeCourseRow(),
+      [],
+    );
+    expect(result.date).toBe("2026.08.06");
+  });
+
   it("completedAt이 null이면 빈 문자열", () => {
     const result = toCompletedCourse(
       makeCompletionRow({ completedAt: null }),
@@ -154,8 +165,30 @@ describe("toCompletedCourse", () => {
 });
 
 describe("toCourseProgress", () => {
-  it("course의 name/id만 그대로 옮긴다", () => {
-    const result = toCourseProgress(makeCompletionRow(), makeCourseRow({ id: "c1", name: "테스트 코스" }));
-    expect(result).toEqual({ name: "테스트 코스", courseId: "c1" });
+  it("course의 name/id를 그대로 옮기고, 장소가 없으면 likelyForgotten은 false다", () => {
+    const result = toCourseProgress(makeCompletionRow(), makeCourseRow({ id: "c1", name: "테스트 코스" }), []);
+    expect(result).toEqual({ name: "테스트 코스", courseId: "c1", likelyForgotten: false });
+  });
+
+  it("경과 시간이 장소들의 stayMax 합(+이동 버퍼)을 넘으면 likelyForgotten: true", () => {
+    const startedAt = new Date(Date.now() - 3 * 60 * 60 * 1000); // 3시간 전 시작
+    const places = [makePlaceRow({ stayMax: 60 })]; // 예상 60분, 버퍼 없음(장소 1개)
+    const result = toCourseProgress(makeCompletionRow({ startedAt }), makeCourseRow(), places);
+    expect(result.likelyForgotten).toBe(true);
+  });
+
+  it("경과 시간이 예상 소요 시간 이내면 likelyForgotten: false", () => {
+    const startedAt = new Date(Date.now() - 10 * 60 * 1000); // 10분 전 시작
+    const places = [makePlaceRow({ stayMax: 120 })]; // 예상 120분
+    const result = toCourseProgress(makeCompletionRow({ startedAt }), makeCourseRow(), places);
+    expect(result.likelyForgotten).toBe(false);
+  });
+
+  it("장소가 여러 개면 이동 버퍼(장소당 15분)까지 더해서 판단한다", () => {
+    // 두 장소 stayMax 합 60분 + 이동버퍼 15분(장소 2개→1구간) = 75분 예상
+    const startedAt = new Date(Date.now() - 70 * 60 * 1000); // 70분 전 시작 — 75분보단 짧음
+    const places = [makePlaceRow({ stayMax: 30 }), makePlaceRow({ id: "p2", stayMax: 30 })];
+    const result = toCourseProgress(makeCompletionRow({ startedAt }), makeCourseRow(), places);
+    expect(result.likelyForgotten).toBe(false);
   });
 });

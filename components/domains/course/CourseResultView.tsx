@@ -11,6 +11,7 @@ import {
   MapPin,
   ThumbsDown,
   Navigation,
+  RefreshCcw,
   Globe,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
@@ -19,6 +20,8 @@ import { Button } from "@/components/commons/Button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/Dialog";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { useCourseResult } from "@/client/hooks/useCourseResult";
+import type { ReasonChipKind } from "@/client/hooks/useCourseResult";
+import type { LucideIcon } from "lucide-react";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { startCourseAction } from "@/app/actions/completion";
 import type {
@@ -46,6 +49,22 @@ const REJECT_REASONS = [
   { id: "visited", icon: Calendar, label: "이미 가봤어요" },
   { id: "time", icon: Clock, label: "시간이 안 맞아요" },
 ] as const;
+
+// 재추천 사유 설명 칩 — useCourseResult가 "그 사유가 실제로 해소됐는지"까지
+// 검증한 뒤에만 kind를 채워주므로, 여기서는 문구/아이콘 매핑만 한다.
+const REASON_CHIP_COPY: Record<ReasonChipKind, { icon: LucideIcon; text: string }> = {
+  far: { icon: Navigation, text: "이전 장소보다 가까워요" },
+  time: { icon: Clock, text: "지금 확실히 운영 중이에요" },
+  visited: { icon: RefreshCcw, text: "이번엔 다른 곳으로 골라봤어요" },
+};
+
+// satisfied:false(폴백) 전용 문구 — "far"만 해당한다(useCourseResult.ts 참고: "time"은
+// 만족 못 하면 칩 자체를 안 켜고, "visited"는 폴백이 존재하지 않는다). 성공 칩과
+// 다르게 아이콘 없이 중립 톤으로 렌더해 "요청은 성공 못 했지만 알려는 준다"는
+// 인상을 준다.
+const REASON_CHIP_FALLBACK_TEXT: Partial<Record<ReasonChipKind, string>> = {
+  far: "이 근처엔 더 가까운 곳이 없었어요",
+};
 
 type Props = {
   courseId: string;
@@ -100,6 +119,7 @@ export function CourseResultView({
   const router = useRouter();
   const queryClient = useQueryClient();
   const startCourse = useCourseProgressStore((s) => s.start);
+  const resetRerolls = useCourseProgressStore((s) => s.resetRerolls);
 
   const {
     currentCourseId,
@@ -107,6 +127,7 @@ export function CourseResultView({
     currentCourseName,
     isBadgeSnapshotStale,
     rerollExhausted,
+    reasonChip,
     newPlaceId,
     rerolling,
     isMaxRerolls,
@@ -159,6 +180,10 @@ export function CourseResultView({
   const proceedStart = () => {
     // 낙관적 이동 — startCourseAction 완료를 기다리지 않고 즉시 진행 화면으로 전환한다.
     startCourse(currentCourseId);
+    // 실제로 출발을 확정하는 지점 — 이번 탐색에서 쌓인 거절 이력을 여기서 끊는다.
+    // (재추천 시점(useGenerateCourse)엔 일부러 안 지운다 — 거절한 장소가 같은 탐색
+    // 안에서 계속 제외되게 하려는 목적이라, 실제 출발해야만 다음 탐색을 위해 리셋한다.)
+    resetRerolls();
     router.push(`/course/active/${currentCourseId}`);
 
     void startCourseAction({
@@ -202,28 +227,54 @@ export function CourseResultView({
     return <CourseResultSkeleton />;
   }
 
-  // 상태 배지 — 선택 진입(직접 고른 장소)은 실측 운영 여부(availability.isOpenNow)로,
-  // 추천 진입은 파싱 성공 여부(availabilityUncertain)로 열림 판정한다(둘 다 "확정 열림"이면 true로 통일).
-  // "판단 불가"(isOpenNow===null / uncertain===true)는 원인에 따라 다시 나뉜다: hours 원문 자체가
-  // 있는데 파서가 이해 못한 "진짜 파싱 실패"만 완곡한 배지로 알리고, hours가 아예 없는 경우
-  // (API 오류·데이터 미비)는 처리 실패가 아니므로 파이프라인의 관대 통과 철학과 같게 열림으로 본다.
+  // 상태 배지 — lib/tour/hours.ts의 status 체계를 그대로 반영한다.
+  // 추천 진입은 CoursePlace/PlaceCandidate가 status 필드 자체를 갖지 않는다 — 게이트
+  // (availabilityGate.ts)를 거치며 이미 boolean(availabilityUncertain)으로 축약된
+  // 값만 여기까지 전달된다. 정상 채택 경로(open/no_data/uncertain 채택)는 이 boolean이
+  // 실제 status와 1:1로 대응하지만, 상한 소진·전 후보 거부 시의 1위 폴백 경로는 실제
+  // status(예: closed_hours로 거부됐던 후보일 수 있음)를 버리고 무조건 true로 덮어쓴다
+  // (availabilityGate.ts의 해당 주석 참고) — 그래서 여기서 신뢰할 수 있는 건 이 boolean
+  // 하나뿐이고, "status가 open/no_data/uncertain 중 하나로 좁혀져 있다"고 가정하면 안 된다.
+  // 선택 진입(직접 고른 장소·축제)은 게이트를 거치지 않아(의도적 비차단) status 원본이
+  // 그대로 넘어온다 — closed_restday/closed_hours/past_admission_cutoff/insufficient_time도
+  // 실제로 올라올 수 있어 이 경우만 "확정적으로 닫혀 있음"을 point 배지로 구분해서 보여준다.
   const isSelectedEntry = currentPlace.origin === "selected";
-  const isConfidentlyOpen = isSelectedEntry
-    ? availability?.isOpenNow === true
-    : !currentPlace.availabilityUncertain;
-  const isConfidentlyClosed = isSelectedEntry && availability?.isOpenNow === false;
-  const uncertainHours = isSelectedEntry ? availability?.hours : currentPlace.hours;
 
   const availabilityBadge: { text: string; variant: "accent" | "point" | "outline" } | null =
-    isBadgeSnapshotStale
-      ? null
-      : isConfidentlyClosed
-        ? { text: "운영시간 확인 필요", variant: "point" }
-        : isConfidentlyOpen
-          ? { text: "지금 출발 가능", variant: "accent" }
-          : uncertainHours?.trim()
-            ? { text: "운영 여부 확인 권장", variant: "outline" }
-            : { text: "지금 출발 가능", variant: "accent" };
+    (() => {
+      if (isBadgeSnapshotStale) return null;
+
+      if (!isSelectedEntry) {
+        return currentPlace.availabilityUncertain
+          ? { text: "운영시간 확인 필요", variant: "outline" }
+          : { text: "지금 출발 가능", variant: "accent" };
+      }
+
+      // availability 자체가 없는 경우 — 구버전 localStorage 페이로드(이 필드 도입 전에
+      // 저장된 선택 진입 코스)에서만 발생한다. no_data/uncertain은 "확인을 시도했지만
+      // 알 수 없었다"는 근거라도 있지만, 이쪽은 신뢰할 스냅샷 자체가 없다 — "닫혀 있다"는
+      // 근거는 물론 "확인이 필요하다"고 단정할 근거도 없으므로, isBadgeSnapshotStale과
+      // 같은 태도로 배지 자체를 숨긴다(잘못된 확신을 주는 것보다 안전).
+      if (!availability) return null;
+
+      switch (availability.status) {
+        case "open":
+          return { text: "지금 출발 가능", variant: "accent" };
+        case "no_data":
+        case "uncertain":
+          return { text: "운영시간 확인 필요", variant: "outline" };
+        default:
+          // closed_restday/closed_hours/past_admission_cutoff/insufficient_time —
+          // 실제로 닫혀 있다는 근거가 있는 상태(게이트가 없어 여기까지 올라옴).
+          return { text: "운영시간 확인 필요", variant: "point" };
+      }
+    })();
+
+  // outline(no_data/uncertain)은 "확정 정보 아님"을 accent와 시각적으로 분명히
+  // 구분하기 위해 중립색(Text Secondary)을 쓴다 — Badge의 outline 기본값은
+  // text-primary라 그대로 두면 accent와 무게감 차이가 잘 드러나지 않는다.
+  const availabilityBadgeClassName =
+    availabilityBadge?.variant === "outline" ? "text-text-secondary" : undefined;
 
   // 장소 좌표 — 지도 미리보기·근처 맛집 검색이 공유한다.
   // currentPlace.coord가 없는 구버전 페이로드는 검색 원점(mapX=경도, mapY=위도)으로 대체한다.
@@ -239,7 +290,10 @@ export function CourseResultView({
             {currentCourseName}
           </h1>
           {availabilityBadge && (
-            <Badge variant={availabilityBadge.variant} className="shrink-0 mt-0.5">
+            <Badge
+              variant={availabilityBadge.variant}
+              className={cn("shrink-0 mt-0.5", availabilityBadgeClassName)}
+            >
               {availabilityBadge.variant === "accent" ? (
                 <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block mr-1" />
               ) : availabilityBadge.variant === "outline" ? (
@@ -251,9 +305,35 @@ export function CourseResultView({
             </Badge>
           )}
         </div>
-        {prefs && (
-          <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
-            {`'${TRAVEL_REASON[prefs.travel] ?? prefs.travel}' 취향에 맞게 골랐어요`}
+        {/* 취향 칩 + 재추천 사유 칩 — 세로 스택(gap 6px). 사유 칩은 리롤이 실제로
+            그 사유를 해소했을 때만 useCourseResult가 채워준다(거짓 주장 방지 —
+            useCourseResult.ts의 검증 로직 참고). */}
+        {(prefs || reasonChip) && (
+          <div className="flex flex-col items-start gap-1.5 mb-5">
+            {prefs && (
+              <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium">
+                {`'${TRAVEL_REASON[prefs.travel] ?? prefs.travel}' 취향에 맞게 골랐어요`}
+              </div>
+            )}
+            {reasonChip && (
+              <div
+                className={cn(
+                  "inline-flex self-start items-center gap-1 px-2.5 py-1.5 rounded-full text-[12px] font-medium",
+                  reasonChip.satisfied
+                    ? "bg-point/10 text-point"
+                    : "border border-border text-text-secondary",
+                )}
+              >
+                {reasonChip.satisfied &&
+                  (() => {
+                    const ReasonIcon = REASON_CHIP_COPY[reasonChip.kind].icon;
+                    return <ReasonIcon size={14} strokeWidth={2} />;
+                  })()}
+                {reasonChip.satisfied
+                  ? REASON_CHIP_COPY[reasonChip.kind].text
+                  : REASON_CHIP_FALLBACK_TEXT[reasonChip.kind]}
+              </div>
+            )}
           </div>
         )}
 
@@ -268,17 +348,18 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 대표 이미지 — 이미지 없으면 슬롯 자체를 렌더하지 않는다 */}
-        {currentPlace.imageUrl && (
-          <div className="w-full h-44 rounded-xl overflow-hidden mb-3">
-            <PlaceThumbnail
-              imageUrl={currentPlace.imageUrl}
-              cat={currentPlace.cat}
-              className="w-full h-full"
-              sizes="100vw"
-            />
-          </div>
-        )}
+        {/* 대표 이미지 — imageUrl이 없어도 슬롯 높이는 항상 유지한다. 후보 사이를
+            오갈 때(재추천·리롤) 이미지 유무에 따라 슬롯이 생겼다 사라지며
+            아래 콘텐츠가 들썩이는 레이아웃 시프트를 막기 위함. PlaceThumbnail이
+            imageUrl==null이면 카테고리 아이콘 플레이스홀더로 자체 폴백한다. */}
+        <div className="w-full h-44 rounded-xl overflow-hidden mb-3">
+          <PlaceThumbnail
+            imageUrl={currentPlace.imageUrl}
+            cat={currentPlace.cat}
+            className="w-full h-full"
+            sizes="100vw"
+          />
+        </div>
 
         {/* 카테고리·태그 칩 행 */}
         <div className="w-full flex items-center gap-1.5 flex-wrap mb-3">
@@ -510,16 +591,19 @@ export function CourseResultView({
                 여기로 갈게요
               </Button>
             )}
-            {/* 취향 다시 설정·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
+            {/* 외출 다시 정하기·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
                 사용자가 직접 고른 장소(origin="selected": 홈 인기 장소·주변 축제 선택 둘 다)
-                에는 성립하지 않는다. */}
+                에는 성립하지 않는다. "외출 다시 정하기"는 /start(여유 시간 재선택)로
+                보낼 뿐 취향(travel/party/vibe/food/indoor) 자체는 그대로 재사용된다 —
+                취향 편집은 설정/온보딩에만 있으므로 "취향 다시 설정"이라는 이전 문구는
+                이 화면이 실제로 하는 일과 어긋났다. */}
             {currentPlace.origin !== "selected" && (
               <div className="flex items-center justify-center gap-4">
                 <button
                   onClick={() => router.push("/start")}
                   className="h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
                 >
-                  <Settings2 size={15} /> 취향 다시 설정
+                  <Settings2 size={15} /> 다시 정하기
                 </button>
                 <button
                   onClick={openRejectPanel}
@@ -547,20 +631,32 @@ export function CourseResultView({
             <AlertCircle size={20} className="text-point" />
           </div>
           <DialogTitle className="text-[17px] font-extrabold text-text-primary text-center">
-            진행 중인 외출이 있어요
+            {activeCourse?.likelyForgotten
+              ? "혹시 이미 다녀오셨나요?"
+              : "진행 중인 외출이 있어요"}
           </DialogTitle>
           <p className="text-[13px] leading-[1.55] text-text-secondary text-center">
             <span className="font-bold text-point">{activeCourse?.name}</span>{" "}
-            외출이 아직 진행 중이에요. 새로 시작하면 이 기록은 종료돼요.
+            {activeCourse?.likelyForgotten
+              ? "외출을 완료 처리하지 않으신 것 같아요. 새로 시작하면 이 기록은 종료돼요."
+              : "외출이 아직 진행 중이에요. 새로 시작하면 이 기록은 종료돼요."}
           </p>
           <div className="flex flex-col gap-2.5 mt-1">
             {activeCourse && (
+              // "다녀오신 것 같은" 경우에도 곧장 완료 화면으로 보내지 않고 진행 화면으로
+              // 보낸다 — 완료 화면(useCourseDone)은 localStorage(pendingCourse)에
+              // 의존하는데, 다른 기기이거나 저장소가 비었으면 완료 기록이 저장되지
+              // 않고 조용히 홈으로 넘어가버릴 수 있다. 진행 화면은 이미 DB
+              // fallback(getResumableCourse)이 있어 기기와 무관하게 복원되고,
+              // "방문 완료" 버튼 한 번이면 끝나므로 이쪽이 더 안전하다.
               <Button
                 size="cta"
                 variant="accent"
                 onClick={() => router.push(`/course/active/${activeCourse.courseId}`)}
               >
-                {activeCourse.name} 이어가기
+                {activeCourse.likelyForgotten
+                  ? "확인하고 완료하기"
+                  : `${activeCourse.name} 이어가기`}
               </Button>
             )}
             <Button

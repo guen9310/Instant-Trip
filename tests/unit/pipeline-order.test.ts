@@ -96,10 +96,10 @@ function baseProfile(overrides: Partial<UserProfile> = {}): UserProfile {
 }
 
 function openResult(hours = "09:00~18:00") {
-  return { open: true, uncertain: false, label: "통과(영업중)", hours, restDayNote: null };
+  return { status: "open", reason: "지금 입장 가능합니다.", hours, restDayNote: null };
 }
 function closedResult() {
-  return { open: false, uncertain: false, label: "제외(운영종료)", hours: null, restDayNote: null };
+  return { status: "closed_hours", reason: "지금은 이용시간이 아닙니다.", hours: null, restDayNote: null };
 }
 
 describe("generateCourse — stage2/4 순서 반전", () => {
@@ -181,5 +181,58 @@ describe("generateCourse — stage2/4 순서 반전", () => {
     const result = await generateCourse(baseProfile());
 
     expect(result.course.nearbyPlaces).toEqual([]);
+  });
+
+  it("excludeCoords와 좌표가 일치하는(반올림 5자리) 후보는 게이트 이전에 제외된다", async () => {
+    const visited = makeItem("visited", { mapx: "126.98000", mapy: "37.56000" });
+    const fresh = makeItem("fresh", { mapx: "126.90000", mapy: "37.50000" });
+    mockedCollect.mockResolvedValue([visited, fresh]);
+    mockedCheck.mockResolvedValue(openResult());
+
+    const result = await generateCourse(baseProfile(), {
+      excludeCoords: [{ lat: 37.56, lng: 126.98 }],
+    });
+
+    const calledIds = mockedCheck.mock.calls.map((call) => call[0].contentid);
+    expect(calledIds).not.toContain("visited");
+    expect(result.course.mainPlace?.contentId).toBe("fresh");
+  });
+
+  it("maxDistanceKm보다 먼 후보는 제외된다", async () => {
+    // baseProfile 위치: (37.5663, 126.9779)
+    const near = makeItem("near", { mapx: "126.98", mapy: "37.57" }); // ~0.5km
+    const far = makeItem("far", { mapx: "127.2", mapy: "37.7" }); // ~24km
+    mockedCollect.mockResolvedValue([near, far]);
+    mockedCheck.mockResolvedValue(openResult());
+
+    const result = await generateCourse(baseProfile(), { maxDistanceKm: 10 });
+
+    const calledIds = mockedCheck.mock.calls.map((call) => call[0].contentid);
+    expect(calledIds).not.toContain("far");
+    expect(result.course.mainPlace?.contentId).toBe("near");
+  });
+
+  it("excludeCoords가 후보 전체를 비우면 쿨다운을 무시하고 원래 풀로 폴백한다", async () => {
+    const onlyOption = makeItem("only", { mapx: "126.98000", mapy: "37.56000" });
+    mockedCollect.mockResolvedValue([onlyOption]);
+    mockedCheck.mockResolvedValue(openResult());
+
+    const result = await generateCourse(baseProfile(), {
+      excludeCoords: [{ lat: 37.56, lng: 126.98 }], // onlyOption과 정확히 일치
+    });
+
+    // 쿨다운을 그대로 적용하면 0건이라 조건을 접고 onlyOption을 그대로 채택한다
+    expect(result.course.mainPlace?.contentId).toBe("only");
+  });
+
+  it("maxDistanceKm이 후보 전체를 비우면(거절한 곳이 최근접) 거리 제약 없이 폴백한다", async () => {
+    // baseProfile 위치: (37.5663, 126.9779) — far가 유일한 후보이고 rejectedDistanceKm보다 멀다
+    const far = makeItem("far", { mapx: "127.2", mapy: "37.7" }); // ~24km
+    mockedCollect.mockResolvedValue([far]);
+    mockedCheck.mockResolvedValue(openResult());
+
+    const result = await generateCourse(baseProfile(), { maxDistanceKm: 1 }); // far 혼자라 무조건 초과
+
+    expect(result.course.mainPlace?.contentId).toBe("far");
   });
 });

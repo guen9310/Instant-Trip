@@ -6,6 +6,7 @@ import type {
   JourneyPlace,
 } from "@/shared/types/course.types";
 import { formatDuration, type DurationRange } from "@/shared/utils/duration";
+import { getKstDateString } from "@/shared/utils/kst";
 
 // DB row 타입 — schema에서 직접 추론
 type CourseRow = typeof courses.$inferSelect;
@@ -14,13 +15,26 @@ type CompletionRow = typeof courseCompletions.$inferSelect;
 
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
+// 장소 간 이동에 드는 시간의 러프한 추정치(분) — 실제 경로/거리 데이터 없이
+// "장소 수 - 1"번의 이동이 있다고 가정하고 각각 이 정도는 걸린다고 본다.
+const TRAVEL_BUFFER_MIN_PER_HOP = 15;
+
 export function toCourseProgress(
   completion: CompletionRow,
   course: CourseRow,
+  places: PlaceRow[],
 ): CourseProgress {
+  const totalStayMax = places.reduce((sum, p) => sum + p.stayMax, 0);
+  const travelBuffer = Math.max(0, places.length - 1) * TRAVEL_BUFFER_MIN_PER_HOP;
+  const expectedMin = totalStayMax + travelBuffer;
+  const elapsedMin = (Date.now() - completion.startedAt.getTime()) / 60000;
+
   return {
     name: course.name,
     courseId: course.id,
+    // 장소 데이터가 없으면(비정상 상태) 판단할 근거가 없으니 false로 둔다 —
+    // 오탐(완료했는데 계속 진행 중으로 뜨는 것)보다 미탐이 안전한 기본값이다.
+    likelyForgotten: places.length > 0 && elapsedMin > expectedMin,
   };
 }
 
@@ -92,12 +106,7 @@ export function toJourneyPlace(place: PlaceRow): JourneyPlace {
 
 function formatDate(date: Date | null): string {
   if (!date) return "";
-  return date
-    .toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-    .replace(/\. /g, ".")
-    .replace(/\.$/, "");
+  // 서버 런타임 타임존(프로덕션은 UTC)에 의존하지 않고 항상 KST 기준으로
+  // 포맷한다 — 프로젝트 표준 방식(shared/utils/kst.ts)과 통일.
+  return getKstDateString(date).replace(/-/g, ".");
 }

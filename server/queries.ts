@@ -1,4 +1,4 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, inArray } from "drizzle-orm";
 import { db } from "@/server/db";
 import { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import {
@@ -41,7 +41,14 @@ export async function getActiveCourse(
     .limit(1);
 
   if (rows.length === 0) return null;
-  return toCourseProgress(rows[0].completion, rows[0].course);
+  const { completion, course } = rows[0];
+
+  const places = await db
+    .select()
+    .from(coursePlaces)
+    .where(eq(coursePlaces.courseId, course.id));
+
+  return toCourseProgress(completion, course, places);
 }
 
 // ─── /course/active/[id] DB fallback ─────────────────────────────────────────
@@ -83,6 +90,31 @@ export async function getResumableCourse(
     scale: course.scale,
     place: toJourneyPlace(place),
   };
+}
+
+// ─── 최근 완료 장소 좌표 (재추천 쿨다운) ──────────────────────────────────────
+// coursePlaces엔 contentId가 없어(스키마상 저장 안 됨) 좌표로만 "같은 장소"를
+// 판정할 수 있다 — 좌표는 파이프라인이 생성 시점에 그대로 저장한 값이라
+// 반올림 일치(coordKey, shared/utils/geo.ts)로 안전하게 매칭된다.
+export async function getRecentlyVisitedCoords(
+  userId: string,
+  sinceDate: Date,
+): Promise<{ lat: number; lng: number }[]> {
+  const rows = await db
+    .select({ lat: coursePlaces.lat, lng: coursePlaces.lng })
+    .from(courseCompletions)
+    .innerJoin(coursePlaces, eq(coursePlaces.courseId, courseCompletions.courseId))
+    .where(
+      and(
+        eq(courseCompletions.userId, userId),
+        eq(courseCompletions.status, "completed"),
+        gte(courseCompletions.completedAt, sinceDate),
+      ),
+    );
+
+  return rows
+    .filter((r): r is { lat: string; lng: string } => r.lat !== null && r.lng !== null)
+    .map((r) => ({ lat: parseFloat(r.lat), lng: parseFloat(r.lng) }));
 }
 
 // ─── 프로필 완료 목록 ──────────────────────────────────────────────────────────

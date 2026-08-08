@@ -35,6 +35,12 @@ export const generateCourseInputSchema = z.object({
   // 재추천은 최대 3회, 반경 확장은 서비스의 최대 탐색 반경인 20km까지 허용한다.
   excludeIds: z.array(z.string().min(1).max(200)).max(3).optional(),
   radiusM: z.number().int().min(1_000).max(20_000).optional(),
+  // "너무 멀어요" 거절 리롤 전용 — 방금 거절한 장소보다 가까운 후보만 남긴다.
+  // 서비스 최대 탐색 반경(20km)을 상한으로 둔다.
+  maxDistanceKm: z.number().positive().max(20).optional(),
+  // "시간이 안 맞아요" 거절 리롤 전용 — no_data/uncertain도 채택하는 기본 게이트 대신
+  // 실측으로 "open"이 확인된 후보만 채택한다.
+  strictOpenOnly: z.boolean().optional(),
 });
 
 export const generateCourseFromPlaceInputSchema = z.object({
