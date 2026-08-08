@@ -13,7 +13,7 @@ const { mockSignInEmailOtp, mockSendVerificationOtp } = vi.hoisted(() => ({
   mockSignInEmailOtp: vi.fn(),
   mockSendVerificationOtp: vi.fn(),
 }));
-vi.mock("@/client/auth-client", () => ({
+vi.mock("@/client/authClient", () => ({
   authClient: {
     signIn: { emailOtp: mockSignInEmailOtp },
     emailOtp: { sendVerificationOtp: mockSendVerificationOtp },

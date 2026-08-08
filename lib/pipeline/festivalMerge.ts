@@ -4,7 +4,7 @@
  */
 
 import { haversineKm } from "@/shared/utils/geo";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import type { TourFestivalItem } from "@/lib/tour/searchFestival";
 
 export const MATCH_DISTANCE_KM = 5;

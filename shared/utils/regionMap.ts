@@ -1,8 +1,9 @@
-import type { AreaCode } from "@/lib/tour/types";
-
 export type Region = {
   name: string;
-  areaCode: AreaCode;
+  // Tour API의 AreaCode(lib/tour/types.ts)와 값은 같지만, shared/는 lib/를
+  // import할 수 없어 타입을 좁히지 않고 string으로 둔다 — 호출부(lib/home/core.ts)의
+  // fetchAreaBasedList도 areaCode를 string으로 받으므로 캐스팅이 필요 없다.
+  areaCode: string;
   // 시청/도청 좌표 — 위치 권한 거부 시 폴백용 대표 중심점
   // 출처: 네이버 지도 + 카카오맵 교차 확인 (2026-07-12)
   lat: number;

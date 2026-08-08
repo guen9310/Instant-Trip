@@ -32,7 +32,7 @@ function sep(title: string) {
 
 async function main() {
   // API 의존 모듈은 dotenv 설정 후 동적 import — pipeline-run.ts와 같은 패턴
-  const { resolveRegion, REGIONS } = await import("@/lib/tour/regionMap");
+  const { resolveRegion, REGIONS } = await import("@/shared/utils/regionMap");
   const { fetchHomeCore } = await import("@/lib/home/core");
   const { fetchAreaBasedList } = await import("@/lib/tour/areaBasedList");
 

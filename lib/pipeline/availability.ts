@@ -10,7 +10,7 @@ import type {
 } from "@/lib/tour/types";
 import { TTL } from "@/lib/cache/ttl";
 import { checkOpenByDayAwareHours } from "@/lib/tour/hours";
-import type { AvailabilityStatus } from "@/lib/tour/hours";
+import type { AvailabilityStatus } from "@/shared/types/availability.types";
 import { estimateStayDuration } from "@/lib/pipeline/stayDuration";
 
 export type AvailableItem = TourItem & {

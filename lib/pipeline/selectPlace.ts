@@ -3,10 +3,10 @@ import { checkPlaceAvailability } from "@/lib/pipeline/availability";
 import { applyMappingRules } from "@/lib/pipeline/scoring";
 import { estimateStayDuration } from "@/lib/pipeline/stayDuration";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import type { TourItem } from "@/lib/tour/types";
 import type { CoursePlace, PlaceCandidate, TagKey } from "@/lib/pipeline/types";
-import type { AvailabilityStatus } from "@/lib/tour/hours";
+import type { AvailabilityStatus } from "@/shared/types/availability.types";
 
 export type PlaceAvailability = {
   // lib/tour/hours.ts의 판정 상태를 그대로 노출한다 — "판단 불가"(no_data/uncertain)도

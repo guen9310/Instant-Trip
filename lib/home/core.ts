@@ -1,7 +1,7 @@
 import { fetchAreaBasedList } from "@/lib/tour/areaBasedList";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import { festivalsToSummaries } from "@/lib/tour/mappers";
-import type { Region } from "@/lib/tour/regionMap";
+import type { Region } from "@/shared/utils/regionMap";
 import type { TourItem } from "@/lib/tour/types";
 import type { FestivalSummary } from "@/shared/types/course.types";
 

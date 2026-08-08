@@ -1,6 +1,6 @@
 import { checkPlaceAvailability } from "@/lib/pipeline/availability";
 import type { PlaceCandidate } from "@/lib/pipeline/types";
-import type { AvailabilityStatus } from "@/lib/tour/hours";
+import type { AvailabilityStatus } from "@/shared/types/availability.types";
 
 // status가 "open"이 아니어도 채택하는 상태 — README의 "판정 불가한 형식은 보수적으로
 // 통과시킨다" 정책. no_data/uncertain은 실제로 닫혀 있다는 근거가 없으므로 다음 순위로

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { DEFAULT_PREFS, PREF_META, type Prefs, type PrefKey } from "@/shared/constants/preferences";
-import { authClient } from "@/client/auth-client";
+import { authClient } from "@/client/authClient";
 import { usePrefsStore } from "@/client/stores/usePrefsStore";
 import { OnboardCard } from "@/components/domains/onboarding/OnboardCard";
 

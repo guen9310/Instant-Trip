@@ -1,6 +1,6 @@
 "use server";
 
-import { resolveRegion, nearestRegion } from "@/lib/tour/regionMap";
+import { resolveRegion, nearestRegion } from "@/shared/utils/regionMap";
 import { fetchHomeCore } from "@/lib/home/core";
 import {
   homeLocationInputSchema,

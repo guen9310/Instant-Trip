@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/shared/utils";
 import { Button } from "@/components/commons/Button";
 import { PREF_KEYS, PREF_META, type Prefs } from "@/shared/constants/preferences";
-import { authClient } from "@/client/auth-client";
+import { authClient } from "@/client/authClient";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
 
 const OPTION_TITLES: Record<string, string> = {

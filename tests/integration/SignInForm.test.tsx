@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 const { mockSendVerificationOtp } = vi.hoisted(() => ({
   mockSendVerificationOtp: vi.fn(),
 }));
-vi.mock("@/client/auth-client", () => ({
+vi.mock("@/client/authClient", () => ({
   authClient: {
     emailOtp: { sendVerificationOtp: mockSendVerificationOtp },
   },

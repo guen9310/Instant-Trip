@@ -1,5 +1,5 @@
 import type { TourItem } from "@/lib/tour/types";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import type { DurationRange } from "@/shared/utils/duration";
 import type { FestivalProgramInfo, FestivalPhase } from "@/shared/types/course.types";
 

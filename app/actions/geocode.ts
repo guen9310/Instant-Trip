@@ -1,6 +1,6 @@
 "use server";
 
-import { resolveRegion } from "@/lib/tour/regionMap";
+import { resolveRegion } from "@/shared/utils/regionMap";
 
 export type GeocodedCity = {
   displayName: string;  // 화면 표시용 — "울산 북구"처럼 시·도 축약형 + 읍/면/동 수준 이름

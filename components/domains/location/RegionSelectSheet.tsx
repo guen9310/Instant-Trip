@@ -1,6 +1,6 @@
 "use client";
 
-import { REGIONS } from "@/lib/tour/regionMap";
+import { REGIONS } from "@/shared/utils/regionMap";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import {
   Drawer,

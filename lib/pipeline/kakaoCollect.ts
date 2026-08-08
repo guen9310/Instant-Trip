@@ -1,6 +1,6 @@
 import type { TourItem } from "@/lib/tour/types";
-import { fetchCourseKakao } from "@/lib/clients/kakao-local";
-import type { KakaoPlaceTagged } from "@/lib/clients/kakao-local";
+import { fetchCourseKakao } from "@/lib/clients/kakaoLocal";
+import type { KakaoPlaceTagged } from "@/lib/clients/kakaoLocal";
 import { haversineKm } from "@/shared/utils/geo";
 
 // stage1에서 수집한 TourAPI 원본 후보 수가 이 값 미만일 때만 카카오 보충 발동

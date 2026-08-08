@@ -26,7 +26,7 @@ async function main() {
   const { getAllTourFestivals } = await import("@/lib/tour/searchFestival");
   const { fetchNearbyFestivals } = await import("@/lib/pipeline/festival");
   // getAllPublicFestivals는 festival.ts 내부 함수이므로, 원본 데이터를 분리 수집
-  const { fetchCulturalFestivals } = await import("@/lib/clients/cultural-festival");
+  const { fetchCulturalFestivals } = await import("@/lib/clients/culturalFestival");
   const { mergeFestivals } = await import("@/lib/pipeline/festivalMerge");
 
   sep("1. 원본 데이터 수집");

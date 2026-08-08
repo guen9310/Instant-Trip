@@ -12,7 +12,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { mockUpdateUser } = vi.hoisted(() => ({ mockUpdateUser: vi.fn() }));
-vi.mock("@/client/auth-client", () => ({
+vi.mock("@/client/authClient", () => ({
   authClient: { updateUser: mockUpdateUser },
 }));
 

@@ -2,13 +2,13 @@ import { toShortAddress, fetchDetail, stripHtml } from "@/lib/pipeline/course";
 import { getFestivalIntro, cleanFestivalText, parseFestivalProgram } from "@/lib/tour/festivalDetail";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import { checkOpenByDayAwareHours } from "@/lib/tour/hours";
-import type { AvailabilityStatus } from "@/lib/tour/hours";
+import type { AvailabilityStatus } from "@/shared/types/availability.types";
 import { STAY_DURATION_DEFAULT } from "@/lib/pipeline/stayDuration";
 import { getKstDateString } from "@/shared/utils/kst";
 import { isBlank } from "@/shared/utils";
 import type { CoursePlace } from "@/lib/pipeline/types";
 import type { PlaceAvailability } from "@/lib/pipeline/selectPlace";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import type { FestivalProgramInfo, FestivalPhase } from "@/shared/types/course.types";
 
 const FESTIVAL_CONTENT_TYPE_ID = "15";
