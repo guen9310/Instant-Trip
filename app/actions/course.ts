@@ -16,6 +16,7 @@ import {
 import { fetchNearby } from "@/lib/clients/kakao-local";
 import type { NearbyCategoryCode } from "@/lib/clients/kakao-local";
 import { getAuthState } from "@/server/session";
+import { getRecentlyVisitedCoords } from "@/server/queries";
 import type {
   JourneyPlace,
   NearbyCategory,
@@ -29,6 +30,10 @@ import {
   nearbyPoisInputSchema,
 } from "@/shared/schemas/actionInputs";
 import type { AuthFailureReason } from "@/shared/types/auth.types";
+
+// "이미 가봤어요" 쿨다운 — 이 기간 내 완료한 장소는 재추천 후보에서 제외한다.
+// 카테고리별 차등화(카페는 짧게, 관광지는 길게)는 1차 범위 밖 — 단일 값으로 시작한다.
+const VISITED_COOLDOWN_DAYS = 30;
 
 type GenerateCourseResult =
   | {
@@ -132,12 +137,23 @@ export async function generateCourseAction(
   }
 
   try {
-    const { mapX, mapY, scale, prefs, excludeIds, radiusM } = parsed.data;
+    const { mapX, mapY, scale, prefs, excludeIds, radiusM, maxDistanceKm, strictOpenOnly } =
+      parsed.data;
     const profile = {
       ...prefsToProfile(prefs, { mapX, mapY }, scale),
       radiusOverrideM: radiusM,
     };
-    const { course } = await generateCourse(profile, { excludeIds });
+    const cooldownSince = new Date(Date.now() - VISITED_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+    const excludeCoords = await getRecentlyVisitedCoords(
+      authState.session.user.id,
+      cooldownSince,
+    );
+    const { course } = await generateCourse(profile, {
+      excludeIds,
+      excludeCoords,
+      maxDistanceKm,
+      strictOpenOnly,
+    });
 
     if (!course.mainPlace) {
       return {

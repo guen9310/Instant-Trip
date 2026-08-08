@@ -144,4 +144,30 @@ describe("selectAvailableCandidate", () => {
     expect(result?.exhausted).toBe(false);
     expect(mockedCheck).toHaveBeenCalledTimes(1);
   });
+
+  it("strictOpenOnly: uncertain은 건너뛰고 실측 open만 채택한다", async () => {
+    const c1 = makeCandidate("1", 0.9);
+    const c2 = makeCandidate("2", 0.8);
+    mockedCheck
+      .mockResolvedValueOnce(uncertainOpenResult())
+      .mockResolvedValueOnce(openResult());
+
+    const result = await selectAvailableCandidate([c1, c2], { strictOpenOnly: true });
+
+    expect(result?.winner.item.contentid).toBe("2");
+    expect(result?.winner.availabilityUncertain).toBe(false);
+    expect(result?.exhausted).toBe(false);
+    expect(mockedCheck).toHaveBeenCalledTimes(2);
+  });
+
+  it("strictOpenOnly: Kakao 후보는 기존과 동일하게 검사 없이 즉시 채택한다", async () => {
+    const c1 = makeCandidate("1", 0.9, { source: "tour" });
+    const c2 = makeCandidate("2", 0.8, { source: "kakao" });
+    mockedCheck.mockResolvedValueOnce(uncertainOpenResult());
+
+    const result = await selectAvailableCandidate([c1, c2], { strictOpenOnly: true });
+
+    expect(result?.winner.item.contentid).toBe("2");
+    expect(mockedCheck).toHaveBeenCalledTimes(1);
+  });
 });

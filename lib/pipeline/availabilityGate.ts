@@ -9,6 +9,13 @@ import type { AvailabilityStatus } from "@/lib/tour/hours";
 // 있는 상태라 다음 순위 후보로 넘어간다.
 const ADOPTABLE_STATUSES: ReadonlySet<AvailabilityStatus> = new Set(["open", "no_data", "uncertain"]);
 
+// "시간이 안 맞아요" 거절 리롤 전용 — no_data/uncertain("판단 불가")까지 관대하게
+// 채택하는 기본 정책 대신, 실측으로 "open"이 확인된 후보만 인정한다. Kakao 출처는
+// 애초에 운영시간 데이터가 없어(이 모드에서도 열림/닫힘을 확인할 방법이 없음)
+// 기존과 동일하게 검사 없이 즉시 채택한다 — strict가 "확인 안 된 걸 걸러낸다"는
+// 취지이지, Kakao 후보 자체를 배제하는 정책은 아니다.
+const STRICT_ADOPTABLE_STATUSES: ReadonlySet<AvailabilityStatus> = new Set(["open"]);
+
 // 순차 확인 상한. 점수 순으로 이 개수까지 확인해도 전부 운영종료로 판정되면
 // 점수 1위를 관대하게(uncertain=true) 채택한다 — API 오류 시 관대 통과와 같은 철학.
 export const MAX_AVAILABILITY_CHECKS = 30;
@@ -31,10 +38,11 @@ export type AvailabilityGateResult = {
 //   TourAPI가 지속적인 동시 부하에 취약하다는 게 확인됐으므로, 여기서도 병렬화하지 않는다.
 export async function selectAvailableCandidate(
   scored: PlaceCandidate[],
-  opts: { maxChecks?: number; logPrefix?: string } = {},
+  opts: { maxChecks?: number; logPrefix?: string; strictOpenOnly?: boolean } = {},
 ): Promise<AvailabilityGateResult | null> {
   const maxChecks = opts.maxChecks ?? MAX_AVAILABILITY_CHECKS;
   const logPrefix = opts.logPrefix ?? "[gate]";
+  const adoptableStatuses = opts.strictOpenOnly ? STRICT_ADOPTABLE_STATUSES : ADOPTABLE_STATUSES;
   if (scored.length === 0) return null;
 
   let checksPerformed = 0;
@@ -59,7 +67,7 @@ export async function selectAvailableCandidate(
     const prefix = `${logPrefix} [${i + 1}/${scored.length}] (검사 ${checksPerformed}/${maxChecks}) "${item.title}"`;
     const result = await checkPlaceAvailability(item, prefix);
 
-    if (ADOPTABLE_STATUSES.has(result.status)) {
+    if (adoptableStatuses.has(result.status)) {
       return {
         winner: {
           ...candidate,

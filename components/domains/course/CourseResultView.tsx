@@ -11,6 +11,7 @@ import {
   MapPin,
   ThumbsDown,
   Navigation,
+  RefreshCcw,
   Globe,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
@@ -19,6 +20,8 @@ import { Button } from "@/components/commons/Button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/commons/Dialog";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { useCourseResult } from "@/client/hooks/useCourseResult";
+import type { ReasonChipKind } from "@/client/hooks/useCourseResult";
+import type { LucideIcon } from "lucide-react";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { startCourseAction } from "@/app/actions/completion";
 import type {
@@ -46,6 +49,22 @@ const REJECT_REASONS = [
   { id: "visited", icon: Calendar, label: "이미 가봤어요" },
   { id: "time", icon: Clock, label: "시간이 안 맞아요" },
 ] as const;
+
+// 재추천 사유 설명 칩 — useCourseResult가 "그 사유가 실제로 해소됐는지"까지
+// 검증한 뒤에만 kind를 채워주므로, 여기서는 문구/아이콘 매핑만 한다.
+const REASON_CHIP_COPY: Record<ReasonChipKind, { icon: LucideIcon; text: string }> = {
+  far: { icon: Navigation, text: "이전 장소보다 가까워요" },
+  time: { icon: Clock, text: "지금 확실히 운영 중이에요" },
+  visited: { icon: RefreshCcw, text: "이번엔 다른 곳으로 골라봤어요" },
+};
+
+// satisfied:false(폴백) 전용 문구 — "far"만 해당한다(useCourseResult.ts 참고: "time"은
+// 만족 못 하면 칩 자체를 안 켜고, "visited"는 폴백이 존재하지 않는다). 성공 칩과
+// 다르게 아이콘 없이 중립 톤으로 렌더해 "요청은 성공 못 했지만 알려는 준다"는
+// 인상을 준다.
+const REASON_CHIP_FALLBACK_TEXT: Partial<Record<ReasonChipKind, string>> = {
+  far: "이 근처엔 더 가까운 곳이 없었어요",
+};
 
 type Props = {
   courseId: string;
@@ -108,6 +127,7 @@ export function CourseResultView({
     currentCourseName,
     isBadgeSnapshotStale,
     rerollExhausted,
+    reasonChip,
     newPlaceId,
     rerolling,
     isMaxRerolls,
@@ -285,9 +305,35 @@ export function CourseResultView({
             </Badge>
           )}
         </div>
-        {prefs && (
-          <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium mb-5">
-            {`'${TRAVEL_REASON[prefs.travel] ?? prefs.travel}' 취향에 맞게 골랐어요`}
+        {/* 취향 칩 + 재추천 사유 칩 — 세로 스택(gap 6px). 사유 칩은 리롤이 실제로
+            그 사유를 해소했을 때만 useCourseResult가 채워준다(거짓 주장 방지 —
+            useCourseResult.ts의 검증 로직 참고). */}
+        {(prefs || reasonChip) && (
+          <div className="flex flex-col items-start gap-1.5 mb-5">
+            {prefs && (
+              <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium">
+                {`'${TRAVEL_REASON[prefs.travel] ?? prefs.travel}' 취향에 맞게 골랐어요`}
+              </div>
+            )}
+            {reasonChip && (
+              <div
+                className={cn(
+                  "inline-flex self-start items-center gap-1 px-2.5 py-1.5 rounded-full text-[12px] font-medium",
+                  reasonChip.satisfied
+                    ? "bg-point/10 text-point"
+                    : "border border-border text-text-secondary",
+                )}
+              >
+                {reasonChip.satisfied &&
+                  (() => {
+                    const ReasonIcon = REASON_CHIP_COPY[reasonChip.kind].icon;
+                    return <ReasonIcon size={14} strokeWidth={2} />;
+                  })()}
+                {reasonChip.satisfied
+                  ? REASON_CHIP_COPY[reasonChip.kind].text
+                  : REASON_CHIP_FALLBACK_TEXT[reasonChip.kind]}
+              </div>
+            )}
           </div>
         )}
 
