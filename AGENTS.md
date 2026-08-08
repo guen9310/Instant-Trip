@@ -225,6 +225,8 @@ components/
 - 템플릿이 없으면 어떤 형식으로 작성할지 먼저 사용자에게 확인하세요.
 - push하거나 PR을 실제로 생성하기 전에 사용자에게 확인하세요 — 다른 사람에게 보이는 행동입니다.
 - 확인을 구할 때는 PR 제목과 본문 전체를 **일반 채팅 메시지**로(마크다운 코드 블록 등) 그대로 보여주세요 — AskUserQuestion 같은 도구로 요약·축약해서 보여주지 마세요. 사용자가 실제로 게시될 내용을 그대로 검토할 수 있어야 합니다.
+- Squash and merge는 사람이 GitHub 웹 UI에서 수동으로 누릅니다 — 에이전트가 `gh pr merge`를 대신 실행하지 마세요. GitHub 저장소의 squash 커밋 메시지 기본 소스가 `COMMIT_MESSAGES`(각 커밋 subject·body 이어붙이기)로 되어 있으면, 모든 커밋에 붙는 `Co-Authored-By` trailer가 커밋 개수만큼 중복돼 뜹니다. 저장소 설정을 `gh api -X PATCH repos/{owner}/{repo} -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY`로 바꾸면, 에이전트가 작성해 사용자 검수를 받은 PR 본문이 그대로 기본 커밋 메시지로 떠서 중복이 생기지 않습니다. 저장소를 새로 만들거나 이 증상을 발견하면 적용하세요.
+- PR 본문에는 `Co-Authored-By` 트레일러를 직접 적지 마세요. GitHub는 `squash_merge_commit_message` 설정과 무관하게, 브랜치의 모든 커밋에서 `Co-authored-by` trailer를 자동으로 스캔·중복 제거해 squash 커밋 메시지 맨 끝에 별도로 붙입니다. PR 본문에 수동으로 넣으면 이 자동 추가분과 겹쳐 다시 중복이 생깁니다.
 
 ---
 
