@@ -22,14 +22,6 @@ describe("useCourseProgressStore", () => {
     expect(state.rerollCount).toBe(2);
   });
 
-  it("resetRerollCount는 rerollCount만 초기화하고 rejectedPlaceIds는 유지한다", () => {
-    useCourseProgressStore.getState().addRejection("p1");
-    useCourseProgressStore.getState().resetRerollCount();
-    const state = useCourseProgressStore.getState();
-    expect(state.rerollCount).toBe(0);
-    expect(state.rejectedPlaceIds).toEqual(["p1"]);
-  });
-
   it("resetRerolls는 rejectedPlaceIds와 rerollCount를 전부 초기화한다", () => {
     useCourseProgressStore.getState().addRejection("p1");
     useCourseProgressStore.getState().resetRerolls();

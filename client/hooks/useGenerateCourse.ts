@@ -92,11 +92,14 @@ export function useGenerateCourse(prefs: Prefs) {
       // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
       recordAbandonedIfAny();
 
-      // 새 추천을 받았으니 리롤 소진 카운트는 다시 채워준다. 거절 이력
-      // (rejectedPlaceIds)은 지우지 않는다 — 방금 excludeIds로 넘겨 반영한 거절이
-      // "이번 탐색이 끝날 때까지"(실제 출발/새 취향 설정 전까지) 계속 지켜지도록,
-      // 이 시점엔 리셋하지 않고 CourseResultView의 "여기로 갈게요"에서 끊는다.
-      useCourseProgressStore.getState().resetRerollCount();
+      // 방금 받은 추천에는 위에서 넘긴 excludeIds가 이미 반영돼 있어 직전 거절 장소가
+      // 다시 나올 일은 없다 — 그러니 여기서 거절 이력을 지워도 "거절한 곳이 재추천됨"
+      // 버그는 재발하지 않는다. 반대로 지우지 않으면 /start를 오갈 때마다 거절 이력이
+      // 끝없이 쌓여, 후보가 적은 지역에서는 이번 라운드 첫 거절만으로 근처 후보가
+      // 고갈된 것처럼 보일 수 있다(리롤 소진 카운트는 새로 채워지는데 실제 제외
+      // 목록은 계속 불어나는 불일치). /start 왕복 자체가 "새 탐색"으로 간주할 만한
+      // 마찰(재조건 설정)이 있으므로, 여기서 거절 이력까지 함께 새로 시작한다.
+      useCourseProgressStore.getState().resetRerolls();
 
       const pending: PendingCourse = {
         courseId: result.courseId,
