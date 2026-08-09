@@ -8,4 +8,5 @@ export const TTL = {
   TOUR_FESTIVAL:       6 * 60 * 60,  // 6h — Tour API searchFestival2
   EMPTY_RESULT:        1 * 60 * 60,  // 1h — 빈 결과 단기 캐시
   WEATHER_NCST:        2 * 60 * 60,  // 2h — 키에 발표시각(base_time)이 포함되어 정합성과 무관, 정리 주기용 여유값
+  WEATHER_FCST:        1 * 60 * 60,  // 1h — 초단기예보, base_time이 30분마다 갱신되어 NCST보다 짧게
 } as const
