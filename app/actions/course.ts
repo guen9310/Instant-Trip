@@ -13,8 +13,8 @@ import {
   coursePlaceToJourneyPlace,
   courseResultToFestivalSummaries,
 } from "@/lib/tour/mappers";
-import { fetchNearby } from "@/lib/clients/kakao-local";
-import type { NearbyCategoryCode } from "@/lib/clients/kakao-local";
+import { fetchNearby } from "@/lib/clients/kakaoLocal";
+import type { NearbyCategoryCode } from "@/lib/clients/kakaoLocal";
 import { getAuthState } from "@/server/session";
 import { getRecentlyVisitedCoords } from "@/server/queries";
 import type {

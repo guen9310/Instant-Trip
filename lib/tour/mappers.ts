@@ -1,6 +1,6 @@
 import type { UserProfile, TravelScale } from "@/lib/pipeline/types";
 import type { CourseResult, CoursePlace } from "@/lib/pipeline/types";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import type {
   JourneyPlace,
   BadgeVariant,

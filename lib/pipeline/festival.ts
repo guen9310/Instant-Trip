@@ -1,5 +1,5 @@
-import { fetchCulturalFestivals } from "@/lib/clients/cultural-festival";
-import type { CulturalFestival } from "@/lib/clients/cultural-festival";
+import { fetchCulturalFestivals } from "@/lib/clients/culturalFestival";
+import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import { getAllTourFestivals } from "@/lib/tour/searchFestival";
 import { mergeFestivals } from "@/lib/pipeline/festivalMerge";
 import { haversineKm } from "@/shared/utils/geo";

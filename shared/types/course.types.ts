@@ -1,6 +1,6 @@
 import type { DurationRange } from "@/shared/utils/duration";
 import type { Prefs } from "@/shared/constants/preferences";
-import type { AvailabilityStatus } from "@/lib/tour/hours";
+import type { AvailabilityStatus } from "@/shared/types/availability.types";
 
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
 

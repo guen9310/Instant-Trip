@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
-import { authClient } from "@/client/auth-client";
+import { authClient } from "@/client/authClient";
 import {
   InputOTP,
   InputOTPGroup,
