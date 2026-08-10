@@ -1,8 +1,16 @@
 import "@testing-library/jest-dom";
 import { beforeAll, afterEach, afterAll } from "vitest";
 import { setupServer } from "msw/node";
+import { MotionGlobalConfig } from "framer-motion";
 
 import { handlers } from "./handlers";
+
+// jsdom엔 Web Animations API가 없어 framer-motion의 AnimatePresence exit 애니메이션이
+// 끝났다는 신호(onAnimationComplete)가 영영 오지 않는다 — mode="wait"를 쓰는 컴포넌트는
+// 이전 요소가 계속 마운트된 채로 남아 다음 요소가 렌더되지 않고 waitFor가 타임아웃난다.
+// skipAnimations는 framer-motion 공식 테스트 권장 설정으로, 모든 트랜지션을 즉시
+// 최종 상태로 스킵시켜 애니메이션 타이밍과 무관하게 테스트가 동작하게 한다.
+MotionGlobalConfig.skipAnimations = true;
 
 global.ResizeObserver = class ResizeObserver {
   observe() {}
