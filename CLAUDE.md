@@ -51,8 +51,4 @@ UI 화면에 대해 논의할 때는 아래의 정식 명칭을 사용하세요.
 | 코스 진행 화면 | `CourseActiveView` | `/course/active/[id]` |
 | 코스 완료 화면 | `CourseDoneView` | `/course/done/[id]` |
 
-### Overlays / Sheets
-
-| 정식 명칭 | 컴포넌트 | 진입 경로 |
-|---|---|---|
-| 주변 정보 시트 | `NearbyPanel` | 코스 진행 화면 → 주변 정보 보기 탭 |
+주변 정보(`NearbyPanel`)는 별도 화면·오버레이가 아니라 코스 진행 화면 내에 인라인으로 병합된 펼치기 섹션입니다. 예전엔 드로어로 열리는 방식이었으나, 여는 동작 자체가 불필요한 액션이라 페이지에 직접 병합했습니다(`CourseActiveView.tsx` 참고).

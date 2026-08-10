@@ -1,8 +1,10 @@
 # 지금어때 (Instant-Trip)
 
-지금 갈 만한 곳을 딱 한 군데 정해주는 즉흥 외출 서비스. 위치와 외출 규모만 선택하면, 지금 문을 연 곳 중 취향에 맞는 장소 하나를 골라드립니다.
+지금 갈 만한 곳을 딱 한 군데 정해주는 즉흥 외출 서비스. 위치와 외출 규모만 선택하면, 지금 문을 연 곳 중 취향에 맞는 장소 하나를 골라줍니다.
 
 > "여행을 위해 시간을 내는 것이 아니라, 시간이 나는 순간 바로 나갈 수 있도록"
+
+🔗 **배포 링크**: [instant-trip.vercel.app](https://instant-trip.vercel.app)
 
 ## 🎯 서비스 개요
 
@@ -13,7 +15,7 @@
 - **오늘 열리는 축제·행사**도 함께 조회해 홈 화면에서 확인
 - **단 하나의 장소**만 제시 — 비교 과정 제거
 - **거절 기반 재추천** — 싫은 이유를 선택하면 즉시 재생성 (최대 3회)
-- **홈 화면 인기 장소·주변 축제를 직접 선택**해 취향 추천 절차 없이 바로 코스를 만들 수도 있음
+- **홈 화면 인기 장소·주변 축제를 직접 선택**해 취향 추천 절차 없이 바로 코스 생성
 
 ## 🛠 기술 스택
 
@@ -23,7 +25,7 @@
 | 언어             | TypeScript 5                                |
 | 스타일링         | Tailwind CSS 4                              |
 | 컴포넌트         | Shadcn/ui + Base UI                         |
-| 애니메이션       | Framer Motion 12                            |
+| 아이콘           | lucide-react                                |
 | 서버 상태        | TanStack Query 5                            |
 | 클라이언트 상태  | Zustand 5                                   |
 | 폼 & 유효성 검사 | React Hook Form 7 + Zod 4                   |
@@ -31,6 +33,9 @@
 | 이메일 발송      | Resend                                      |
 | 데이터베이스     | Neon (PostgreSQL) + Drizzle ORM             |
 | 지도             | Kakao Maps SDK + react-kakao-maps-sdk       |
+| 바텀시트/드로어  | vaul                                        |
+| OTP 입력         | input-otp                                   |
+| 페이지 전환 로딩 | nextjs-toploader                            |
 | 테스트           | Vitest + Testing Library + MSW              |
 | 배포             | Vercel                                      |
 
@@ -60,7 +65,7 @@
 
 ### 데이터 출처 표시
 
-공공데이터포털 이용약관상 저작자표시(공공누리 제1유형)가 걸려 있는 API는 아래 2개뿐이다 — 화면 디자인을 해치지 않도록 상시 노출 문구 대신, 데이터가 실제 쓰이는 지점에 작은 안내 아이콘(`AttributionNotice`)을 달아 탭했을 때만 출처를 보여준다.
+공공데이터포털 이용약관상 저작자표시(공공누리 제1유형)가 걸려 있는 API는 아래 2개뿐입니다 — 화면 디자인을 해치지 않도록 상시 노출 문구 대신, 데이터가 실제 쓰이는 지점에 작은 안내 아이콘(`AttributionNotice`)을 달아 탭했을 때만 출처를 보여줍니다.
 
 | 엔드포인트 | 제공기관 | 표시 위치 |
 | --- | --- | --- |
@@ -77,7 +82,7 @@
 /                     홈 (위치 기반 근처 장소·축제, 카드를 직접 탭해 바로 코스 생성 가능)
 /start                위치 확인 + 외출 규모 선택
 /course/preview       외출 추천/선택 결과 (지도 미리보기 + 인라인 거절 패널)
-/course/active/[id]   외출 진행 중 (장소 체크리스트 + 주변 정보 Drawer)
+/course/active/[id]   외출 진행 중 (장소 체크리스트 + 주변 정보 펼치기 섹션)
 /course/done/[id]     외출 완료 + 별점 후기
 /profile              내 정보 + 완료 기록 목록
 /settings             성향 재설정
@@ -88,15 +93,17 @@
 ```
 ├── app/              # Next.js App Router (라우트, 레이아웃, Server Actions)
 ├── client/           # 브라우저 전용 (hooks, Zustand stores, providers)
-├── server/           # 백엔드 전용 (auth, DB, schema, session)
-├── shared/           # 공용 코드 (types, constants, utils)
+├── server/           # 백엔드 전용 (auth, DB, schema, session, weather)
+├── shared/           # 공용 코드 (types, constants, schemas, utils)
 ├── components/
 │   ├── commons/      # 도메인 무관 UI 컴포넌트 (Button, Card, …)
 │   └── domains/      # 기능별 컴포넌트 (auth, course, home, location, onboarding, profile, settings, start)
 └── lib/
     ├── pipeline/     # 외출 추천 파이프라인
     ├── tour/         # TourAPI 클라이언트 + 매퍼
-    └── clients/      # 외부 API 클라이언트 (Kakao, Weather, 문화축제)
+    ├── clients/      # 외부 API 클라이언트 (Kakao, 문화축제)
+    ├── home/         # 홈 화면 데이터 조회 (장소·축제 병렬 조회)
+    └── cache/        # DB 기반 캐시 (TTL 관리)
 ```
 
 ## 🎨 디자인 시스템
@@ -119,8 +126,9 @@
 
 ### 컬러 역할
 
-- **Primary** — CTA 버튼, 로고, 주요 인터랙션
-- **Accent** — 영업중 배지, 완료 배지, 위치 확인 등 긍정 상태
+- **Primary** — CTA 버튼, 주요 인터랙션
+- **Secondary** — 카테고리 배지, "진행 중"/"현재" 상태 표시
+- **Accent** — 영업중(지금 출발 가능) 배지, 위치 확인 등 긍정 상태
 - **Point** — 오늘 축제 배지, 이벤트 강조
 
 ## 🔐 인증 플로우
@@ -133,55 +141,38 @@
 
 ## 🧠 외출 추천 파이프라인
 
-`/start`에서 외출 규모를 선택했을 때만 도는 파이프라인이다. 가용성 검사(영업 여부 확인)를 먼저 몰아서 하지 않고, **점수화를 끝낸 뒤 점수 순으로 하나씩만 확인해 최초로 열려 있는 곳을 채택**하는 구조다 — 전체 후보를 미리 다 검사하는 것보다 외부 API 호출량이 훨씬 적다.
+`/start`에서 외출 규모를 선택했을 때만 도는 파이프라인입니다. 가용성 검사(영업 여부 확인)를 먼저 몰아서 하지 않고, **점수화를 끝낸 뒤 점수 순으로 하나씩만 확인해 최초로 열려 있는 곳을 채택**하는 구조입니다 — 전체 후보를 미리 다 검사하는 것보다 외부 API 호출량이 훨씬 적습니다.
 
 ```
-stage1 후보지 수집
-  locationBasedList2로 GPS 좌표 + 반경 내 관광지 목록 조회
-  (contentTypeId: 12 관광지, 14 문화시설, 28 레포츠)
-  외출 규모: 가볍게(5km) / 적당히(10km) / 여유롭게(20km)
+1. 후보지 수집
+   GPS 좌표 + 반경 내 관광지 목록 조회 (외출 규모별 5~20km)
 
-stage3.5 조건부 Kakao 보충
-  외출 규모가 '가볍게'이고 stage1 원본 수집 건수가 5건 미만이면
-  Kakao Local API(공원 키워드)로 후보를 보충한다.
+2. Kakao 보충
+   후보가 적은 경우(가볍게 규모 한정) 공원 키워드로 보충
 
-stage4 태그 기반 점수화
-  온보딩 yes/no 답변 → 태그 가중치 변환
-  사용자 태그 가중치 × 관광지 태그 매핑 → 적합도 점수 산출
-  거절 이력 반영하여 실시간 보정 (최대 3회 재생성)
-  이 단계는 운영시간 데이터를 쓰지 않으므로 가용성 검사보다 먼저 실행한다.
+3. 태그 기반 점수화
+   온보딩 성향 태그 × 관광지 태그 매핑으로 적합도 산출, 거절 이력 실시간 반영
 
-가용성 게이트 (점수 순 지연 평가)
-  점수 내림차순으로 후보를 하나씩 확인해, detailIntro2의 운영시간(usetime)·
-  휴무일(restdate) 원문을 `lib/tour/hours.ts`(checkOpenByDayAwareHours)로 해석한다.
-  요일 인지 판정에 더해 입장마감(절대/상대 시각 표기)과 예상 체류시간(카테고리 평균)
-  기반 "폐관까지 체류시간을 못 채움" 판정까지 한 번에 수행하고, 그 결과를
-  status(open / closed_restday / closed_hours / past_admission_cutoff /
-  insufficient_time / no_data / uncertain)로 반환한다. status가 "open"인 최초의
-  후보를 채택한다. 판정 불가한 형식(no_data·uncertain)은 보수적으로 통과시키고,
-  나머지(실제로 닫혀 있다는 근거가 있는 상태)만 다음 순위로 넘긴다. 상한(30건)
-  소진 시 또는 전 후보가 닫혀 있으면 점수 1위를 관대 채택한다.
+4. 가용성 게이트
+   점수 순으로 하나씩 요일별 운영시간·입장마감·예상 체류시간을 확인해
+   최초로 "지금 갈 수 있는" 곳을 채택 (판정이 불확실하면 보수적으로 통과)
 
-stage5 상세 조회
-  채택된 후보 1곳의 상세 정보를 조회한다
-  detailImage2로 썸네일 확보 후 결과 화면 구성
+5. 상세 조회
+   채택된 후보의 상세 정보와 썸네일을 조회해 결과 화면 구성
 ```
 
-홈 화면 "인기 장소"·"주변 축제" 카드를 직접 탭하는 경우(위 화면 구조의 `/` 참조)는 이 파이프라인의 수집·점수화 단계를 건너뛰고, 선택된 장소/축제 하나를 곧바로 조회해 코스로 만든다 — 이 경로는 가용성 게이트를 거치지 않는 의도적 비차단 진입이라, `status`가 "open"이 아닌 값(닫혀 있다는 근거가 있는 상태 포함)도 결과 화면에 그대로 노출될 수 있다. 축제는 요일별 영업시간이 아니라 축제 기간(시작일~종료일) + 당일 운영시간(playtime)으로 가용 여부를 판정하는데, 당일 운영시간 판정 자체는 장소와 동일하게 `lib/tour/hours.ts`의 status 체계를 공유한다(요일 개념이 없어 restdate는 넘기지 않는다).
+홈 화면 "인기 장소"·"주변 축제" 카드를 직접 탭하는 경우(위 화면 구조의 `/` 참조)는 이 파이프라인의 수집·점수화·가용성 검사 단계를 모두 건너뛰고, 선택한 장소/축제 하나를 곧바로 코스로 만듭니다 — 추천 절차 없이 바로 시작하고 싶은 사용자를 위한 의도적인 지름길입니다.
 
-축제·행사 목록 자체는 이 파이프라인의 점수화에 관여하지 않는다 — searchFestival2와 공공데이터포털 문화축제 API를 병렬로 조회해 홈 화면에 별도로 표시한다.
+축제·행사 목록 자체는 이 파이프라인의 점수화에 관여하지 않습니다 — searchFestival2와 공공데이터포털 문화축제 API를 병렬로 조회해 홈 화면에 별도로 표시합니다.
 
-## 🎮 게이미피케이션 (3순위 예정 기능)
+## 📸 스크린샷
 
-강제하지 않는 경험치 시스템을 구상 중입니다. 외출을 마친 후 자연스럽게 쌓이는 기록을 목표로 하며, 아직 코드에는 반영되지 않았습니다.
-
-| 액션                | 경험치 |
-| ------------------- | ------ |
-| 외출 완료           | +30 XP |
-| 첫 지역 방문 보너스 | +10 XP |
-| 후기 작성 (선택)    | +5 XP  |
-
-레벨업 시 칭호 부여 (탐험가 → 지역 전문가 → …) — 예정된 설계안이며 구현 전입니다.
+| 화면 | 스크린샷 | 화면 | 스크린샷 |
+| --- | --- | --- | --- |
+| **온보딩 화면** (`OnboardingForm`)<br>yes/no 성향 질문 UI | <img src=".github/screenshots/OnboardingForm.png" width="200" /> | **홈 화면** (`HomeView`)<br>위치 기반 근처 장소·축제, 날씨 표시 | <img src=".github/screenshots/HomeView.png" width="200" /> |
+| **출발 설정 화면** (`StartView`)<br>외출 규모 선택 | <img src=".github/screenshots/StartView.png" width="200" /> | **코스 추천 화면** (`CourseResultView`)<br>지도 미리보기 + 거절 재추천 패널 | <img src=".github/screenshots/CourseResultView.png" width="200" /> |
+| **코스 진행 화면** (`CourseActiveView`)<br>장소 체크리스트 + 주변 정보 펼치기 섹션 | <img src=".github/screenshots/CourseActiveView.png" width="200" /> | **코스 완료 화면** (`CourseDoneView`)<br>별점 후기 | <img src=".github/screenshots/CourseDoneView.png" width="200" /> |
+| **프로필 화면** (`ProfileView`)<br>완료 기록 목록 | <img src=".github/screenshots/ProfileView.png" width="200" /> | | |
 
 ## 🚀 시작하기
 
@@ -190,37 +181,17 @@ stage5 상세 조회
 pnpm install
 
 # DB 마이그레이션
-pnpm drizzle-kit push
+pnpm db:push
 
 # 개발 서버 실행
 pnpm dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 확인할 수 있습니다.
-
-### 필수 환경 변수
-
-`.env.local` 파일을 직접 만들어 아래 값을 채워주세요 (저장소에 `.env.example`은 없습니다).
-
-```
-DATABASE_URL=          # Neon PostgreSQL 연결 URL
-BETTER_AUTH_SECRET=    # better-auth 세션 암호화 시크릿 키
-BETTER_AUTH_URL=       # 배포 환경 URL (better-auth trustedOrigins)
-NEXT_PUBLIC_APP_URL=   # 클라이언트 auth 요청 baseURL
-RESEND_API_KEY=        # Resend 이메일 발송 API 키
-RESEND_FROM_EMAIL=     # OTP 발신 이메일 주소
-TOUR_API_KEY=          # 한국관광공사 TourAPI 인증 키
-TOUR_API_BASE_URL=     # TourAPI 베이스 URL (선택, 기본값 있음)
-KAKAO_REST_KEY=        # Kakao REST API 키 (Local API)
-NEXT_PUBLIC_KAKAO_KEY= # Kakao 지도 SDK 앱 키
-WEATHER_API_KEY=       # 기상청 API 인증 키
-VWORLD_KEY=            # 국토교통부 브이월드 지오코더 API 인증 키
-CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
-```
+DB(Neon)·인증(better-auth)·TourAPI·Kakao 등 외부 서비스 연동에 필요한 환경 변수 설정이 선행되어야 합니다. 브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 확인할 수 있습니다.
 
 ## 🧪 테스트 · CI/CD
 
-- `pnpm test`(vitest run) — 24개 파일, 175개 테스트 전부 통과
+- `pnpm test`(vitest run) — 30개 파일, 223개 테스트 전부 통과
 - `pnpm type-check`(tsc --noEmit) — 에러 0건
 - `pnpm lint`(eslint) — 에러 0건
 - CI(`.github/workflows/ci.yml`) — PR 시 lint → type-check → test → build 순으로 검증
@@ -253,12 +224,9 @@ CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
 
 ### 3순위 — 예정
 
-- [ ] 게이미피케이션 XP/레벨 실제 연동
-- [ ] 날씨 예보 기반 실내/실외 추천 가중치 조정 — 설계는 검토됨(비 예보 시 실내 태그 가중치 상향 등), MVP 단계에선 사용자 체감이 안 되는 로직 변경이라 보류
-- [ ] PWA 적용 (next-pwa)
-- [ ] 대중교통 예상 비용 (ODsay API)
+- [ ] 날씨 예보 기반 실내/실외 추천 가중치 조정
+- [ ] 애완동물 동반 장소 추천 및 온보딩 항목 추가
 - [ ] 다국어 지원
-
 
 ---
 
