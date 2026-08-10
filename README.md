@@ -171,17 +171,14 @@ stage5 상세 조회
 
 축제·행사 목록 자체는 이 파이프라인의 점수화에 관여하지 않는다 — searchFestival2와 공공데이터포털 문화축제 API를 병렬로 조회해 홈 화면에 별도로 표시한다.
 
-## 🎮 게이미피케이션 (3순위 예정 기능)
+## 📸 스크린샷
 
-강제하지 않는 경험치 시스템을 구상 중입니다. 외출을 마친 후 자연스럽게 쌓이는 기록을 목표로 하며, 아직 코드에는 반영되지 않았습니다.
-
-| 액션                | 경험치 |
-| ------------------- | ------ |
-| 외출 완료           | +30 XP |
-| 첫 지역 방문 보너스 | +10 XP |
-| 후기 작성 (선택)    | +5 XP  |
-
-레벨업 시 칭호 부여 (탐험가 → 지역 전문가 → …) — 예정된 설계안이며 구현 전입니다.
+| 화면 | 스크린샷 | 화면 | 스크린샷 |
+| --- | --- | --- | --- |
+| **온보딩 화면** (`OnboardingForm`)<br>yes/no 성향 질문 UI | <img src=".github/screenshots/OnboardingForm.png" width="160" /> | **홈 화면** (`HomeView`)<br>위치 기반 근처 장소·축제, 날씨 표시 | <img src=".github/screenshots/HomeView.png" width="160" /> |
+| **출발 설정 화면** (`StartView`)<br>외출 규모 선택 | <img src=".github/screenshots/StartView.png" width="160" /> | **코스 추천 화면** (`CourseResultView`)<br>지도 미리보기 + 거절 재추천 패널 | <img src=".github/screenshots/CourseResultView.png" width="160" /> |
+| **코스 진행 화면** (`CourseActiveView`)<br>장소 체크리스트 | <img src=".github/screenshots/CourseActiveView.png" width="160" /> | **주변 정보 시트** (`NearbyPanel`)<br>코스 진행 화면 → 주변 정보 보기 탭 | <img src=".github/screenshots/NearbyPanel.png" width="160" /> |
+| **코스 완료 화면** (`CourseDoneView`)<br>별점 후기 | <img src=".github/screenshots/CourseDoneView.png" width="160" /> | **프로필 화면** (`ProfileView`)<br>완료 기록 목록 | <img src=".github/screenshots/ProfileView.png" width="160" /> |
 
 ## 🚀 시작하기
 
@@ -220,7 +217,7 @@ CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
 
 ## 🧪 테스트 · CI/CD
 
-- `pnpm test`(vitest run) — 24개 파일, 175개 테스트 전부 통과
+- `pnpm test`(vitest run) — 30개 파일, 223개 테스트 전부 통과
 - `pnpm type-check`(tsc --noEmit) — 에러 0건
 - `pnpm lint`(eslint) — 에러 0건
 - CI(`.github/workflows/ci.yml`) — PR 시 lint → type-check → test → build 순으로 검증
@@ -253,10 +250,11 @@ CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
 
 ### 3순위 — 예정
 
-- [ ] 게이미피케이션 XP/레벨 실제 연동
-- [ ] 날씨 예보 기반 실내/실외 추천 가중치 조정 — 설계는 검토됨(비 예보 시 실내 태그 가중치 상향 등), MVP 단계에선 사용자 체감이 안 되는 로직 변경이라 보류
-- [ ] PWA 적용 (next-pwa)
-- [ ] 대중교통 예상 비용 (ODsay API)
+
+- [ ] 날씨 예보 기반 실내/실외 추천 가중치 조정
+- [ ] 애완동물 동반 장소 추천 및 온보딩 항목 추가
+
+
 - [ ] 다국어 지원
 
 
