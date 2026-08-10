@@ -187,27 +187,7 @@ pnpm db:push
 pnpm dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 확인할 수 있습니다.
-
-### 필수 환경 변수
-
-`.env.local` 파일을 직접 만들어 아래 값을 채워주세요 (저장소에 `.env.example`은 없습니다).
-
-```
-DATABASE_URL=          # Neon PostgreSQL 연결 URL
-BETTER_AUTH_SECRET=    # better-auth 세션 암호화 시크릿 키
-BETTER_AUTH_URL=       # 배포 환경 URL (better-auth trustedOrigins)
-NEXT_PUBLIC_APP_URL=   # 클라이언트 auth 요청 baseURL
-RESEND_API_KEY=        # Resend 이메일 발송 API 키
-RESEND_FROM_EMAIL=     # OTP 발신 이메일 주소
-TOUR_API_KEY=          # 한국관광공사 TourAPI 인증 키
-TOUR_API_BASE_URL=     # TourAPI 베이스 URL (선택, 기본값 있음)
-KAKAO_REST_KEY=        # Kakao REST API 키 (Local API)
-NEXT_PUBLIC_KAKAO_KEY= # Kakao 지도 SDK 앱 키
-WEATHER_API_KEY=       # 기상청 API 인증 키
-VWORLD_KEY=            # 국토교통부 브이월드 지오코더 API 인증 키
-CRON_SECRET=           # Vercel Cron 엔드포인트 인증 시크릿
-```
+DB(Neon)·인증(better-auth)·TourAPI·Kakao 등 외부 서비스 연동에 필요한 환경 변수 설정이 선행되어야 합니다. 브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 확인할 수 있습니다.
 
 ## 🧪 테스트 · CI/CD
 
