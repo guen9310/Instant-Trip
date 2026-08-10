@@ -1,6 +1,12 @@
 import type { WeatherItem, GridXY } from "@/shared/types/weather.types";
 import { getCached, setCached, setCachedEmpty, CACHE_EMPTY } from "@/lib/cache/dbCache";
 import { TTL } from "@/lib/cache/ttl";
+import {
+  kmaToWeatherCondition,
+  groupForecastByTime,
+  findUpcomingWeatherChange,
+  type WeatherForecastAlert,
+} from "@/shared/utils/weatherContext";
 
 export type { WeatherItem, GridXY };
 
@@ -309,21 +315,40 @@ export async function getUltraSrtNcst(
   }
 }
 
-// 로드맵 예정 기능용, 현재 미사용
 export async function getUltraSrtFcst(
   nx: number,
   ny: number,
   now: Date = new Date(),
 ): Promise<WeatherItem[]> {
+  const { base_date, base_time } = getSrtFcstBaseTime(now);
+  // getUltraSrtNcst와 동일한 격자+발표시각 단위 캐시.
+  const cacheKey = `weather:fcst:${nx}:${ny}:${base_date}:${base_time}`;
+
+  const cached = await getCached<WeatherItem[]>(cacheKey);
+  if (cached === CACHE_EMPTY) {
+    console.log(`[weather] fcst 캐시 EMPTY — nx=${nx} ny=${ny} (${base_time})`);
+    return [];
+  }
+  if (cached !== null) {
+    console.log(`[weather] fcst 캐시 HIT — nx=${nx} ny=${ny} (${base_time})`);
+    return cached;
+  }
+
   try {
-    const { base_date, base_time } = getSrtFcstBaseTime(now);
     const data = await weatherFetch<WeatherItem>("getUltraSrtFcst", {
       nx,
       ny,
       base_date,
       base_time,
     });
-    return extractWeatherItems(data);
+    const items = extractWeatherItems(data);
+    if (items.length === 0) {
+      await setCachedEmpty(cacheKey, TTL.WEATHER_FCST);
+    } else {
+      await setCached(cacheKey, items, TTL.WEATHER_FCST);
+    }
+    console.log(`[weather] fcst nx=${nx} ny=${ny} (${base_time}) → ${items.length}건`);
+    return items;
   } catch {
     return [];
   }
@@ -358,4 +383,27 @@ export async function getCurrentWeather(
   return Object.fromEntries(
     items.map((item) => [item.category, item.obsrValue ?? ""]),
   );
+}
+
+// 현재 실황과 비교해 windowHours 이내에 날씨가 나빠지는(맑음→흐림→비/눈) 첫 시점이
+// 있으면 안내 대상으로 반환한다. 변화가 없거나 API 실패 시 null.
+export async function getWeatherForecastAlert(
+  lat: number,
+  lng: number,
+  windowHours: number,
+  now: Date = new Date(),
+): Promise<WeatherForecastAlert | null> {
+  const { nx, ny } = latlngToGrid(lat, lng);
+  const [currentItems, forecastItems] = await Promise.all([
+    getUltraSrtNcst(nx, ny, now),
+    getUltraSrtFcst(nx, ny, now),
+  ]);
+
+  const currentWeather = Object.fromEntries(
+    currentItems.map((item) => [item.category, item.obsrValue ?? ""]),
+  );
+  const currentCondition = kmaToWeatherCondition(currentWeather);
+  const forecast = groupForecastByTime(forecastItems);
+
+  return findUpcomingWeatherChange(forecast, now, currentCondition, windowHours);
 }

@@ -27,6 +27,13 @@ export const nearbyPoisInputSchema = z.object({
   lng: longitudeSchema,
 });
 
+export const weatherForecastAlertInputSchema = z.object({
+  lat: latitudeSchema,
+  lng: longitudeSchema,
+  // 초단기예보 제공 범위(발표시각 기준 최대 6시간)를 상한으로 둔다.
+  windowHours: z.number().int().min(1).max(6),
+});
+
 export const generateCourseInputSchema = z.object({
   mapX: longitudeSchema,
   mapY: latitudeSchema,

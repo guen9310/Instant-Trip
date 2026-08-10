@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Check, MapPin, Clock, AlertTriangle, ChevronDown } from "lucide-react";
+import { ExternalLink, Check, MapPin, Clock, AlertTriangle, ChevronDown, CloudRain } from "lucide-react";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyPanel } from "@/components/domains/course/NearbyPanel";
 import { cn, isBlank } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
 import { Button } from "@/components/commons/Button";
 import { useCourseActive } from "@/client/hooks/useCourseActive";
+import { useWeatherForecastAlertQuery } from "@/client/hooks/useWeatherForecastAlertQuery";
 import type { ResumableCourse } from "@/shared/types/course.types";
 
 type Props = {
@@ -17,10 +18,20 @@ type Props = {
   dbFallback: ResumableCourse | null;
 };
 
+// 진행 중인 외출은 "곧" 비가 오는지가 중요하므로 홈보다 짧은 창을 본다.
+const FORECAST_WINDOW_HOURS = 1;
+
 export function CourseActiveView({ courseId, dbFallback }: Props) {
   const state = useCourseActive(courseId, dbFallback);
   const [descOpen, setDescOpen] = useState(false);
   const [nearbyExpanded, setNearbyExpanded] = useState(true);
+
+  const weatherCoord = state.status === "ready" ? state.placeCoord : null;
+  const { data: forecastAlert } = useWeatherForecastAlertQuery(
+    weatherCoord?.lat ?? null,
+    weatherCoord?.lng ?? null,
+    FORECAST_WINDOW_HOURS,
+  );
 
   if (state.status === "loading") {
     return (
@@ -31,6 +42,11 @@ export function CourseActiveView({ courseId, dbFallback }: Props) {
   }
 
   const { place, placeCoord, cat, setCat, filteredPois, poisLoading, selectedPoiId, selectPoi, handleComplete } = state;
+  // 우산 안내는 비/눈으로 바뀔 때만 의미가 있다(흐려지거나 갤 땐 카드를 띄우지 않는다).
+  const rainAlert =
+    forecastAlert && (forecastAlert.condition === "rain" || forecastAlert.condition === "snow")
+      ? forecastAlert
+      : null;
 
   return (
     <>
@@ -115,6 +131,26 @@ export function CourseActiveView({ courseId, dbFallback }: Props) {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 날씨 예보 카드 — 비/눈이 임박했을 때만 표시 */}
+          {rainAlert && (
+            <div className="flex items-center gap-3 rounded-xl bg-card border border-border px-4 py-3">
+              <div className="w-8 h-8 rounded-full bg-point/10 flex items-center justify-center shrink-0">
+                <CloudRain size={15} strokeWidth={2} className="text-point" />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold text-text-secondary uppercase tracking-wide mb-0.5">
+                  곧 예보
+                </p>
+                <p className="text-[15px] font-bold text-text-primary">
+                  {rainAlert.hoursAhead}시간 뒤 {rainAlert.condition === "snow" ? "눈" : "비"} 예상
+                </p>
+                <p className="text-[11px] text-text-secondary mt-0.5">
+                  우산을 챙기시는 걸 추천해요
+                </p>
+              </div>
             </div>
           )}
 

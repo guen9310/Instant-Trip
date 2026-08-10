@@ -33,3 +33,14 @@ export function getKstDateString(now: Date = new Date()): string {
 export function getKstDateYYYYMMDD(now: Date = new Date()): string {
   return getKstDateString(now).replace(/-/g, "");
 }
+
+// "YYYYMMDD" + "HHmm" (기상청 fcstDate/fcstTime, KST 기준) → 실제 시각의 Date.
+// KST 필드를 UTC 필드로 읽어들인 뒤 -9h 시프트 — server/weather.ts의 toKST()(+9h)의 역연산.
+export function parseKstDateTime(fcstDate: string, fcstTime: string): Date {
+  const y = Number(fcstDate.slice(0, 4));
+  const mo = Number(fcstDate.slice(4, 6)) - 1;
+  const d = Number(fcstDate.slice(6, 8));
+  const h = Number(fcstTime.slice(0, 2));
+  const mi = Number(fcstTime.slice(2, 4));
+  return new Date(Date.UTC(y, mo, d, h, mi) - 9 * 60 * 60 * 1000);
+}

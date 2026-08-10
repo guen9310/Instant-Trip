@@ -1,5 +1,6 @@
 import { PartyPopper } from "lucide-react";
 import { SelectCard } from "@/components/commons/SelectCard";
+import { AttributionNotice } from "@/components/commons/AttributionNotice";
 import type { FestivalSummary } from "@/shared/types/course.types";
 import { cn } from "@/shared/utils";
 
@@ -12,8 +13,11 @@ type Props = {
 export function FestivalSection({ festivals, startingId, onSelectFestival }: Props) {
   return (
     <section className="mb-6">
-      <h2 className="text-[15px] font-bold text-text-primary tracking-tight mb-3">
+      <h2 className="flex items-center gap-1 text-[15px] font-bold text-text-primary tracking-tight mb-3">
         주변 축제
+        <AttributionNotice>
+          문화체육관광부·한국관광공사 제공
+        </AttributionNotice>
       </h2>
       <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
         {festivals.map((f) => (
