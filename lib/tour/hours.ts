@@ -233,6 +233,14 @@ export interface CheckOptions {
   now?: Date;
   /** 예상 체류시간(분). 넘기면 insufficient_time 판정도 함께 수행 */
   expectedDurationMinutes?: number;
+  /**
+   * 이 판정에 restdate라는 개념 자체가 존재하는지 여부. 기본값 true(존재함).
+   * 축제 playtime 판정(selectFestival.ts)처럼 요일별 휴무 개념이 애초에 없어 restdateRaw를
+   * 항상 null로 넘기는 호출부는 false를 지정해야 한다 — 그래야 "restdate 필드가 비어서
+   * 휴무 여부를 모른다"는 불확실성 강등이 "이 판정엔 restdate가 원래 없다"는 정상 케이스에
+   * 잘못 적용되지 않는다.
+   */
+  restDateApplicable?: boolean;
 }
 
 export function checkOpenByDayAwareHours(
@@ -247,6 +255,14 @@ export function checkOpenByDayAwareHours(
   if (closedDays.includes(today)) {
     return { status: "closed_restday", reason: "오늘은 정기 휴무일입니다." };
   }
+
+  // restdateRaw 자체가 없으면 parseRestDate가 "휴무일 없음"과 구분 없이 []를 반환한다.
+  // 이는 "확인해봤더니 휴무가 없다"가 아니라 "휴무 여부를 알 수 없다"이므로, 이 상태로
+  // 시간대 조건만 맞춰서 open을 확정하면 안 된다 — 아래 open 판정 분기에서 uncertain으로
+  // 강등시킨다 (판정 자체를 막지는 않는다: no_data/uncertain과 마찬가지로 호출부가
+  // 관대하게 채택할 수 있는 상태).
+  const restDateInfoMissing =
+    (options.restDateApplicable ?? true) && (!restdateRaw || !restdateRaw.trim());
 
   if (!usetimeRaw || !usetimeRaw.trim()) {
     return { status: "no_data", reason: "이용시간 정보가 등록되어 있지 않습니다." };
@@ -294,7 +310,24 @@ export function checkOpenByDayAwareHours(
         canCompleteVisit: false,
       };
     }
+    if (restDateInfoMissing) {
+      return {
+        status: "uncertain",
+        reason: "휴무일 정보가 없어 실제 운영 여부를 확인해주세요.",
+        closesAt,
+        admissionCutoffAt,
+      };
+    }
     return { status: "open", reason: "지금 입장 가능합니다.", closesAt, admissionCutoffAt, canCompleteVisit: true };
+  }
+
+  if (restDateInfoMissing) {
+    return {
+      status: "uncertain",
+      reason: "휴무일 정보가 없어 실제 운영 여부를 확인해주세요.",
+      closesAt,
+      admissionCutoffAt,
+    };
   }
 
   return { status: "open", reason: "지금 입장 가능합니다.", closesAt, admissionCutoffAt };
