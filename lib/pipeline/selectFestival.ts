@@ -103,7 +103,7 @@ export async function generateCourseFromFestival(
     } else if (!playtime) {
       dayStatus = "no_data";
     } else {
-      dayStatus = checkOpenByDayAwareHours(playtime, null).status;
+      dayStatus = checkOpenByDayAwareHours(playtime, null, { restDateApplicable: false }).status;
     }
 
     const period = `${formatShortDate(startDate)} ~ ${formatShortDate(endDate)}`;

@@ -101,7 +101,9 @@ describe("실제 TourAPI 샘플 기반 회귀 테스트", () => {
 
   it("체류시간이 남은 시간보다 길면 insufficient_time (기존 스크린샷 버그 케이스)", () => {
     const usetime = "10:00~18:00(입장마감 17:00)";
-    const restdate = "";
+    // restdate는 "연중무휴"로 명시해 이 테스트의 관심사(체류시간 경계값)를
+    // restdate 누락 시 uncertain으로 강등되는 별도 로직과 분리한다.
+    const restdate = "연중무휴";
 
     const result = checkOpenByDayAwareHours(usetime, restdate, {
       now: new Date("2026-08-06T16:30:00"),
@@ -123,6 +125,31 @@ describe("실제 TourAPI 샘플 기반 회귀 테스트", () => {
     });
 
     expect(result.status).toBe("uncertain");
+  });
+
+  it("[고복수음악관 버그 케이스] usetime은 있지만 restdate가 빈 문자열이면 open이 아니라 uncertain이다", () => {
+    const usetime = "10:00~18:00";
+    const restdate = "";
+
+    const result = checkOpenByDayAwareHours(usetime, restdate, {
+      now: new Date("2026-08-06T12:00:00"), // usetime 범위 내 시각
+    });
+
+    // restdate가 비어있는 건 "휴무일이 없음이 확인됨"이 아니라 "휴무일을 알 수 없음"이므로
+    // 시간대만 맞는다고 open을 확정해서는 안 된다 — 운영시간 확인 카드를 띄우기 위해
+    // availabilityUncertain=true로 이어지는 uncertain을 반환해야 한다.
+    expect(result.status).toBe("uncertain");
+  });
+
+  it("usetime과 restdate가 모두 명시적으로 채워져 있으면 여전히 open으로 확정된다", () => {
+    const usetime = "10:00~18:00";
+    const restdate = "매주 월요일";
+
+    const result = checkOpenByDayAwareHours(usetime, restdate, {
+      now: new Date("2026-08-06T12:00:00"), // 목요일, usetime 범위 내
+    });
+
+    expect(result.status).toBe("open");
   });
 });
 
