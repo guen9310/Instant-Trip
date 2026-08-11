@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { DEFAULT_PREFS, PREF_META, type Prefs, type PrefKey } from "@/shared/constants/preferences";
@@ -66,6 +67,7 @@ export function OnboardingForm() {
   const router = useRouter();
   const setPrefs = usePrefsStore((s) => s.setPrefs);
   const [stepIdx, setStepIdx] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Partial<Prefs>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export function OnboardingForm() {
 
   const handleBack = () => {
     const prevIdx = stepIdx - 1;
+    setDirection(-1);
     setStepIdx(prevIdx);
     setSelectedValue(answers[STEPS[prevIdx].id] ?? null);
   };
@@ -103,6 +106,7 @@ export function OnboardingForm() {
           setSaveError("저장에 실패했어요. 다시 시도해 주세요.");
         }
       } else {
+        setDirection(1);
         setStepIdx((prev) => prev + 1);
         setSelectedValue(null);
       }
@@ -150,29 +154,40 @@ export function OnboardingForm() {
           </p>
         )}
 
-        <div className={cn("flex flex-1 flex-col justify-start", stepIdx > 0 && "pt-[18%]")}>
-          <h1 className="mb-2 text-balance text-center text-[28px] font-bold tracking-tight text-text-primary">
-            {step.question}
-          </h1>
-          <p className="mb-9 text-center text-[14px] text-text-secondary">
-            {step.subtitle}
-          </p>
+        <div className={cn("flex flex-1 flex-col justify-start overflow-hidden", stepIdx > 0 && "pt-[18%]")}>
+          <AnimatePresence mode="wait" initial={false} custom={direction}>
+            <motion.div
+              key={stepIdx}
+              custom={direction}
+              initial={{ opacity: 0, x: direction > 0 ? 24 : -24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: direction > 0 ? -24 : 24 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              <h1 className="mb-2 text-balance text-center text-[28px] font-bold tracking-tight text-text-primary">
+                {step.question}
+              </h1>
+              <p className="mb-9 text-center text-[14px] text-text-secondary">
+                {step.subtitle}
+              </p>
 
-          <div className="grid grid-cols-2 gap-3">
-            {step.options.map((opt) => {
-              const Icon = opt.icon;
-              return (
-                <OnboardCard
-                  key={opt.id}
-                  selected={selectedValue === opt.id}
-                  onClick={() => handleChoose(opt.id)}
-                  icon={<Icon size={32} className={opt.iconClass} strokeWidth={1.8} />}
-                  title={opt.title}
-                  desc={opt.desc}
-                />
-              );
-            })}
-          </div>
+              <div className="grid grid-cols-2 gap-3">
+                {step.options.map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <OnboardCard
+                      key={opt.id}
+                      selected={selectedValue === opt.id}
+                      onClick={() => handleChoose(opt.id)}
+                      icon={<Icon size={32} className={opt.iconClass} strokeWidth={1.8} />}
+                      title={opt.title}
+                      desc={opt.desc}
+                    />
+                  );
+                })}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 

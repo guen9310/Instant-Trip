@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Settings2,
   Clock,
@@ -459,9 +460,25 @@ export function CourseResultView({
           <HoursInfoCard placeName={currentPlace.name} />
         )}
 
-        {/* 소개 — 2줄 클램프 + 더보기/접기 토글 */}
+        {/* 소개 — 2줄 클램프 + 더보기/접기 토글. AnimatePresence는 mode="wait"를 쓰지
+            않는다 — PlaceDescription은 key 변경 시 리마운트되어 마운트 직후 useEffect로
+            hasMore(ref.scrollHeight)를 측정하는데, "wait"는 이전 요소의 exit 애니메이션이
+            끝날 때까지 새 요소 마운트 자체를 늦춰 크로스페이드가 아니라 순차 전환이
+            돼버린다. popLayout은 exit 중인 요소를 즉시 flow에서 빼(absolute) 새 요소가
+            바로 그 자리에서 마운트·측정되게 하면서도 두 요소가 겹쳐 있는 동안 레이아웃
+            높이가 늘어나는 튐을 막는다. */}
         {currentPlace.desc?.trim() && (
-          <PlaceDescription key={currentPlace.id} desc={currentPlace.desc} />
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={currentPlace.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <PlaceDescription desc={currentPlace.desc} />
+            </motion.div>
+          </AnimatePresence>
         )}
 
         {/* 축제 전용 — 행사 프로그램. programInfo가 없으면(장소이거나 Tour API 미매칭
@@ -533,92 +550,110 @@ export function CourseResultView({
       </div>
 
       {/* CTA 바 */}
-      <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
-        {rejectPanelOpen ? (
-          rerolling ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-4">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-[14px] text-text-secondary">새로운 장소를 찾는 중...</p>
-            </div>
+      <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2 overflow-hidden">
+        <AnimatePresence mode="wait" initial={false}>
+          {rejectPanelOpen ? (
+            <motion.div
+              key="reject-panel"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="flex flex-col gap-2"
+            >
+              {rerolling ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-4">
+                  <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <p className="text-[14px] text-text-secondary">새로운 장소를 찾는 중...</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-muted-foreground text-center">
+                    거절한 장소는 다음 추천에서 제외돼요
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {REJECT_REASONS.map((r) => {
+                      const sel = rejectReason === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => setRejectReason(r.id)}
+                          className={cn(
+                            "p-3.5 rounded-[10px] border flex flex-col items-center gap-2 transition-colors",
+                            sel
+                              ? "bg-primary/5 border-primary text-primary"
+                              : "bg-background border-border text-text-secondary",
+                          )}
+                        >
+                          <r.icon size={20} />
+                          <span className="text-[13px] font-medium">{r.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Button size="cta" disabled={!rejectReason} onClick={confirmReject}>
+                    여기 말고 다른 곳으로
+                  </Button>
+                  <button
+                    onClick={closeRejectPanel}
+                    className="w-full h-10 text-[13px] font-medium text-text-secondary"
+                  >
+                    취소
+                  </button>
+                </>
+              )}
+            </motion.div>
           ) : (
-            <>
-              <p className="text-[11px] text-muted-foreground text-center">
-                거절한 장소는 다음 추천에서 제외돼요
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {REJECT_REASONS.map((r) => {
-                  const sel = rejectReason === r.id;
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => setRejectReason(r.id)}
-                      className={cn(
-                        "p-3.5 rounded-[10px] border flex flex-col items-center gap-2 transition-colors",
-                        sel
-                          ? "bg-primary/5 border-primary text-primary"
-                          : "bg-background border-border text-text-secondary",
-                      )}
-                    >
-                      <r.icon size={20} />
-                      <span className="text-[13px] font-medium">{r.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <Button size="cta" disabled={!rejectReason} onClick={confirmReject}>
-                여기 말고 다른 곳으로
-              </Button>
-              <button
-                onClick={closeRejectPanel}
-                className="w-full h-10 text-[13px] font-medium text-text-secondary"
-              >
-                취소
-              </button>
-            </>
-          )
-        ) : (
-          <>
-            {/* 예정(시작 전) 축제는 "여기로 갈게요"가 성립하지 않는다 — 진행 화면은
-                "지금 그 장소에 가 있다"를 전제로 하는데 아직 시작도 안 했기 때문이다.
-                버튼 대신 안내문으로 대체하고 액션은 없다(종료된 축제는 목록에 나온 적이
-                없어 여기서 다루지 않는다 — splitOngoingUpcoming이 ongoing/upcoming만 반환). */}
-            {currentPlace.festivalPhase === "upcoming" ? (
-              <div className="w-full h-13 rounded-full bg-muted text-text-secondary text-[15px] font-semibold flex items-center justify-center">
-                {currentPlace.festivalStartLabel}부터 방문할 수 있어요
-              </div>
-            ) : (
-              <Button size="cta" className="w-full" onClick={handleStart}>
-                여기로 갈게요
-              </Button>
-            )}
-            {/* 외출 다시 정하기·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
-                사용자가 직접 고른 장소(origin="selected": 홈 인기 장소·주변 축제 선택 둘 다)
-                에는 성립하지 않는다. "외출 다시 정하기"는 /start(여유 시간 재선택)로
-                보낼 뿐 취향(travel/party/vibe/food/indoor) 자체는 그대로 재사용된다 —
-                취향 편집은 설정/온보딩에만 있으므로 "취향 다시 설정"이라는 이전 문구는
-                이 화면이 실제로 하는 일과 어긋났다. */}
-            {currentPlace.origin !== "selected" && (
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => router.push("/start")}
-                  className="h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
-                >
-                  <Settings2 size={15} /> 다시 정하기
-                </button>
-                <button
-                  onClick={openRejectPanel}
-                  disabled={isMaxRerolls || rerolling}
-                  className={cn(
-                    "h-12 text-[15px] font-medium text-point flex items-center justify-center gap-1.5",
-                    (isMaxRerolls || rerolling) && "opacity-40 cursor-not-allowed",
-                  )}
-                >
-                  <ThumbsDown size={15} /> 이런 곳은 싫어요
-                </button>
-              </div>
-            )}
-          </>
-        )}
+            <motion.div
+              key="cta"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="flex flex-col gap-2"
+            >
+              {/* 예정(시작 전) 축제는 "여기로 갈게요"가 성립하지 않는다 — 진행 화면은
+                  "지금 그 장소에 가 있다"를 전제로 하는데 아직 시작도 안 했기 때문이다.
+                  버튼 대신 안내문으로 대체하고 액션은 없다(종료된 축제는 목록에 나온 적이
+                  없어 여기서 다루지 않는다 — splitOngoingUpcoming이 ongoing/upcoming만 반환). */}
+              {currentPlace.festivalPhase === "upcoming" ? (
+                <div className="w-full h-13 rounded-full bg-muted text-text-secondary text-[15px] font-semibold flex items-center justify-center">
+                  {currentPlace.festivalStartLabel}부터 방문할 수 있어요
+                </div>
+              ) : (
+                <Button size="cta" className="w-full" onClick={handleStart}>
+                  여기로 갈게요
+                </Button>
+              )}
+              {/* 외출 다시 정하기·재추천 — 둘 다 취향 기반 추천이 마음에 안 들 때의 탈출구라,
+                  사용자가 직접 고른 장소(origin="selected": 홈 인기 장소·주변 축제 선택 둘 다)
+                  에는 성립하지 않는다. "외출 다시 정하기"는 /start(여유 시간 재선택)로
+                  보낼 뿐 취향(travel/party/vibe/food/indoor) 자체는 그대로 재사용된다 —
+                  취향 편집은 설정/온보딩에만 있으므로 "취향 다시 설정"이라는 이전 문구는
+                  이 화면이 실제로 하는 일과 어긋났다. */}
+              {currentPlace.origin !== "selected" && (
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={() => router.push("/start")}
+                    className="h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center gap-1.5"
+                  >
+                    <Settings2 size={15} /> 다시 정하기
+                  </button>
+                  <button
+                    onClick={openRejectPanel}
+                    disabled={isMaxRerolls || rerolling}
+                    className={cn(
+                      "h-12 text-[15px] font-medium text-point flex items-center justify-center gap-1.5",
+                      (isMaxRerolls || rerolling) && "opacity-40 cursor-not-allowed",
+                    )}
+                  >
+                    <ThumbsDown size={15} /> 이런 곳은 싫어요
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* 진행 중인 외출 종료 확인 모달 */}
