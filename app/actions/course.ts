@@ -22,6 +22,7 @@ import type {
   NearbyCategory,
   NearbyPoi,
   FestivalSummary,
+  WeatherSwitchReason,
 } from "@/shared/types/course.types";
 import {
   generateCourseFromFestivalInputSchema,
@@ -42,6 +43,7 @@ type GenerateCourseResult =
       place: JourneyPlace;
       courseName: string;
       festivals: FestivalSummary[];
+      weatherSwitch: WeatherSwitchReason | null;
     }
   // NO_PLACE: 반경 내 적합한 장소 없음 — radiusM은 실제 검색에 사용된 반경
   | { ok: false; code: "NO_PLACE"; error: string; radiusM: number }
@@ -137,8 +139,17 @@ export async function generateCourseAction(
   }
 
   try {
-    const { mapX, mapY, scale, prefs, excludeIds, radiusM, maxDistanceKm, strictOpenOnly } =
-      parsed.data;
+    const {
+      mapX,
+      mapY,
+      scale,
+      prefs,
+      excludeIds,
+      radiusM,
+      maxDistanceKm,
+      strictOpenOnly,
+      debugWeather,
+    } = parsed.data;
     const profile = {
       ...prefsToProfile(prefs, { mapX, mapY }, scale),
       radiusOverrideM: radiusM,
@@ -148,11 +159,16 @@ export async function generateCourseAction(
       authState.session.user.id,
       cooldownSince,
     );
+    // debugWeather는 항상 파싱은 되지만, 이 환경변수가 켜져 있을 때만 실제로
+    // 반영한다 — 데모/QA 전용 스위치를 운영 환경과 분리하기 위함(PR 설계 참고).
+    const weatherOverride =
+      process.env.WEATHER_GATE_DEBUG_ENABLED === "true" ? debugWeather : undefined;
     const { course } = await generateCourse(profile, {
       excludeIds,
       excludeCoords,
       maxDistanceKm,
       strictOpenOnly,
+      weatherOverride,
     });
 
     if (!course.mainPlace) {
@@ -169,7 +185,14 @@ export async function generateCourseAction(
     const courseName = course.mainPlace.title;
     const festivals = courseResultToFestivalSummaries(course);
 
-    return { ok: true, courseId, place, courseName, festivals };
+    return {
+      ok: true,
+      courseId,
+      place,
+      courseName,
+      festivals,
+      weatherSwitch: course.weatherSwitch ?? null,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "추천 중 오류가 발생했어요.";
     return { ok: false, code: "UNKNOWN", error: message };
