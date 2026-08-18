@@ -2,17 +2,14 @@ import type { TourItem } from "@/lib/tour/types";
 
 export type IndoorOutdoorClass = "indoor" | "outdoor" | "unknown";
 
-// 레포츠(contenttypeid=28) 카테고리는 관광공사 코드북에 실내/실외를 구분하는
-// lclsSystm 세부 코드가 없다(프로젝트 전체 조사 완료 — 문서화된 코드 없음).
-// 제목 키워드로 보조 판별한다 — 이 함수에서 가장 불확실한 지점이며 오탐 가능성을
-// 내포한 채로 쓴다. 정식 코드북이 생기면 이 배열을 대체해야 한다.
+// 레포츠(28)는 관광공사 코드북에 실내/실외 구분 코드가 없어 제목 키워드로 보조
+// 판별한다 — 가장 불확실한 지점, 정식 코드북이 생기면 대체할 것.
 const INDOOR_LEISURE_KEYWORDS = [
   "실내", "클라이밍", "볼링", "스크린골프", "찜질방", "사우나", "수영장",
 ];
 
-// scoring.ts의 TAG_MAPPING_RULES와 동일한 관행: contenttypeid 규칙은 TourAPI
-// 출처(source!=="kakao")에만 적용한다. Kakao 후보는 contenttypeid(12/14)가 버킷
-// 편의용으로만 부여됐을 뿐이라 신뢰할 수 없고, kakaoCategory로만 판별한다.
+// Kakao 후보는 contenttypeid가 버킷 편의용으로만 부여돼 신뢰 불가 —
+// kakaoCategory로만 판별한다(scoring.ts TAG_MAPPING_RULES와 동일 관행).
 export function classifyIndoorOutdoor(item: TourItem): IndoorOutdoorClass {
   const isKakao = item.source === "kakao";
 
@@ -24,6 +21,9 @@ export function classifyIndoorOutdoor(item: TourItem): IndoorOutdoorClass {
   if (item.kakaoCategory === "AT4") return "outdoor";
 
   if (!isKakao && item.contenttypeid === "28") {
+    // 제목의 명시적 "실외" 표기가 키워드 추측보다 우선 (예: "OO수영장(실외)").
+    if (item.title.includes("실외")) return "outdoor";
+
     const hit = INDOOR_LEISURE_KEYWORDS.find((kw) => item.title.includes(kw));
     if (hit) {
       console.log(

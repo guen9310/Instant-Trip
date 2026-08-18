@@ -61,6 +61,16 @@ describe("classifyIndoorOutdoor", () => {
     ).toBe("outdoor");
   });
 
+  // 실측 재현(pnpm pipeline --weather) — "수영장"은 실내/실외 둘 다 쓰이는 단어라,
+  // 제목의 명시적 "(실외)" 표기가 키워드 추측을 이겨야 한다.
+  it("레포츠(28) + 제목에 '수영장'과 '실외'가 함께 있으면 → outdoor(명시적 표기 우선)", () => {
+    expect(
+      classifyIndoorOutdoor(
+        makeItem({ contenttypeid: "28", title: "한강시민공원 뚝섬수영장(실외)" }),
+      ),
+    ).toBe("outdoor");
+  });
+
   it("그 외 contenttypeid(예: 15 행사) → unknown", () => {
     expect(classifyIndoorOutdoor(makeItem({ contenttypeid: "15" }))).toBe("unknown");
   });
