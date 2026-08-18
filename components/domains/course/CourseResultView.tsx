@@ -71,10 +71,8 @@ const REASON_CHIP_FALLBACK_TEXT: Partial<Record<ReasonChipKind, string>> = {
   far: "이 근처엔 더 가까운 곳이 없었어요",
 };
 
-// 날씨 게이트(lib/pipeline/weatherGate.ts)가 실외 1순위 후보를 실내로 전환했을 때
-// 안내하는 카드 — rerollExhausted 카드와 같은 구조지만, 경고가 아니라 도움이 되는
-// 안내라 point 대신 primary 톤을 쓴다. 원래 추천했을 장소명은 일부러 보여주지 않는다
-// — "대신 추천 안 한 곳"을 노출하는 건 혼란만 준다는 판단(2026-08-18 피드백).
+// 실외→실내 전환 안내 — rerollExhausted와 같은 구조지만 경고가 아니라 point 대신
+// primary 톤. 원래 장소명은 노출하지 않는다(혼란만 준다).
 const WEATHER_SWITCH_ICON: Record<WeatherSwitchReason, LucideIcon> = {
   rain: CloudRain,
   snow: CloudSnow,

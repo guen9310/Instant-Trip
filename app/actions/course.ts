@@ -159,8 +159,7 @@ export async function generateCourseAction(
       authState.session.user.id,
       cooldownSince,
     );
-    // debugWeather는 항상 파싱은 되지만, 이 환경변수가 켜져 있을 때만 실제로
-    // 반영한다 — 데모/QA 전용 스위치를 운영 환경과 분리하기 위함(PR 설계 참고).
+    // 데모/QA 전용 — 이 환경변수가 켜져 있을 때만 반영한다.
     const weatherOverride =
       process.env.WEATHER_GATE_DEBUG_ENABLED === "true" ? debugWeather : undefined;
     const { course } = await generateCourse(profile, {

@@ -410,11 +410,8 @@ export async function getWeatherForecastAlert(
   return findUpcomingWeatherChange(forecast, now, currentCondition, windowHours);
 }
 
-// 날씨 적응형 추천 전환(lib/pipeline/weatherGate.ts)이 쓰는 "지금~windowHours 이내
-// 최악의 날씨" 신호. getUltraSrtNcst/getUltraSrtFcst는 내부에서 이미 에러를 삼키고
-// 빈 배열을 반환하므로, API 장애 시 resolveWeatherGateSignal이 자동으로
-// condition:"clear"/isHeatwave:false(무감점)로 fail-open된다 — 별도 try/catch 없이도
-// availabilityGate.ts의 "판정 불가는 관대 통과" 철학과 동일하게 동작한다.
+// weatherGate.ts가 쓰는 "지금~windowHours 최악 날씨" 신호. 두 API 모두 실패 시
+// []를 반환하므로 장애 시 자동으로 무감점(clear) 폴백된다.
 export async function getWeatherGateSignal(
   lat: number,
   lng: number,

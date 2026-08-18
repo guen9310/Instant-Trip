@@ -34,9 +34,7 @@ function recordAbandonedIfAny() {
   }
 }
 
-// 데모/QA 전용 — /start?debugWeather=rain 같은 쿼리 파라미터로 날씨 게이트를 강제
-// 트리거한다. 서버(app/actions/course.ts)가 WEATHER_GATE_DEBUG_ENABLED 환경변수가
-// 켜져 있을 때만 실제로 반영하므로, 여기서 유효하지 않은 값을 걸러내는 정도로 충분하다.
+// 데모/QA 전용 — /start?debugWeather=rain으로 날씨 게이트를 강제 트리거한다.
 const DEBUG_WEATHER_VALUES = ["clear", "cloudy", "rain", "snow", "heatwave"] as const;
 type DebugWeather = (typeof DEBUG_WEATHER_VALUES)[number];
 

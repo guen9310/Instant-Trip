@@ -21,9 +21,7 @@ export type ForecastPoint = {
   tempC: number | null;
 };
 
-// 기온 파싱 — 초단기실황/예보는 T1H 카테고리를 쓴다. TMP는 단기예보(getVilageFcst,
-// 3일 범위, 현재 미사용) 전용 카테고리라 여기선 절대 읽지 않는다 — CATEGORY_LABEL에
-// 둘 다 "기온(°C)"으로 라벨링돼 있어 헷갈리기 쉬우니 주의.
+// 초단기실황/예보는 기온을 T1H로 준다 — TMP는 단기예보(미사용) 전용이라 혼동 주의.
 function parseTempC(weather: Record<string, string>): number | null {
   const raw = weather.T1H;
   if (raw === undefined || raw === "") return null;
@@ -81,14 +79,12 @@ export function findUpcomingWeatherChange(
 }
 
 // ─── 날씨 게이트(실외→실내 추천 전환) ────────────────────────────────────────
-// lib/pipeline/weatherGate.ts가 소비하는 순수 판정 로직. 여기서는 날씨 데이터를
-// "얼마나 나쁜가" 신호 하나로 축약하기만 하고, 그 신호를 추천 점수에 어떻게
-// 반영할지는 파이프라인 계층(lib/)의 책임이다.
+// lib/pipeline/weatherGate.ts가 쓰는 순수 판정 로직 — 날씨를 "얼마나 나쁜가" 신호로
+// 축약할 뿐, 추천 점수 반영은 파이프라인 계층 책임이다.
 
+// 기상청 폭염주의보(일 최고 33℃) 기준 — 공식 특보의 "2일 지속" 요건은 반영 안 된
+// 순간값 프록시다.
 export const HEATWAVE_THRESHOLD_C = 33;
-// 기상청 폭염주의보(일 최고기온 33℃ 이상) 기준을 차용했다. 다만 공식 특보는
-// "2일 이상 지속 예상"까지 요구하는 반면, 이 기능은 초단기실황/예보(최대 6시간)만
-// 보므로 순간값 기준 프록시일 뿐이다 — 실제 특보 발령 여부와 다를 수 있다.
 
 export function isAdverseWeather(condition: WeatherCondition): boolean {
   return condition === "rain" || condition === "snow";
@@ -116,10 +112,8 @@ export type WeatherGateSignal = {
   hoursAhead: number;
 };
 
-// 현재 실황(currentWeather)과 창 안의 예보(forecast)를 합쳐 "방문 시점 날씨"를
-// 하나의 신호로 축약한다. 이 코스 파이프라인은 "지금 당장 가는 단일 장소"만
-// 만들어(방문 예상 시간대를 별도로 계산하지 않음) 실제 방문 시각을 모른다 —
-// now~now+windowHours 중 최악값을 근사치로 쓴다.
+// 현재 실황+창 안의 예보를 "방문 시점 날씨" 신호 하나로 축약한다(실제 방문 시각을
+// 몰라 now~now+windowHours 중 최악값을 쓴다).
 export function resolveWeatherGateSignal(
   currentWeather: Record<string, string>,
   forecast: ForecastPoint[],
