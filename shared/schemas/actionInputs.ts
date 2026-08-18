@@ -48,6 +48,10 @@ export const generateCourseInputSchema = z.object({
   // "시간이 안 맞아요" 거절 리롤 전용 — no_data/uncertain도 채택하는 기본 게이트 대신
   // 실측으로 "open"이 확인된 후보만 채택한다.
   strictOpenOnly: z.boolean().optional(),
+  // 데모/QA 전용 — 실제 기상청 API 대신 날씨 게이트(lib/pipeline/weatherGate.ts)를
+  // 강제 트리거한다. 서버 액션(app/actions/course.ts)이 WEATHER_GATE_DEBUG_ENABLED
+  // 환경변수가 켜져 있을 때만 실제로 반영하고, 그 외엔 파싱만 되고 무시된다.
+  debugWeather: z.enum(["clear", "cloudy", "rain", "snow", "heatwave"]).optional(),
 });
 
 export const generateCourseFromPlaceInputSchema = z.object({

@@ -16,6 +16,12 @@ export type FestivalProgramInfo = {
 // isOpenNow(boolean)만으로는 "시작 전"과 "이미 끝남"을 구분할 수 없어서 별도로 둔다.
 export type FestivalPhase = "upcoming" | "ongoing" | "ended";
 
+// 날씨 게이트(lib/pipeline/weatherGate.ts)가 실외 1순위 후보를 실내로 전환시켰을 때의
+// 사유. generateCourse() 경로(취향 기반 추천)에서만 채워진다 — 선택/축제 진입은 이
+// 개념 자체가 없어 undefined. 원래 1순위였던 후보명은 일부러 담지 않는다 — "대신 추천
+// 안 한 곳"을 사용자에게 노출하는 건 혼란만 준다는 판단(2026-08-18 피드백).
+export type WeatherSwitchReason = "rain" | "snow" | "heatwave";
+
 // 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)
 export type JourneyPlace = {
   id: string;
@@ -116,6 +122,9 @@ export type PendingCourse = {
   // 코스 생성 성공 시점(epoch ms). 운영시간 배지는 이 시점의 실시간 판정을 스냅샷으로
   // 저장한 것이므로, 오래 지난 스냅샷은 화면 층에서 배지를 숨기는 만료 판단에 쓴다.
   generatedAt?: number;
+  // 코스 생성 시 실외→실내 전환이 일어났으면 사유. generateCourse() 경로에서만
+  // 채워진다(선택/축제 진입은 undefined) — availability 필드와 정확히 반대 대칭.
+  weatherSwitch?: WeatherSwitchReason | null;
 };
 
 // /course/active/[id] 서버 컴포넌트가 미리 조회해두는 DB 기반 이어서 데이터.
