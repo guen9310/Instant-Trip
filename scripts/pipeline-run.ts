@@ -3,7 +3,7 @@
  * 실행: pnpm pipeline [--scale 가볍게|적당히|여유롭게]
  *                    [--travel walk|min] [--party solo|group]
  *                    [--vibe quiet|lively] [--food matjip|any] [--indoor indoor|outdoor]
- *                    [--lat N] [--lng N] [--quiet]
+ *                    [--lat N] [--lng N] [--quiet] [--weather clear|cloudy|rain|snow|heatwave]
  *
  * 플래그 없이 실행하면 인터랙티브 선택 모드로 진입한다.
  * 플래그:
@@ -16,6 +16,8 @@
  *   --lat      위도 (기본값: 고창 도솔암 35.4806)
  *   --lng      경도 (기본값: 고창 도솔암 126.5640)
  *   --quiet    stage4 상세 로그 없이 요약만 출력
+ *   --weather  clear|cloudy|rain|snow|heatwave — 날씨 게이트를 강제 트리거하고
+ *              "맑음 가정"과 나란히 비교 출력한다(실제 TourAPI 데이터로 검증용).
  */
 
 import { config } from "dotenv";
@@ -96,6 +98,21 @@ const getArg = (flag: string) => {
   return idx !== -1 ? args[idx + 1] : undefined;
 };
 const hasArg = (flag: string) => args.includes(flag);
+
+const WEATHER_OVERRIDE_VALUES = ["clear", "cloudy", "rain", "snow", "heatwave"] as const;
+type WeatherOverride = (typeof WEATHER_OVERRIDE_VALUES)[number];
+
+function resolveWeatherOverride(): WeatherOverride | undefined {
+  const raw = getArg("--weather");
+  if (!raw) return undefined;
+  if ((WEATHER_OVERRIDE_VALUES as readonly string[]).includes(raw)) {
+    return raw as WeatherOverride;
+  }
+  console.warn(
+    `[pipeline-run] 알 수 없는 --weather 값: "${raw}" (허용: ${WEATHER_OVERRIDE_VALUES.join("|")}) — 무시하고 실시간 날씨로 진행`,
+  );
+  return undefined;
+}
 
 function prefsToProfile(prefs: Prefs) {
   return {
@@ -255,6 +272,15 @@ async function run() {
     mapX: isNaN(parsedLng) ? DEFAULT_LNG : parsedLng,
     mapY: isNaN(parsedLat) ? DEFAULT_LAT : parsedLat,
   };
+  const weatherOverride = resolveWeatherOverride();
+  const profile = {
+    tagWeights,
+    preferFood,
+    location: LOCATION,
+    scale,
+    areaCode: "",
+    sigunguCode: "",
+  };
 
   console.log(`\n${"━".repeat(60)}`);
   console.log(`  파이프라인 실행`);
@@ -265,21 +291,42 @@ async function run() {
   console.log(
     `  태그 가중치: ${JSON.stringify(tagWeights)} | preferFood=${preferFood}`,
   );
+  if (weatherOverride) {
+    console.log(`  날씨 강제: ${weatherOverride} (실제 기상청 API 미호출)`);
+  }
   console.log(`${"━".repeat(60)}\n`);
 
-  const result = await generateCourse(
-    {
-      tagWeights,
-      preferFood,
-      location: LOCATION,
-      scale,
-      areaCode: "",
-      sigunguCode: "",
-    },
-    {},
-  );
-
+  const result = await generateCourse(profile, { weatherOverride });
   const { course, debug } = result;
+
+  // "맑음이었다면 어땠을지"를 한 번 더 실행해 나란히 비교한다(모킹 없이 실제
+  // generateCourse() 호출).
+  if (weatherOverride) {
+    sep(`날씨 영향 비교 — 맑음 가정 vs ${weatherOverride} 가정 (같은 위치·같은 취향)`);
+    const baseline =
+      weatherOverride === "clear"
+        ? result
+        : await generateCourse(profile, { weatherOverride: "clear" });
+
+    const baseTitle = baseline.course.mainPlace?.title ?? "(후보 없음)";
+    const testTitle = course.mainPlace?.title ?? "(후보 없음)";
+    console.log(`  맑음 가정        → ${baseTitle}`);
+    console.log(`  ${weatherOverride.padEnd(8)} 가정 → ${testTitle}`);
+
+    if (course.weatherSwitch) {
+      console.log(
+        `  ⇒ 전환됨(사유: ${course.weatherSwitch}) — 위 [weatherGate] "전환됨" 로그 라인과 대조해 원래 1위였던 장소명도 확인하세요.`,
+      );
+    } else if (baseTitle !== testTitle) {
+      console.log(
+        `  ⇒ 결과는 다르지만 "전환됨" 판정은 아님 — 날씨 감점이 아니라 가용성 게이트(폐점 등) 차이일 수 있음, [gate]/[weatherGate] 로그로 원인 확인 필요.`,
+      );
+    } else {
+      console.log(
+        `  ⇒ 전환 없음 — 이 위치·조건에서는 날씨가 나빠도 실외 후보가 그대로 채택됨(감점이 순위를 못 뒤집었을 수도, 애초에 실내 대안이 없었을 수도 있음 — [weatherGate] 로그의 "감점 N건" 수치로 구분 가능).`,
+      );
+    }
+  }
 
   sep("파이프라인 요약");
   console.log(
