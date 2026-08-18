@@ -47,6 +47,7 @@ export function CoursePreviewClient({ isAuthenticated, sessionExpired, activeCou
       prefs={course.prefs}
       availability={course.availability}
       generatedAt={course.generatedAt}
+      weatherSwitch={course.weatherSwitch}
       isAuthenticated={isAuthenticated}
       sessionExpired={sessionExpired}
       activeCourse={activeCourse}
