@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
@@ -34,11 +34,25 @@ function recordAbandonedIfAny() {
   }
 }
 
+// 데모/QA 전용 — /start?debugWeather=rain 같은 쿼리 파라미터로 날씨 게이트를 강제
+// 트리거한다. 서버(app/actions/course.ts)가 WEATHER_GATE_DEBUG_ENABLED 환경변수가
+// 켜져 있을 때만 실제로 반영하므로, 여기서 유효하지 않은 값을 걸러내는 정도로 충분하다.
+const DEBUG_WEATHER_VALUES = ["clear", "cloudy", "rain", "snow", "heatwave"] as const;
+type DebugWeather = (typeof DEBUG_WEATHER_VALUES)[number];
+
+function readDebugWeather(searchParams: URLSearchParams): DebugWeather | undefined {
+  const raw = searchParams.get("debugWeather");
+  return (DEBUG_WEATHER_VALUES as readonly string[]).includes(raw ?? "")
+    ? (raw as DebugWeather)
+    : undefined;
+}
+
 // 위치 확인 → 코스 생성 서버 액션 호출 → localStorage 기록 → 프리뷰로 이동까지의 흐름을
 // 캡슐화한다(useStartCourse.ts와 같은 결). 실패(NO_PLACE)면 noNearby 상태로 알려
 // 화면(StartView)이 대안 UI(NoNearbyView)를 그리게 한다.
 export function useGenerateCourse(prefs: Prefs) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { state } = useLocationStore();
   const [loading, setLoading] = useState(false);
   const [noNearby, setNoNearby] = useState(false);
@@ -70,6 +84,7 @@ export function useGenerateCourse(prefs: Prefs) {
         prefs,
         radiusM,
         excludeIds: rejectedPlaceIds,
+        debugWeather: readDebugWeather(searchParams),
       });
 
       if (!result.ok) {
@@ -112,6 +127,7 @@ export function useGenerateCourse(prefs: Prefs) {
         // 생성 시점 취향 스냅샷 — 결과 화면의 칩·맛집 섹션·재추천이 이 값을 읽는다
         prefs,
         generatedAt: Date.now(),
+        weatherSwitch: result.weatherSwitch,
       };
       localStorage.setItem("pendingCourse", JSON.stringify(pending));
       router.push("/course/preview");
