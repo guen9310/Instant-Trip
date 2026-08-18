@@ -16,6 +16,16 @@ import {
 } from "@/lib/pipeline/kakaoCollect";
 import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import { haversineKm, coordKey } from "@/shared/utils/geo";
+import { getWeatherGateSignal } from "@/server/weather";
+import {
+  applyWeatherGate,
+  findDemotedOutdoorCandidate,
+  overrideToSignal,
+  WEATHER_GATE_WINDOW_HOURS,
+} from "@/lib/pipeline/weatherGate";
+import { classifyIndoorOutdoor } from "@/lib/pipeline/indoorOutdoor";
+import type { WeatherSwitchReason } from "@/shared/types/course.types";
+import type { WeatherCondition, WeatherGateSignal } from "@/shared/utils/weatherContext";
 
 export type {
   UserProfile,
@@ -56,6 +66,8 @@ export async function generateCourse(
     maxDistanceKm?: number;
     // "시간이 안 맞아요" 거절 리롤 전용 — 실측 "open" 후보만 채택한다.
     strictOpenOnly?: boolean;
+    // 데모/QA 전용 — 실제 API 호출 없이 날씨 게이트를 강제 트리거한다.
+    weatherOverride?: WeatherCondition | "heatwave";
   } = {},
 ): Promise<PipelineResult> {
   const t0 = Date.now();
@@ -74,6 +86,14 @@ export async function generateCourse(
     simulationDate: options.simulationDate,
   });
 
+  // 날씨 신호도 같은 이유로 미리 시작한다. catch는 예상 밖 예외까지 fail-open 시킨다.
+  const weatherSignalPromise: Promise<WeatherGateSignal> = options.weatherOverride
+    ? Promise.resolve(overrideToSignal(options.weatherOverride))
+    : getWeatherGateSignal(lat, lng, WEATHER_GATE_WINDOW_HOURS).catch((err) => {
+        console.warn(`[pipeline] 날씨 신호 조회 실패 — 무감점 폴백 — ${err}`);
+        return { condition: "clear", isHeatwave: false, tempC: null, hoursAhead: 0 } as const;
+      });
+
   const items = await collectCandidates(profile);
   console.log(
     `[pipeline] stage1 수집 ${items.length}건 | ${elapsed(Date.now() - ts)}`,
@@ -87,6 +107,7 @@ export async function generateCourse(
       festivals: { ongoing: [], upcoming: [] },
       scale: profile.scale,
       generatedAt: new Date().toISOString(),
+      weatherSwitch: null,
     };
     return {
       course: empty,
@@ -201,11 +222,24 @@ export async function generateCourse(
     `[pipeline] stage4 완료 — ${scored.length}건 점수화 (관광공사:${tourScored} / 카카오:${kakaoScored}) | ${elapsed(Date.now() - ts)}`,
   );
 
+  // stage4.5: 날씨 게이트. scoring.ts는 날씨를 전혀 모르는 순수 함수로 유지하고,
+  // 날씨 지식은 weatherGate.ts와 이 배선에만 존재한다.
+  ts = Date.now();
+  const weatherSignal = await weatherSignalPromise;
+  const weatherGateResult = applyWeatherGate(scored, weatherSignal);
+  console.log(
+    `[weatherGate] 신호:${weatherSignal.condition}${weatherSignal.isHeatwave ? "+폭염" : ""} → ` +
+      `사유:${weatherGateResult.reason ?? "없음"} 감점:${weatherGateResult.penalizedCount}건 | ${elapsed(Date.now() - ts)}`,
+  );
+
   // 신규: 점수 순으로 하나씩만 운영시간을 확인해 최초로 열려있는 후보를 채택한다
   // (기존엔 stage2가 전체를 미리 검사했으나, 점수화가 운영시간 데이터를 쓰지 않으므로
   // 순서를 뒤집어 TourAPI 호출을 80~120건에서 보통 1~수건으로 줄인다)
+  // 날씨 게이트가 이미 재정렬한 순서(weatherGateResult.scored)로 순회한다.
   ts = Date.now();
-  const gate = await selectAvailableCandidate(scored, { strictOpenOnly: options.strictOpenOnly });
+  const gate = await selectAvailableCandidate(weatherGateResult.scored, {
+    strictOpenOnly: options.strictOpenOnly,
+  });
   console.log(
     gate
       ? `[gate] 완료 — "${gate.winner.item.title}" 채택 (검사 ${gate.checksPerformed}건${gate.exhausted ? ", 상한소진→1위 폴백" : ""}) | ${elapsed(Date.now() - ts)}`
@@ -213,10 +247,29 @@ export async function generateCourse(
   );
 
   const allCandidates = gate
-    ? scored.map((c) =>
+    ? weatherGateResult.scored.map((c) =>
         c.item.contentid === gate.winner.item.contentid ? gate.winner : c,
       )
-    : scored;
+    : weatherGateResult.scored;
+
+  // 감점으로 winner보다 아래로 밀려난 실외 후보가 있으면 "전환됨"으로 판정한다.
+  // 원래 있었을 실외 후보명은 사용자에게 노출하지 않는다(혼란만 준다) — 로그에만 남긴다.
+  const demotedOutdoor =
+    weatherGateResult.reason !== null &&
+    gate !== null &&
+    classifyIndoorOutdoor(gate.winner.item) === "indoor"
+      ? findDemotedOutdoorCandidate(scored, weatherGateResult.scored, gate.winner)
+      : null;
+
+  const weatherSwitchReason: WeatherSwitchReason | null = demotedOutdoor
+    ? weatherGateResult.reason!
+    : null;
+
+  if (weatherSwitchReason) {
+    console.log(
+      `[weatherGate] 전환됨 — "${demotedOutdoor!.item.title}"(밀려남) → "${gate!.winner.item.title}" (사유: ${weatherSwitchReason})`,
+    );
+  }
 
   // stage5: 최종 코스 조립 — 채택된 1건(또는 0건)만 넘긴다.
   // assembleCourse는 scored[0]만 읽고 nearbyPlaces는 항상 []를 반환하므로 안전하다.
@@ -236,6 +289,7 @@ export async function generateCourse(
   const course: CourseResult = {
     ...courseBase,
     festivals: { ongoing: festivalsOngoing, upcoming: festivalsUpcoming },
+    weatherSwitch: weatherSwitchReason,
   };
 
   const courseIds = new Set([

@@ -23,6 +23,13 @@ vi.mock("@/lib/pipeline/festival", () => ({
 vi.mock("@/lib/pipeline/availability", () => ({
   checkPlaceAvailability: vi.fn(),
 }));
+// 날씨는 이 테스트 파일의 관심사가 아니다 — clear로 고정해 무감점(기존 동작과
+// 동일)으로 두고, 실제 KMA API 호출(및 키 없을 때의 재시도 sleep)을 피한다.
+vi.mock("@/server/weather", () => ({
+  getWeatherGateSignal: vi
+    .fn()
+    .mockResolvedValue({ condition: "clear", isHeatwave: false, tempC: null, hoursAhead: 0 }),
+}));
 vi.mock("@/lib/pipeline/course", () => ({
   assembleCourse: vi.fn(async (scored: PlaceCandidate[], profile: UserProfile) => {
     if (scored.length === 0) {

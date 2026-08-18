@@ -1,7 +1,11 @@
 import type { TourItem } from "@/lib/tour/types";
 import type { CulturalFestival } from "@/lib/clients/culturalFestival";
 import type { DurationRange } from "@/shared/utils/duration";
-import type { FestivalProgramInfo, FestivalPhase } from "@/shared/types/course.types";
+import type {
+  FestivalProgramInfo,
+  FestivalPhase,
+  WeatherSwitchReason,
+} from "@/shared/types/course.types";
 
 export type TravelScale = "가볍게" | "적당히" | "여유롭게";
 
@@ -100,6 +104,11 @@ export interface CourseResult {
   festivals: { ongoing: CulturalFestival[]; upcoming: CulturalFestival[] };
   scale: TravelScale;
   generatedAt: string;
+  // optional인 이유: 날씨 판정은 오케스트레이터(lib/pipeline/index.ts)만 알아야 하는
+  // 개념이라, required로 두면 course.ts(assembleCourse)·selectPlace.ts/selectFestival.ts의
+  // CourseResult 생성 지점을 전부 건드려야 한다. availability?(PlaceAvailabilitySnapshot)와
+  // 동일한 패턴.
+  weatherSwitch?: WeatherSwitchReason | null;
 }
 
 // 파이프라인 전체 결과 (디버그 포함)

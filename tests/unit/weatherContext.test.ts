@@ -3,6 +3,9 @@ import {
   kmaToWeatherCondition,
   groupForecastByTime,
   findUpcomingWeatherChange,
+  isAdverseWeather,
+  isHeatwaveTemp,
+  resolveWeatherGateSignal,
   type ForecastPoint,
 } from "@/shared/utils/weatherContext";
 import type { WeatherItem } from "@/shared/types/weather.types";
@@ -16,10 +19,15 @@ function fcstItem(
   return { baseDate: fcstDate, baseTime: fcstTime, category, nx: 60, ny: 127, fcstDate, fcstTime, fcstValue };
 }
 
-function point(hhmm: string, condition: ForecastPoint["condition"]): ForecastPoint {
+function point(
+  hhmm: string,
+  condition: ForecastPoint["condition"],
+  tempC: number | null = null,
+): ForecastPoint {
   return {
     fcstDateTime: new Date(`2026-08-09T${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}:00+09:00`),
     condition,
+    tempC,
   };
 }
 
@@ -129,5 +137,68 @@ describe("findUpcomingWeatherChange", () => {
 
   it("변화 시점이 없으면 null", () => {
     expect(findUpcomingWeatherChange([], now, "clear", 3)).toBeNull();
+  });
+});
+
+describe("isAdverseWeather", () => {
+  it("rain/snow만 true", () => {
+    expect(isAdverseWeather("rain")).toBe(true);
+    expect(isAdverseWeather("snow")).toBe(true);
+    expect(isAdverseWeather("cloudy")).toBe(false);
+    expect(isAdverseWeather("clear")).toBe(false);
+  });
+});
+
+describe("isHeatwaveTemp", () => {
+  it("33도 이상이면 true", () => {
+    expect(isHeatwaveTemp(33)).toBe(true);
+  });
+  it("32.9도는 false(경계값 미만)", () => {
+    expect(isHeatwaveTemp(32.9)).toBe(false);
+  });
+  it("null이면 false", () => {
+    expect(isHeatwaveTemp(null)).toBe(false);
+  });
+});
+
+describe("resolveWeatherGateSignal", () => {
+  const now = new Date("2026-08-09T14:00:00+09:00");
+
+  it("현재 clear + 창 내 rain 예보 → condition=rain 선택", () => {
+    const forecast = [point("1500", "rain")];
+    const signal = resolveWeatherGateSignal({ PTY: "0", SKY: "1" }, forecast, now, 3);
+    expect(signal.condition).toBe("rain");
+    expect(signal.hoursAhead).toBe(1);
+  });
+
+  it("condition은 snow>rain>cloudy>clear 우선순위로 창 내 최악값을 고른다", () => {
+    const forecast = [point("1500", "cloudy"), point("1600", "snow"), point("1700", "rain")];
+    const signal = resolveWeatherGateSignal({ PTY: "0", SKY: "1" }, forecast, now, 4);
+    expect(signal.condition).toBe("snow");
+  });
+
+  it("조건은 맑아도 창 내 예보점 기온이 임계 이상이면 isHeatwave=true (조건과 독립 판정)", () => {
+    const forecast = [point("1500", "clear", 34)];
+    const signal = resolveWeatherGateSignal({ PTY: "0", SKY: "1", T1H: "28" }, forecast, now, 3);
+    expect(signal.condition).toBe("clear");
+    expect(signal.isHeatwave).toBe(true);
+  });
+
+  it("현재 실황 기온만으로도 폭염 판정된다", () => {
+    const signal = resolveWeatherGateSignal({ PTY: "0", SKY: "1", T1H: "35" }, [], now, 3);
+    expect(signal.isHeatwave).toBe(true);
+    expect(signal.hoursAhead).toBe(0);
+  });
+
+  it("창 밖의 악화 시점은 무시한다", () => {
+    const forecast = [point("1800", "rain")]; // 4시간 뒤, window=2
+    const signal = resolveWeatherGateSignal({ PTY: "0", SKY: "1" }, forecast, now, 2);
+    expect(signal.condition).toBe("clear");
+  });
+
+  it("빈 입력(API 실패 시뮬레이션) → clear/heatwave=false로 폴백", () => {
+    const signal = resolveWeatherGateSignal({}, [], now, 3);
+    expect(signal.condition).toBe("clear");
+    expect(signal.isHeatwave).toBe(false);
   });
 });

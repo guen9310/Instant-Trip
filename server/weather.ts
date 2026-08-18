@@ -5,7 +5,9 @@ import {
   kmaToWeatherCondition,
   groupForecastByTime,
   findUpcomingWeatherChange,
+  resolveWeatherGateSignal,
   type WeatherForecastAlert,
+  type WeatherGateSignal,
 } from "@/shared/utils/weatherContext";
 
 export type { WeatherItem, GridXY };
@@ -406,4 +408,26 @@ export async function getWeatherForecastAlert(
   const forecast = groupForecastByTime(forecastItems);
 
   return findUpcomingWeatherChange(forecast, now, currentCondition, windowHours);
+}
+
+// weatherGate.ts가 쓰는 "지금~windowHours 최악 날씨" 신호. 두 API 모두 실패 시
+// []를 반환하므로 장애 시 자동으로 무감점(clear) 폴백된다.
+export async function getWeatherGateSignal(
+  lat: number,
+  lng: number,
+  windowHours: number,
+  now: Date = new Date(),
+): Promise<WeatherGateSignal> {
+  const { nx, ny } = latlngToGrid(lat, lng);
+  const [currentItems, forecastItems] = await Promise.all([
+    getUltraSrtNcst(nx, ny, now),
+    getUltraSrtFcst(nx, ny, now),
+  ]);
+
+  const currentWeather = Object.fromEntries(
+    currentItems.map((item) => [item.category, item.obsrValue ?? ""]),
+  );
+  const forecast = groupForecastByTime(forecastItems);
+
+  return resolveWeatherGateSignal(currentWeather, forecast, now, windowHours);
 }
