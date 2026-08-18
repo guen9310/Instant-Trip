@@ -5,7 +5,9 @@ import {
   kmaToWeatherCondition,
   groupForecastByTime,
   findUpcomingWeatherChange,
+  resolveWeatherGateSignal,
   type WeatherForecastAlert,
+  type WeatherGateSignal,
 } from "@/shared/utils/weatherContext";
 
 export type { WeatherItem, GridXY };
@@ -406,4 +408,29 @@ export async function getWeatherForecastAlert(
   const forecast = groupForecastByTime(forecastItems);
 
   return findUpcomingWeatherChange(forecast, now, currentCondition, windowHours);
+}
+
+// 날씨 적응형 추천 전환(lib/pipeline/weatherGate.ts)이 쓰는 "지금~windowHours 이내
+// 최악의 날씨" 신호. getUltraSrtNcst/getUltraSrtFcst는 내부에서 이미 에러를 삼키고
+// 빈 배열을 반환하므로, API 장애 시 resolveWeatherGateSignal이 자동으로
+// condition:"clear"/isHeatwave:false(무감점)로 fail-open된다 — 별도 try/catch 없이도
+// availabilityGate.ts의 "판정 불가는 관대 통과" 철학과 동일하게 동작한다.
+export async function getWeatherGateSignal(
+  lat: number,
+  lng: number,
+  windowHours: number,
+  now: Date = new Date(),
+): Promise<WeatherGateSignal> {
+  const { nx, ny } = latlngToGrid(lat, lng);
+  const [currentItems, forecastItems] = await Promise.all([
+    getUltraSrtNcst(nx, ny, now),
+    getUltraSrtFcst(nx, ny, now),
+  ]);
+
+  const currentWeather = Object.fromEntries(
+    currentItems.map((item) => [item.category, item.obsrValue ?? ""]),
+  );
+  const forecast = groupForecastByTime(forecastItems);
+
+  return resolveWeatherGateSignal(currentWeather, forecast, now, windowHours);
 }
