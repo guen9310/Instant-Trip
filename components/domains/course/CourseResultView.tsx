@@ -14,6 +14,9 @@ import {
   Navigation,
   RefreshCcw,
   Globe,
+  CloudRain,
+  CloudSnow,
+  Thermometer,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -30,6 +33,7 @@ import type {
   PendingCourse,
   PlaceAvailabilitySnapshot,
   CourseProgress,
+  WeatherSwitchReason,
 } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
@@ -67,6 +71,21 @@ const REASON_CHIP_FALLBACK_TEXT: Partial<Record<ReasonChipKind, string>> = {
   far: "이 근처엔 더 가까운 곳이 없었어요",
 };
 
+// 날씨 게이트(lib/pipeline/weatherGate.ts)가 실외 1순위 후보를 실내로 전환했을 때
+// 안내하는 카드 — rerollExhausted 카드와 같은 구조지만, 경고가 아니라 도움이 되는
+// 안내라 point 대신 primary 톤을 쓴다. 원래 추천했을 장소명은 일부러 보여주지 않는다
+// — "대신 추천 안 한 곳"을 노출하는 건 혼란만 준다는 판단(2026-08-18 피드백).
+const WEATHER_SWITCH_ICON: Record<WeatherSwitchReason, LucideIcon> = {
+  rain: CloudRain,
+  snow: CloudSnow,
+  heatwave: Thermometer,
+};
+const WEATHER_SWITCH_TEXT: Record<WeatherSwitchReason, string> = {
+  rain: "비 예보가 있어 실내 장소로 바꿔드렸어요.",
+  snow: "눈 예보가 있어 실내 장소로 바꿔드렸어요.",
+  heatwave: "폭염이 예상돼 실내 장소로 바꿔드렸어요.",
+};
+
 type Props = {
   courseId: string;
   courseName: string;
@@ -83,6 +102,9 @@ type Props = {
   // 코스 생성 시점(epoch ms) — 운영시간 배지가 참조하는 판정은 이 시점의 스냅샷이라
   // 오래되면(30분 초과) 배지를 숨기는 데 쓴다. 구버전 localStorage 페이로드엔 없을 수 있다.
   generatedAt?: number;
+  // 날씨 게이트가 실외→실내로 전환했으면 사유. generateCourse() 경로(취향 기반
+  // 추천)에서만 채워진다 — 선택/축제 진입은 undefined.
+  weatherSwitch?: WeatherSwitchReason | null;
   // 서버 컴포넌트(page.tsx)에서 getAuthState()로 미리 판정 — 탭 시 서버 왕복 없이
   // 즉시 분기하기 위함 (비로그인은 안내 후 이동, 로그인은 낙관적 이동).
   isAuthenticated: boolean;
@@ -109,6 +131,7 @@ export function CourseResultView({
   prefs,
   availability,
   generatedAt,
+  weatherSwitch: initialWeatherSwitch,
   isAuthenticated,
   sessionExpired,
   activeCourse,
@@ -129,6 +152,7 @@ export function CourseResultView({
     isBadgeSnapshotStale,
     rerollExhausted,
     reasonChip,
+    weatherSwitch,
     newPlaceId,
     rerolling,
     isMaxRerolls,
@@ -138,7 +162,17 @@ export function CourseResultView({
     rejectReason,
     setRejectReason,
     confirmReject,
-  } = useCourseResult({ courseId, courseName, place, generatedAt, mapX, mapY, scale, prefs });
+  } = useCourseResult({
+    courseId,
+    courseName,
+    place,
+    generatedAt,
+    mapX,
+    mapY,
+    scale,
+    prefs,
+    weatherSwitch: initialWeatherSwitch,
+  });
 
   // 비로그인 안내 후 로그인 화면으로 이동 — HomeView의 토스트 자동 소멸 패턴과 동일하게
   // 일정 시간 노출 후 전환한다(안내를 보여줄 틈 없이 즉시 이동하지 않도록).
@@ -335,6 +369,19 @@ export function CourseResultView({
                   : REASON_CHIP_FALLBACK_TEXT[reasonChip.kind]}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 날씨 게이트 전환 안내 — 경고가 아닌 도움말 톤(primary) */}
+        {weatherSwitch && (
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-primary/8 border border-primary/20 mb-4">
+            {(() => {
+              const Icon = WEATHER_SWITCH_ICON[weatherSwitch];
+              return <Icon size={16} className="text-primary shrink-0 mt-0.5" />;
+            })()}
+            <p className="text-[13px] text-primary leading-snug">
+              {WEATHER_SWITCH_TEXT[weatherSwitch]}
+            </p>
           </div>
         )}
 
