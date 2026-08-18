@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { applyWeatherGate, WEATHER_PENALTY } from "@/lib/pipeline/weatherGate";
+import {
+  applyWeatherGate,
+  findDemotedOutdoorCandidate,
+  WEATHER_PENALTY,
+} from "@/lib/pipeline/weatherGate";
 import type { PlaceCandidate } from "@/lib/pipeline/types";
 import type { TourItem } from "@/lib/tour/types";
 import type { WeatherGateSignal } from "@/shared/utils/weatherContext";
@@ -100,5 +104,50 @@ describe("applyWeatherGate", () => {
     const item = makeCandidate("1", 0.5);
     const result = applyWeatherGate([item], signal({ condition: "snow", isHeatwave: true }));
     expect(result.reason).toBe("snow");
+  });
+});
+
+describe("findDemotedOutdoorCandidate", () => {
+  // 1위(indoor)는 그대로 두고, 2위(outdoor)가 감점으로 3위(indoor)보다 아래로
+  // 밀려나는 상황(실측 재현).
+  it("winner보다 위였던 실외 후보가 감점으로 winner보다 아래로 밀리면 그 후보를 반환한다", () => {
+    const top = makeCandidate("top", 0.9, { contenttypeid: "14" }); // indoor, 그대로 1위
+    const outdoor = makeCandidate("outdoor", 0.7); // 관광지 → outdoor, 감점 전 2위
+    const winner = makeCandidate("winner", 0.6, { contenttypeid: "14" }); // indoor, 감점 전 3위
+    const preScored = [top, outdoor, winner]; // 감점 전 순위
+    // outdoor에 0.15 감점 적용 → 0.55, winner(0.6)보다 아래로 밀림
+    const postScored = [top, winner, { ...outdoor, score: 0.55 }];
+
+    const demoted = findDemotedOutdoorCandidate(preScored, postScored, winner);
+    expect(demoted?.item.contentid).toBe("outdoor");
+  });
+
+  it("winner가 감점 전 1위면(위에 아무도 없으면) null", () => {
+    const winner = makeCandidate("winner", 0.9, { contenttypeid: "14" });
+    const outdoor = makeCandidate("outdoor", 0.5);
+    const preScored = [winner, outdoor];
+    const postScored = [winner, { ...outdoor, score: 0.35 }];
+
+    expect(findDemotedOutdoorCandidate(preScored, postScored, winner)).toBeNull();
+  });
+
+  it("winner 위에 있던 실외 후보가 감점 후에도 winner보다 여전히 위면 null", () => {
+    const outdoor = makeCandidate("outdoor", 0.9); // 감점(0.15) 후에도 0.75로 여전히 위
+    const winner = makeCandidate("winner", 0.6, { contenttypeid: "14" });
+    const preScored = [outdoor, winner];
+    const postScored = [{ ...outdoor, score: 0.75 }, winner];
+
+    expect(findDemotedOutdoorCandidate(preScored, postScored, winner)).toBeNull();
+  });
+
+  it("winner 위에 있던 후보가 실내면(실외가 아니면) 무시한다", () => {
+    const indoorAbove = makeCandidate("indoor-above", 0.9, { contenttypeid: "14" });
+    const winner = makeCandidate("winner", 0.6, { contenttypeid: "14" });
+    const preScored = [indoorAbove, winner];
+    // indoor는 감점 대상이 아니므로 순서가 안 바뀌어야 정상이지만, 혹시 바뀌어도
+    // outdoor가 아니므로 무시돼야 한다.
+    const postScored = [winner, indoorAbove];
+
+    expect(findDemotedOutdoorCandidate(preScored, postScored, winner)).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ import { haversineKm, coordKey } from "@/shared/utils/geo";
 import { getWeatherGateSignal } from "@/server/weather";
 import {
   applyWeatherGate,
+  findDemotedOutdoorCandidate,
   overrideToSignal,
   WEATHER_GATE_WINDOW_HOURS,
 } from "@/lib/pipeline/weatherGate";
@@ -65,8 +66,7 @@ export async function generateCourse(
     maxDistanceKm?: number;
     // "시간이 안 맞아요" 거절 리롤 전용 — 실측 "open" 후보만 채택한다.
     strictOpenOnly?: boolean;
-    // 데모/QA 전용 — 실제 기상청 API 호출 없이 날씨 게이트(weatherGate.ts)를 강제
-    // 트리거한다. simulationDate와 같은 성격의 함수 레벨 오버라이드.
+    // 데모/QA 전용 — 실제 API 호출 없이 날씨 게이트를 강제 트리거한다.
     weatherOverride?: WeatherCondition | "heatwave";
   } = {},
 ): Promise<PipelineResult> {
@@ -86,10 +86,7 @@ export async function generateCourse(
     simulationDate: options.simulationDate,
   });
 
-  // 날씨 신호도 같은 이유로 미리 시작한다 — stage4 점수화 이후에나 필요하지만
-  // API 응답을 기다리는 시간을 그 전 단계(수집·태깅)와 겹치게 해 지연을 없앤다.
-  // getWeatherGateSignal은 내부에서 이미 실패를 삼켜 무감점(clear) 폴백을 반환하지만,
-  // 예상 밖의 예외까지 fail-open 시키기 위해 catch를 한 번 더 둔다.
+  // 날씨 신호도 같은 이유로 미리 시작한다. catch는 예상 밖 예외까지 fail-open 시킨다.
   const weatherSignalPromise: Promise<WeatherGateSignal> = options.weatherOverride
     ? Promise.resolve(overrideToSignal(options.weatherOverride))
     : getWeatherGateSignal(lat, lng, WEATHER_GATE_WINDOW_HOURS).catch((err) => {
@@ -225,11 +222,8 @@ export async function generateCourse(
     `[pipeline] stage4 완료 — ${scored.length}건 점수화 (관광공사:${tourScored} / 카카오:${kakaoScored}) | ${elapsed(Date.now() - ts)}`,
   );
 
-  // stage4.5: 날씨 게이트 — 감점 전 1위를 스냅샷으로 남겨둔다("전환됨" 판정용,
-  // 최종 결과 자체엔 영향 없음). scoring.ts는 날씨를 전혀 모르는 순수 함수로
-  // 유지하고, 날씨 지식은 weatherGate.ts와 이 배선에만 존재한다.
-  const originalTop = scored[0] ?? null;
-
+  // stage4.5: 날씨 게이트. scoring.ts는 날씨를 전혀 모르는 순수 함수로 유지하고,
+  // 날씨 지식은 weatherGate.ts와 이 배선에만 존재한다.
   ts = Date.now();
   const weatherSignal = await weatherSignalPromise;
   const weatherGateResult = applyWeatherGate(scored, weatherSignal);
@@ -258,26 +252,22 @@ export async function generateCourse(
       )
     : weatherGateResult.scored;
 
-  // 원래 1위가 실외였고 최종 채택이 실내로 바뀌었으면 "전환됨"으로 판정한다.
-  // 가용성 게이트 탈락(폐점 등)과 날씨 감점을 완벽히 구분하는 인과관계 증명은
-  // 아니지만, "원래 1위=실외, 최종 채택=실내"라는 사실 자체는 정확히 검증되므로
-  // 배너 문구("비 예보가 있어 실내 장소로 바꿔드렸어요")의 근거로 충분하다.
-  // 원래 1순위였던 장소명은 사용자에게 노출하지 않는다 — "대신 추천 안 한 곳"을
-  // 보여주는 건 혼란만 준다는 판단(2026-08-18 피드백). 로그에만 남긴다.
-  const switchedToIndoor =
+  // 감점으로 winner보다 아래로 밀려난 실외 후보가 있으면 "전환됨"으로 판정한다.
+  // 원래 있었을 실외 후보명은 사용자에게 노출하지 않는다(혼란만 준다) — 로그에만 남긴다.
+  const demotedOutdoor =
     weatherGateResult.reason !== null &&
-    originalTop !== null &&
     gate !== null &&
-    classifyIndoorOutdoor(originalTop.item) === "outdoor" &&
-    classifyIndoorOutdoor(gate.winner.item) === "indoor";
+    classifyIndoorOutdoor(gate.winner.item) === "indoor"
+      ? findDemotedOutdoorCandidate(scored, weatherGateResult.scored, gate.winner)
+      : null;
 
-  const weatherSwitchReason: WeatherSwitchReason | null = switchedToIndoor
+  const weatherSwitchReason: WeatherSwitchReason | null = demotedOutdoor
     ? weatherGateResult.reason!
     : null;
 
   if (weatherSwitchReason) {
     console.log(
-      `[weatherGate] 전환됨 — "${originalTop!.item.title}" → "${gate!.winner.item.title}" (사유: ${weatherSwitchReason})`,
+      `[weatherGate] 전환됨 — "${demotedOutdoor!.item.title}"(밀려남) → "${gate!.winner.item.title}" (사유: ${weatherSwitchReason})`,
     );
   }
 

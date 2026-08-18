@@ -4,19 +4,13 @@ import type { WeatherCondition, WeatherGateSignal } from "@/shared/utils/weather
 
 export type WeatherGateReason = "rain" | "snow" | "heatwave";
 
-// "방문 예상 시간대" = 코스 생성 시점. 이 파이프라인은 "지금 당장 가는 단일 장소"만
-// 만들어(nearbyPlaces는 항상 [], JourneyPlace.time은 항상 "") 방문 시각을 별도로
-// 계산하지 않는다 — now~now+WEATHER_GATE_WINDOW_HOURS 안의 최악 날씨를 근사치로
-// 쓴다. "여유롭게"(240분 체류)는 이 창을 벗어나는 날씨를 놓칠 수 있다 — scale별
-// 창 확장은 후속 과제로 남긴다.
+// 코스 생성 시점 기준 now~+2시간의 최악 날씨를 "방문 시점 날씨"로 근사한다
+// (방문 예상 시간대 자체를 계산하지 않는 파이프라인이라).
 export const WEATHER_GATE_WINDOW_HOURS = 2;
 
-// 감점 계수 — [0,1] 점수 스케일 기준. scoring.ts의 SCORING_WEIGHTS.distance(0.25)를
-// 상한 기준선으로 삼았다: "실내선호해요"만 체크한 사용자의 태그 컴포넌트 최대
-// 기여분(W.tag×1=0.5)에 근접한 감점은 사실상 하드 배제나 다름없어 "실외가 압도적
-// 으로 좋으면 그대로 채택한다"는 소프트 감점 취지를 깬다. 조건별로 차등을 둔다:
-// 적설은 통행·낙상 위험이 강수보다 커서 더 무겁게, 폭염은 "접근 불가"가 아닌
-// "불쾌"라 가장 약하게.
+// scoring.ts의 SCORING_WEIGHTS.distance(0.25)보다 작게 잡은 소프트 감점 —
+// 실외가 다른 신호로 압도적이면 그대로 채택되게 하기 위함. snow>rain>heatwave
+// 순서는 체감 위험도 순.
 export const WEATHER_PENALTY: Record<WeatherGateReason, number> = {
   rain: 0.15,
   snow: 0.20,
@@ -55,6 +49,29 @@ export function applyWeatherGate(
   adjusted.sort((a, b) => b.score - a.score);
 
   return { scored: adjusted, reason, penalizedCount };
+}
+
+// 감점 전엔 winner보다 위였는데 감점으로 아래로 밀린 실외 후보를 찾는다(없으면
+// null) — "날씨 때문에 이 실내 장소가 채택됐는지"의 근거. 그 후보가 실제로
+// 열려 있었는지는 확인하지 않는다(가용성 게이트 재순회=추가 API 호출을 피하기
+// 위한 트레이드오프, 상세는 docs/plan/weather-adaptive-recommendation.md §5-1).
+export function findDemotedOutdoorCandidate(
+  preScored: PlaceCandidate[],
+  postScored: PlaceCandidate[],
+  winner: PlaceCandidate,
+): PlaceCandidate | null {
+  const postPositionByContentId = new Map(
+    postScored.map((c, i) => [c.item.contentid, i]),
+  );
+  const winnerPostPos = postPositionByContentId.get(winner.item.contentid) ?? -1;
+
+  for (const candidate of preScored) {
+    if (candidate.item.contentid === winner.item.contentid) break; // winner 이전까지만 훑는다
+    if (classifyIndoorOutdoor(candidate.item) !== "outdoor") continue;
+    const postPos = postPositionByContentId.get(candidate.item.contentid) ?? -1;
+    if (postPos > winnerPostPos) return candidate; // 감점으로 winner보다 아래로 밀려남
+  }
+  return null;
 }
 
 // weatherOverride(테스트·데모 전용)를 실제 API 호출 없이 WeatherGateSignal로 변환한다.

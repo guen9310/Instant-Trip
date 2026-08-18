@@ -113,6 +113,9 @@ function baseProfile(overrides: Partial<UserProfile> = {}): UserProfile {
 function openResult(hours = "09:00~18:00") {
   return { status: "open", reason: "지금 입장 가능합니다.", hours, restDayNote: null };
 }
+function closedResult() {
+  return { status: "closed_hours", reason: "지금은 이용시간이 아닙니다.", hours: null, restDayNote: null };
+}
 
 const CLEAR = { condition: "clear" as const, isHeatwave: false, tempC: null, hoursAhead: 0 };
 const RAIN = { condition: "rain" as const, isHeatwave: false, tempC: null, hoursAhead: 0 };
@@ -189,6 +192,46 @@ describe("generateCourse — 날씨 게이트", () => {
 
     expect(result.course.mainPlace?.contentId).toBe("in");
     expect(result.course.weatherSwitch).toBeNull();
+  });
+
+  // 실측 재현(pnpm pipeline --weather) — 1위(실내)가 휴관이라 2위로 넘어가고,
+  // 그 2위(실외)가 감점으로 3위(실내)보다 아래로 밀리는 경우.
+  it("감점 전 1위(실내)가 휴관이어도, 2위(실외)→3위(실내) 역전을 전환으로 감지한다", async () => {
+    const closedIndoorTop = makeIndoorItem("top", {
+      title: "실내-1위(휴관)",
+      mapx: "126.9779",
+      mapy: "37.5663", // 원점 — distanceBonus=1.0, 최고 점수
+    });
+    const outdoorSecond = makeOutdoorItem("second", {
+      title: "실외-2위",
+      mapx: "126.9779",
+      mapy: "37.5664", // 원점에서 아주 조금(≈0.01km) — 근소하게 2위
+    });
+    const indoorThird = makeIndoorItem("third", {
+      title: "실내-3위",
+      mapx: "126.9779",
+      mapy: "37.5673", // 원점에서 조금 더(≈0.1km) — 근소하게 3위
+    });
+    mockedCollect.mockResolvedValue([closedIndoorTop, outdoorSecond, indoorThird]);
+    mockedWeather.mockResolvedValue(RAIN);
+
+    // 감점 전(맑음) 순서 확인용 — 1위는 휴관, 2위(실외)가 채택돼야 정상
+    mockedCheck
+      .mockResolvedValueOnce(closedResult()) // top
+      .mockResolvedValueOnce(openResult()); // second
+    const clearResult = await generateCourse(baseProfile(), { weatherOverride: "clear" });
+    expect(clearResult.course.mainPlace?.contentId).toBe("second");
+
+    // 비 예보 — 1위는 여전히 휴관, 2위(실외)는 감점으로 3위보다 아래로 밀려나
+    // 게이트가 3위(실내)를 확인해 채택해야 한다.
+    mockedCheck.mockReset();
+    mockedCheck
+      .mockResolvedValueOnce(closedResult()) // top
+      .mockResolvedValueOnce(openResult()); // third (감점 후 2번째로 확인됨)
+    const result = await generateCourse(baseProfile());
+
+    expect(result.course.mainPlace?.contentId).toBe("third");
+    expect(result.course.weatherSwitch).toBe("rain");
   });
 
   it("weatherOverride를 주면 실제 API(getWeatherGateSignal)를 호출하지 않는다", async () => {
