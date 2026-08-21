@@ -79,9 +79,9 @@ const WEATHER_SWITCH_ICON: Record<WeatherSwitchReason, LucideIcon> = {
   heatwave: Thermometer,
 };
 const WEATHER_SWITCH_TEXT: Record<WeatherSwitchReason, string> = {
-  rain: "비 예보가 있어 실내 장소로 바꿔드렸어요.",
-  snow: "눈 예보가 있어 실내 장소로 바꿔드렸어요.",
-  heatwave: "폭염이 예상돼 실내 장소로 바꿔드렸어요.",
+  rain: "비 예보가 있어 실내 장소를 추천해드렸어요.",
+  snow: "눈 예보가 있어 실내 장소를 추천해드렸어요.",
+  heatwave: "폭염이 예상돼 실내 장소를 추천해드렸어요.",
 };
 
 type Props = {
