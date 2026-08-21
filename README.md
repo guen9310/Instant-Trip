@@ -172,7 +172,7 @@
 | **온보딩 화면** (`OnboardingForm`)<br>yes/no 성향 질문 UI | <img src=".github/screenshots/OnboardingForm.png" width="200" /> | **홈 화면** (`HomeView`)<br>위치 기반 근처 장소·축제, 날씨 표시 | <img src=".github/screenshots/HomeView.png" width="200" /> |
 | **출발 설정 화면** (`StartView`)<br>외출 규모 선택 | <img src=".github/screenshots/StartView.png" width="200" /> | **코스 추천 화면** (`CourseResultView`)<br>지도 미리보기 + 거절 재추천 패널 | <img src=".github/screenshots/CourseResultView.png" width="200" /> |
 | **코스 진행 화면** (`CourseActiveView`)<br>장소 체크리스트 + 주변 정보 펼치기 섹션 | <img src=".github/screenshots/CourseActiveView.png" width="200" /> | **코스 완료 화면** (`CourseDoneView`)<br>별점 후기 | <img src=".github/screenshots/CourseDoneView.png" width="200" /> |
-| **프로필 화면** (`ProfileView`)<br>완료 기록 목록 | <img src=".github/screenshots/ProfileView.png" width="200" /> | | |
+| **프로필 화면** (`ProfileView`)<br>완료 기록 목록 | <img src=".github/screenshots/ProfileView.png" width="200" /> | **날씨 전환 안내 배너** (코스 추천 화면)<br>실외 후보 감점으로 실내 장소가 채택되면 사유 노출 | <img src=".github/screenshots/WeatherSwitchBanner.png" width="200" /> |
 
 ## 🚀 시작하기
 
