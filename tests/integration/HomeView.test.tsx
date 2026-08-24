@@ -12,9 +12,14 @@ const mockStore = vi.hoisted(() => ({
   setCity: vi.fn(),
 }));
 
-vi.mock("@/client/stores/useLocationStore", () => ({
-  useLocationStore: () => mockStore,
-}));
+// 실제 스토어처럼 훅 함수에 정적 API(getState)까지 붙인다 — HomeView의 마운트 effect는
+// 렌더 스냅샷이 아니라 useLocationStore.getState()로 현재 상태를 읽는다(하이드레이션
+// 렌더가 복원 이전 값을 보는 문제 때문. HomeView.locationHydration.test.tsx 참고).
+vi.mock("@/client/stores/useLocationStore", () => {
+  const useLocationStore = () => mockStore;
+  useLocationStore.getState = () => mockStore;
+  return { useLocationStore };
+});
 
 /* ── mock: next/navigation ──────────────────────────────────────────── */
 const mockPush = vi.hoisted(() => vi.fn());
