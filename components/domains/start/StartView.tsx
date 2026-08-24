@@ -53,12 +53,14 @@ type ScaleId = (typeof SCALES)[number]["id"];
 export function StartView({ prefs }: { prefs: Prefs }) {
   const [selected, setSelected] = useState<ScaleId>("moderate");
   const [showManualPicker, setShowManualPicker] = useState(false);
-  const { state, requestPermission } = useLocationStore();
+  const { state } = useLocationStore();
   const { loading, noNearby, setNoNearby, searchRadiusM, generate } = useGenerateCourse(prefs);
 
   useEffect(() => {
-    if (state.status === "idle") requestPermission();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // 렌더 스냅샷이 아니라 effect 시점의 스토어를 직접 읽는다 — 이유는 HomeView의
+    // 같은 effect 주석 참고(하이드레이션 렌더는 복원 전 "idle"을 본다).
+    const { state: current, requestPermission } = useLocationStore.getState();
+    if (current.status === "idle") requestPermission();
   }, []);
 
   const isDenied =

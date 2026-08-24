@@ -15,7 +15,7 @@ import { LocationDeniedView } from "@/components/domains/location/LocationDenied
 import type { HomeData } from "@/lib/home/core";
 
 export function HomeView() {
-  const { state, requestPermission } = useLocationStore();
+  const { state } = useLocationStore();
   const [filter, setFilter] = useState<FilterChip>("전체");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const { startingId, selectPlace: handleSelectPlace, selectFestival: handleSelectFestival } =
@@ -35,11 +35,16 @@ export function HomeView() {
   };
 
   useEffect(() => {
-    if (state.status === "idle") requestPermission();
+    // 렌더 스냅샷(state)이 아니라 effect 시점의 스토어를 직접 읽는다 — zustand persist는
+    // getInitialState()를 하이드레이션 이전 값({status:"idle"})으로 고정해두고,
+    // useSyncExternalStore가 그 값을 클라이언트 하이드레이션 렌더의 스냅샷으로도 쓴다.
+    // 즉 스토어에 복원된 위치가 이미 들어 있어도 첫 렌더의 클로저는 "idle"을 보며,
+    // 그대로 requestPermission()을 부르면 수동 선택한 지역이 권한 확인 결과로 덮어써진다.
+    const { state: current, requestPermission: request } = useLocationStore.getState();
+    if (current.status === "idle") request();
     // 새로고침 직후 복원된(restored) 위치는 지오코딩 재확인이 끝나지 않은 상태이므로
     // 마운트 시점에 다시 한번 위치를 확인해 "geo"로 확정한다.
-    else if (state.status === "granted" && state.source === "restored") requestPermission();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    else if (current.status === "granted" && current.source === "restored") request();
   }, []);
 
   // 토스트 자동 소멸 — 별도 닫기 UI 없이 일정 시간 후 사라진다
