@@ -4,7 +4,12 @@ import { useState } from "react";
 import { useCourseProgressStore, MAX_REROLLS } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
 import { haversineKm } from "@/shared/utils/geo";
-import type { JourneyPlace, PendingCourse, WeatherSwitchReason } from "@/shared/types/course.types";
+import type {
+  JourneyPlace,
+  PendingCourse,
+  WeatherSwitchReason,
+  ConcentrationSwitchReason,
+} from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 
 // 운영시간 배지 스냅샷 유효 시간 — 이보다 오래된 generatedAt은 배지를 숨긴다.
@@ -34,6 +39,7 @@ type Params = {
   scale?: string;
   prefs?: Prefs;
   weatherSwitch?: WeatherSwitchReason | null;
+  concentrationSwitch?: ConcentrationSwitchReason | null;
 };
 
 // 코스 프리뷰의 재추천(리롤)·거절 흐름 — 현재 장소·운영시간 배지 신선도·거절 패널
@@ -48,6 +54,7 @@ export function useCourseResult({
   scale,
   prefs,
   weatherSwitch: initialWeatherSwitch,
+  concentrationSwitch: initialConcentrationSwitch,
 }: Params) {
   const [rerolling, setRerolling] = useState(false);
   const [currentCourseId, setCurrentCourseId] = useState(courseId);
@@ -57,6 +64,8 @@ export function useCourseResult({
   const [weatherSwitch, setWeatherSwitch] = useState<WeatherSwitchReason | null>(
     initialWeatherSwitch ?? null,
   );
+  const [concentrationSwitch, setConcentrationSwitch] =
+    useState<ConcentrationSwitchReason | null>(initialConcentrationSwitch ?? null);
   // 최초 진입 시점(마운트) 기준 1회만 판단한다 — 리롤 시엔 doReroll이 방금 생성된
   // 신선한 스냅샷임을 알고 있으므로 같은 핸들러에서 false로 직접 갱신한다
   // (effect로 다른 state 변화에 반응해 setState하는 캐스케이드 패턴을 피한다).
@@ -91,6 +100,7 @@ export function useCourseResult({
     setRerollExhausted(false);
     setReasonChip(null);
     setWeatherSwitch(null);
+    setConcentrationSwitch(null);
 
     const prevId = currentPlace.id;
     const prevCoord = currentPlace.coord;
@@ -116,6 +126,7 @@ export function useCourseResult({
     setCurrentPlace(result.place);
     setCurrentCourseName(result.courseName);
     setWeatherSwitch(result.weatherSwitch);
+    setConcentrationSwitch(result.concentrationSwitch);
     console.log(
       `[festival] 재추천 후 수신 — ${result.festivals.length}건`,
       result.festivals,
@@ -165,6 +176,7 @@ export function useCourseResult({
       prefs,
       generatedAt: nextGeneratedAt,
       weatherSwitch: result.weatherSwitch,
+      concentrationSwitch: result.concentrationSwitch,
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
   };
@@ -222,6 +234,7 @@ export function useCourseResult({
     rerollExhausted,
     reasonChip,
     weatherSwitch,
+    concentrationSwitch,
     newPlaceId,
     rerolling,
     isMaxRerolls,

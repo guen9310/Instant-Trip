@@ -4,6 +4,7 @@
  *                    [--travel walk|min] [--party solo|group]
  *                    [--vibe quiet|lively] [--food matjip|any] [--indoor indoor|outdoor]
  *                    [--lat N] [--lng N] [--quiet] [--weather clear|cloudy|rain|snow|heatwave]
+ *                    [--concentration]
  *
  * 플래그 없이 실행하면 인터랙티브 선택 모드로 진입한다.
  * 플래그:
@@ -18,6 +19,8 @@
  *   --quiet    stage4 상세 로그 없이 요약만 출력
  *   --weather  clear|cloudy|rain|snow|heatwave — 날씨 게이트를 강제 트리거하고
  *              "맑음 가정"과 나란히 비교 출력한다(실제 TourAPI 데이터로 검증용).
+ *   --concentration  [실험용] 관광지 집중률 게이트를 켜고, 껐을 때와 나란히
+ *              비교 출력한다. --vibe로 quiet/lively 방향을 바꿔가며 테스트.
  */
 
 import { config } from "dotenv";
@@ -273,6 +276,7 @@ async function run() {
     mapY: isNaN(parsedLat) ? DEFAULT_LAT : parsedLat,
   };
   const weatherOverride = resolveWeatherOverride();
+  const concentrationTest = hasArg("--concentration");
   const profile = {
     tagWeights,
     preferFood,
@@ -294,9 +298,12 @@ async function run() {
   if (weatherOverride) {
     console.log(`  날씨 강제: ${weatherOverride} (실제 기상청 API 미호출)`);
   }
+  if (concentrationTest) {
+    console.log(`  집중률 게이트: ON (vibe=${prefs.vibe} 기준 방향 결정)`);
+  }
   console.log(`${"━".repeat(60)}\n`);
 
-  const result = await generateCourse(profile, { weatherOverride });
+  const result = await generateCourse(profile, { weatherOverride, concentrationTest });
   const { course, debug } = result;
 
   // "맑음이었다면 어땠을지"를 한 번 더 실행해 나란히 비교한다(모킹 없이 실제
@@ -324,6 +331,34 @@ async function run() {
     } else {
       console.log(
         `  ⇒ 전환 없음 — 이 위치·조건에서는 날씨가 나빠도 실외 후보가 그대로 채택됨(감점이 순위를 못 뒤집었을 수도, 애초에 실내 대안이 없었을 수도 있음 — [weatherGate] 로그의 "감점 N건" 수치로 구분 가능).`,
+      );
+    }
+  }
+
+  // "집중률 게이트가 꺼져 있었다면 어땠을지"를 한 번 더 실행해 나란히 비교한다.
+  if (concentrationTest) {
+    sep(`집중률 영향 비교 — 게이트 OFF vs ON (vibe=${prefs.vibe}, 같은 위치·같은 취향)`);
+    const baseline = await generateCourse(profile, {
+      weatherOverride,
+      concentrationTest: false,
+    });
+
+    const baseTitle = baseline.course.mainPlace?.title ?? "(후보 없음)";
+    const testTitle = course.mainPlace?.title ?? "(후보 없음)";
+    console.log(`  게이트 OFF → ${baseTitle}`);
+    console.log(`  게이트 ON  → ${testTitle}`);
+
+    if (baseTitle !== testTitle) {
+      const findScore = (list: typeof debug.scored, title: string) =>
+        list.find((c) => c.item.title === title)?.score;
+      console.log(
+        `  ⇒ 채택 장소가 바뀜 — "${baseTitle}"(OFF일 때 점수 ${findScore(baseline.debug.scored, baseTitle)?.toFixed(3) ?? "?"}) ` +
+          `→ "${testTitle}"(ON일 때 점수 ${findScore(debug.scored, testTitle)?.toFixed(3) ?? "?"}). ` +
+          `방향=${prefs.vibe === "quiet" ? "조용함(고집중 감점)" : "활기참(고집중 가점)"} — 위 [concentrationGate] 로그의 매칭 건수도 함께 확인하세요.`,
+      );
+    } else {
+      console.log(
+        `  ⇒ 채택 장소 동일 — 이 조건에서는 집중률 보정이 순위를 못 뒤집음(애초에 매칭된 후보가 없거나, 다른 신호가 압도적일 수 있음 — [concentrationGate] 로그의 "매칭 N/M건" 수치로 확인).`,
       );
     }
   }

@@ -126,6 +126,7 @@ export function useGenerateCourse(prefs: Prefs) {
         prefs,
         generatedAt: Date.now(),
         weatherSwitch: result.weatherSwitch,
+        concentrationSwitch: result.concentrationSwitch,
       };
       localStorage.setItem("pendingCourse", JSON.stringify(pending));
       router.push("/course/preview");

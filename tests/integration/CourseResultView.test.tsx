@@ -109,3 +109,57 @@ describe("CourseResultView — '여기로 갈게요' 인증 상태별 분기 (�
     expect(mockStartCourseAction).not.toHaveBeenCalled();
   });
 });
+
+describe("CourseResultView — 집중률 게이트 배너", () => {
+  beforeEach(() => {
+    useCourseProgressStore.getState().reset();
+  });
+
+  it("concentrationSwitch='quiet'면 한산함 안내 문구를 보여준다", () => {
+    renderWithClient(
+      <CourseResultView
+        {...BASE_PROPS}
+        isAuthenticated
+        sessionExpired={false}
+        concentrationSwitch="quiet"
+      />,
+    );
+
+    expect(
+      screen.getByText("조용한 곳을 선호하셔서, 비교적 한산한 곳으로 골랐어요."),
+    ).toBeInTheDocument();
+  });
+
+  it("concentrationSwitch='lively'면 인기 안내 문구를 보여준다", () => {
+    renderWithClient(
+      <CourseResultView
+        {...BASE_PROPS}
+        isAuthenticated
+        sessionExpired={false}
+        concentrationSwitch="lively"
+      />,
+    );
+
+    expect(
+      screen.getByText("활기찬 곳을 선호하셔서, 요즘 사람이 많이 찾는 곳으로 골랐어요."),
+    ).toBeInTheDocument();
+  });
+
+  it("concentrationSwitch가 없으면(null) 배너를 렌더하지 않는다", () => {
+    renderWithClient(
+      <CourseResultView
+        {...BASE_PROPS}
+        isAuthenticated
+        sessionExpired={false}
+        concentrationSwitch={null}
+      />,
+    );
+
+    expect(
+      screen.queryByText("비교적 한산한 곳으로 골랐어요.", { exact: false }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("사람이 많이 찾는 곳으로 골랐어요.", { exact: false }),
+    ).not.toBeInTheDocument();
+  });
+});

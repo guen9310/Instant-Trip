@@ -22,6 +22,12 @@ export type FestivalPhase = "upcoming" | "ongoing" | "ended";
 // 안 한 곳"을 사용자에게 노출하는 건 혼란만 준다는 판단(2026-08-18 피드백).
 export type WeatherSwitchReason = "rain" | "snow" | "heatwave";
 
+// 집중률 게이트(lib/pipeline/concentrationGate.ts)가 온보딩 "장소 분위기"(vibe) 방향과
+// 실제 집중률이 서로 부합할 때만 채워진다 — quiet인데 매칭된 장소가 오히려 붐비는 경우처럼
+// 방향과 실측이 어긋나면 null로 둔다(모순된 문구를 보여주지 않기 위함). CONCENTRATION_GATE_
+// ENABLED가 꺼져 있거나 집중률 데이터가 매칭 안 된 경우도 null.
+export type ConcentrationSwitchReason = "quiet" | "lively";
+
 // 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)
 export type JourneyPlace = {
   id: string;
@@ -125,6 +131,9 @@ export type PendingCourse = {
   // 코스 생성 시 실외→실내 전환이 일어났으면 사유. generateCourse() 경로에서만
   // 채워진다(선택/축제 진입은 undefined) — availability 필드와 정확히 반대 대칭.
   weatherSwitch?: WeatherSwitchReason | null;
+  // 집중률 게이트가 온보딩 vibe 방향과 부합하는 선택을 했으면 사유. weatherSwitch와
+  // 같은 대칭 — generateCourse() 경로에서만, CONCENTRATION_GATE_ENABLED일 때만 채워진다.
+  concentrationSwitch?: ConcentrationSwitchReason | null;
 };
 
 // /course/active/[id] 서버 컴포넌트가 미리 조회해두는 DB 기반 이어서 데이터.

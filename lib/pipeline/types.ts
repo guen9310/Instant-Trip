@@ -5,6 +5,7 @@ import type {
   FestivalProgramInfo,
   FestivalPhase,
   WeatherSwitchReason,
+  ConcentrationSwitchReason,
 } from "@/shared/types/course.types";
 
 export type TravelScale = "가볍게" | "적당히" | "여유롭게";
@@ -66,6 +67,10 @@ export interface PlaceCandidate {
   // 배치 필터(filterByAvailability) 경로에서만 채워진다.
   hours?: string | null;
   restDayNote?: string | null;
+  // 관광지 집중률(TatsCnctrRateService) 매칭 값(0~100) — concentrationGate.ts가 이름
+  // 매칭에 성공한 후보에만 채운다. CONCENTRATION_GATE_ENABLED가 꺼져 있거나 매칭
+  // 안 되면 undefined — index.ts가 이 값의 유무로 배너 노출 여부를 판단한다.
+  concentrationRate?: number | null;
 }
 
 // 이 장소가 어떻게 코스에 들어왔는지 — 취향 기반 추천(stage4 점수화) vs
@@ -109,6 +114,8 @@ export interface CourseResult {
   // CourseResult 생성 지점을 전부 건드려야 한다. availability?(PlaceAvailabilitySnapshot)와
   // 동일한 패턴.
   weatherSwitch?: WeatherSwitchReason | null;
+  // weatherSwitch와 같은 이유로 optional — CONCENTRATION_GATE_ENABLED일 때만 채워진다.
+  concentrationSwitch?: ConcentrationSwitchReason | null;
 }
 
 // 파이프라인 전체 결과 (디버그 포함)

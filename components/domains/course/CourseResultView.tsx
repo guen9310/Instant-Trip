@@ -17,6 +17,8 @@ import {
   CloudRain,
   CloudSnow,
   Thermometer,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/shared/utils";
 import { Badge } from "@/components/commons/Badge";
@@ -34,6 +36,7 @@ import type {
   PlaceAvailabilitySnapshot,
   CourseProgress,
   WeatherSwitchReason,
+  ConcentrationSwitchReason,
 } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
@@ -84,6 +87,17 @@ const WEATHER_SWITCH_TEXT: Record<WeatherSwitchReason, string> = {
   heatwave: "폭염이 예상돼 실내 장소를 추천해드렸어요.",
 };
 
+// 집중률 게이트 안내 — 온보딩 "장소 분위기"와 실측 혼잡도가 부합할 때만 채워진다
+// (index.ts의 판정 참고). 원래 순위였던 다른 후보명은 노출하지 않는다(날씨 배너와 동일 원칙).
+const CONCENTRATION_SWITCH_ICON: Record<ConcentrationSwitchReason, LucideIcon> = {
+  quiet: TrendingDown,
+  lively: TrendingUp,
+};
+const CONCENTRATION_SWITCH_TEXT: Record<ConcentrationSwitchReason, string> = {
+  quiet: "조용한 곳을 선호하셔서, 비교적 한산한 곳으로 골랐어요.",
+  lively: "활기찬 곳을 선호하셔서, 요즘 사람이 많이 찾는 곳으로 골랐어요.",
+};
+
 type Props = {
   courseId: string;
   courseName: string;
@@ -103,6 +117,9 @@ type Props = {
   // 날씨 게이트가 실외→실내로 전환했으면 사유. generateCourse() 경로(취향 기반
   // 추천)에서만 채워진다 — 선택/축제 진입은 undefined.
   weatherSwitch?: WeatherSwitchReason | null;
+  // 집중률 게이트가 온보딩 vibe 방향과 부합하는 선택을 했으면 사유. weatherSwitch와
+  // 같은 대칭 — CONCENTRATION_GATE_ENABLED일 때만 채워진다.
+  concentrationSwitch?: ConcentrationSwitchReason | null;
   // 서버 컴포넌트(page.tsx)에서 getAuthState()로 미리 판정 — 탭 시 서버 왕복 없이
   // 즉시 분기하기 위함 (비로그인은 안내 후 이동, 로그인은 낙관적 이동).
   isAuthenticated: boolean;
@@ -130,6 +147,7 @@ export function CourseResultView({
   availability,
   generatedAt,
   weatherSwitch: initialWeatherSwitch,
+  concentrationSwitch: initialConcentrationSwitch,
   isAuthenticated,
   sessionExpired,
   activeCourse,
@@ -151,6 +169,7 @@ export function CourseResultView({
     rerollExhausted,
     reasonChip,
     weatherSwitch,
+    concentrationSwitch,
     newPlaceId,
     rerolling,
     isMaxRerolls,
@@ -170,6 +189,7 @@ export function CourseResultView({
     scale,
     prefs,
     weatherSwitch: initialWeatherSwitch,
+    concentrationSwitch: initialConcentrationSwitch,
   });
 
   // 비로그인 안내 후 로그인 화면으로 이동 — HomeView의 토스트 자동 소멸 패턴과 동일하게
@@ -379,6 +399,19 @@ export function CourseResultView({
             })()}
             <p className="text-[13px] text-primary leading-snug">
               {WEATHER_SWITCH_TEXT[weatherSwitch]}
+            </p>
+          </div>
+        )}
+
+        {/* 집중률 게이트 안내 — 취향 매칭 성공을 알리는 긍정 톤(accent) */}
+        {concentrationSwitch && (
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-accent/8 border border-accent/20 mb-4">
+            {(() => {
+              const Icon = CONCENTRATION_SWITCH_ICON[concentrationSwitch];
+              return <Icon size={16} className="text-accent shrink-0 mt-0.5" />;
+            })()}
+            <p className="text-[13px] text-accent leading-snug">
+              {CONCENTRATION_SWITCH_TEXT[concentrationSwitch]}
             </p>
           </div>
         )}

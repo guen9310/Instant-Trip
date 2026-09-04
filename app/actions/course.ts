@@ -23,6 +23,7 @@ import type {
   NearbyPoi,
   FestivalSummary,
   WeatherSwitchReason,
+  ConcentrationSwitchReason,
 } from "@/shared/types/course.types";
 import {
   generateCourseFromFestivalInputSchema,
@@ -44,6 +45,7 @@ type GenerateCourseResult =
       courseName: string;
       festivals: FestivalSummary[];
       weatherSwitch: WeatherSwitchReason | null;
+      concentrationSwitch: ConcentrationSwitchReason | null;
     }
   // NO_PLACE: 반경 내 적합한 장소 없음 — radiusM은 실제 검색에 사용된 반경
   | { ok: false; code: "NO_PLACE"; error: string; radiusM: number }
@@ -191,6 +193,7 @@ export async function generateCourseAction(
       courseName,
       festivals,
       weatherSwitch: course.weatherSwitch ?? null,
+      concentrationSwitch: course.concentrationSwitch ?? null,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "추천 중 오류가 발생했어요.";
