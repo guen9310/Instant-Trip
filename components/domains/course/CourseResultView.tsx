@@ -403,14 +403,15 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 집중률 게이트 안내 — 취향 매칭 성공을 알리는 긍정 톤(accent) */}
+        {/* 집중률 게이트 안내 — 날씨 배너(primary)와 같은 계열이되 다른 명도(secondary)로
+            구분한다. accent(초록)는 화면 내 다른 요소와 어울리는 곳이 없어 튀는 문제가 있었다. */}
         {concentrationSwitch && (
-          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-accent/8 border border-accent/20 mb-4">
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-secondary/8 border border-secondary/20 mb-4">
             {(() => {
               const Icon = CONCENTRATION_SWITCH_ICON[concentrationSwitch];
-              return <Icon size={16} className="text-accent shrink-0 mt-0.5" />;
+              return <Icon size={16} className="text-secondary shrink-0 mt-0.5" />;
             })()}
-            <p className="text-[13px] text-accent leading-snug">
+            <p className="text-[13px] text-secondary leading-snug">
               {CONCENTRATION_SWITCH_TEXT[concentrationSwitch]}
             </p>
           </div>
