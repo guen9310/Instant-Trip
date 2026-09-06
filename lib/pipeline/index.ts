@@ -23,6 +23,11 @@ import {
   overrideToSignal,
   WEATHER_GATE_WINDOW_HOURS,
 } from "@/lib/pipeline/weatherGate";
+import {
+  applyConcentrationGate,
+  deriveConcentrationSwitchReason,
+  type ConcentrationGateResult,
+} from "@/lib/pipeline/concentrationGate";
 import { classifyIndoorOutdoor } from "@/lib/pipeline/indoorOutdoor";
 import type { WeatherSwitchReason } from "@/shared/types/course.types";
 import type { WeatherCondition, WeatherGateSignal } from "@/shared/utils/weatherContext";
@@ -68,6 +73,11 @@ export async function generateCourse(
     strictOpenOnly?: boolean;
     // 데모/QA 전용 — 실제 API 호출 없이 날씨 게이트를 강제 트리거한다.
     weatherOverride?: WeatherCondition | "heatwave";
+    // 관광지 집중률 기반 재정렬 게이트 on/off — 기본은 CONCENTRATION_GATE_ENABLED
+    // 환경변수를 따른다(미설정 시 꺼짐). scripts/pipeline-run.ts의 --concentration
+    // 비교 실행처럼, 환경변수와 무관하게 특정 호출만 강제로 켜거나 끄고 싶을 때만
+    // 명시적으로 넘긴다 — 프로덕션 호출(app/actions/course.ts)은 넘기지 않는다.
+    concentrationTest?: boolean;
   } = {},
 ): Promise<PipelineResult> {
   const t0 = Date.now();
@@ -108,6 +118,7 @@ export async function generateCourse(
       scale: profile.scale,
       generatedAt: new Date().toISOString(),
       weatherSwitch: null,
+      concentrationSwitch: null,
     };
     return {
       course: empty,
@@ -232,12 +243,28 @@ export async function generateCourse(
       `사유:${weatherGateResult.reason ?? "없음"} 감점:${weatherGateResult.penalizedCount}건 | ${elapsed(Date.now() - ts)}`,
   );
 
+  // stage4.6: 관광지 집중률 게이트. weatherGate와 같은 자리, 서로 다른 신호
+  // (실내외 vs 이름 매칭)라 순서 무관. on/off는 CONCENTRATION_GATE_ENABLED가
+  // 기본이고, concentrationTest가 넘어오면(테스트·비교용) 그 값이 우선한다.
+  ts = Date.now();
+  const concentrationEnabled =
+    options.concentrationTest ?? process.env.CONCENTRATION_GATE_ENABLED === "true";
+  let preAvailabilityScored = weatherGateResult.scored;
+  let concentrationResult: ConcentrationGateResult | null = null;
+  if (concentrationEnabled) {
+    concentrationResult = await applyConcentrationGate(weatherGateResult.scored, profile);
+    preAvailabilityScored = concentrationResult.scored;
+    console.log(
+      `[pipeline] stage4.6 집중률 게이트 완료 | ${elapsed(Date.now() - ts)}`,
+    );
+  }
+
   // 신규: 점수 순으로 하나씩만 운영시간을 확인해 최초로 열려있는 후보를 채택한다
   // (기존엔 stage2가 전체를 미리 검사했으나, 점수화가 운영시간 데이터를 쓰지 않으므로
   // 순서를 뒤집어 TourAPI 호출을 80~120건에서 보통 1~수건으로 줄인다)
-  // 날씨 게이트가 이미 재정렬한 순서(weatherGateResult.scored)로 순회한다.
+  // 날씨/집중률 게이트가 이미 재정렬한 순서(preAvailabilityScored)로 순회한다.
   ts = Date.now();
-  const gate = await selectAvailableCandidate(weatherGateResult.scored, {
+  const gate = await selectAvailableCandidate(preAvailabilityScored, {
     strictOpenOnly: options.strictOpenOnly,
   });
   console.log(
@@ -247,10 +274,10 @@ export async function generateCourse(
   );
 
   const allCandidates = gate
-    ? weatherGateResult.scored.map((c) =>
+    ? preAvailabilityScored.map((c) =>
         c.item.contentid === gate.winner.item.contentid ? gate.winner : c,
       )
-    : weatherGateResult.scored;
+    : preAvailabilityScored;
 
   // 감점으로 winner보다 아래로 밀려난 실외 후보가 있으면 "전환됨"으로 판정한다.
   // 원래 있었을 실외 후보명은 사용자에게 노출하지 않는다(혼란만 준다) — 로그에만 남긴다.
@@ -268,6 +295,21 @@ export async function generateCourse(
   if (weatherSwitchReason) {
     console.log(
       `[weatherGate] 전환됨 — "${demotedOutdoor!.item.title}"(밀려남) → "${gate!.winner.item.title}" (사유: ${weatherSwitchReason})`,
+    );
+  }
+
+  // 채택된 장소(winner)에 집중률 매칭이 있고, 실측 집중률이 온보딩 vibe 방향과
+  // 부합할 때만 배너 사유를 채운다 — quiet인데 winner가 오히려 붐비는 경우처럼
+  // 방향과 실측이 어긋나면 모순된 문구가 되므로 null로 둔다(weatherSwitch의
+  // "실제로 전환이 일어났을 때만" 원칙과 같은 결).
+  const winnerRate = gate?.winner.concentrationRate;
+  const concentrationSwitchReason = concentrationResult
+    ? deriveConcentrationSwitchReason(concentrationResult.direction, winnerRate)
+    : null;
+
+  if (concentrationSwitchReason) {
+    console.log(
+      `[concentrationGate] 배너 노출 — "${gate!.winner.item.title}" 방향:${concentrationSwitchReason} 집중률:${winnerRate}`,
     );
   }
 
@@ -290,6 +332,7 @@ export async function generateCourse(
     ...courseBase,
     festivals: { ongoing: festivalsOngoing, upcoming: festivalsUpcoming },
     weatherSwitch: weatherSwitchReason,
+    concentrationSwitch: concentrationSwitchReason,
   };
 
   const courseIds = new Set([
