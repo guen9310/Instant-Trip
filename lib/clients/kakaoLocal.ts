@@ -63,8 +63,12 @@ async function fetchByCode(
     size: "15",
   });
 
+  // 카카오 로컬 API도 Tour API(lib/tour/client.ts)와 같은 이유로 TCP 연결 후
+  // 무응답 상태가 될 수 있다. 타임아웃 없이 기다리면 supplementWithKakao 대기가
+  // 끝나지 않아 코스 생성 파이프라인 전체가 멈춘다.
   const res = await fetch(`${BASE_URL}?${params}`, {
     headers: { Authorization: `KakaoAK ${REST_KEY}` },
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!res.ok) {
@@ -90,8 +94,10 @@ async function fetchByKeyword(
     size: "15",
   });
 
+  // fetchByCode와 같은 이유로 타임아웃을 둔다.
   const res = await fetch(`${KEYWORD_BASE_URL}?${params}`, {
     headers: { Authorization: `KakaoAK ${REST_KEY}` },
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!res.ok) {
