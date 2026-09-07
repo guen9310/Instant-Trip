@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useCourseProgressStore, MAX_REROLLS } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
 import { haversineKm } from "@/shared/utils/geo";
+import { withTimeout } from "@/shared/utils/withTimeout";
+import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type {
   JourneyPlace,
   PendingCourse,
@@ -107,15 +109,20 @@ export function useCourseResult({
 
     let result: Awaited<ReturnType<typeof generateCourseAction>>;
     try {
-      result = await generateCourseAction({
-        mapX,
-        mapY,
-        scale: scale as "light" | "moderate" | "leisurely",
-        prefs,
-        excludeIds,
-        maxDistanceKm: opts.maxDistanceKm,
-        strictOpenOnly: opts.strictOpenOnly,
-      });
+      // withTimeout: 서버 액션 자체는 reject조차 안 되고 영원히 pending일 수 있어
+      // (진짜 네트워크 hang — withTimeout.ts 참고) try/catch만으론 부족하다.
+      result = await withTimeout(
+        generateCourseAction({
+          mapX,
+          mapY,
+          scale: scale as "light" | "moderate" | "leisurely",
+          prefs,
+          excludeIds,
+          maxDistanceKm: opts.maxDistanceKm,
+          strictOpenOnly: opts.strictOpenOnly,
+        }),
+        COURSE_ACTION_TIMEOUT_MS,
+      );
     } catch (err) {
       // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면
       // setRerolling(false)를 못 돌아 재추천 버튼이 "재추천 중..."에 영구히

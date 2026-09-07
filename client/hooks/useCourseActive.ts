@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { fetchNearbyPoisAction } from "@/app/actions/course";
+import { withTimeout } from "@/shared/utils/withTimeout";
+import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type {
   JourneyPlace,
   NearbyCategory,
@@ -107,7 +109,9 @@ export function useCourseActive(
   useEffect(() => {
     if (!coordKey) return;
     const [lat, lng] = coordKey.split(",").map(Number);
-    fetchNearbyPoisAction(lat, lng)
+    // withTimeout: 서버 액션 자체는 reject조차 안 되고 영원히 pending일 수 있어(진짜
+    // 네트워크 hang — withTimeout.ts 참고) .catch()만으론 부족하다.
+    withTimeout(fetchNearbyPoisAction(lat, lng), COURSE_ACTION_TIMEOUT_MS)
       .then((result) => {
         if (result.ok) {
           setPois(result.pois);
