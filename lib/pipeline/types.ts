@@ -7,12 +7,11 @@ import type {
   WeatherSwitchReason,
   ConcentrationSwitchReason,
 } from "@/shared/types/course.types";
+import type { TagKey, TagWeights } from "@/shared/constants/preferences";
+
+export type { TagKey, TagWeights };
 
 export type TravelScale = "가볍게" | "적당히" | "여유롭게";
-
-export type TagKey = "도보친화" | "1인여행" | "실내" | "조용함";
-
-export type TagWeights = Record<TagKey, number>;
 
 export interface OnboardingAnswers {
   걷는거좋아요: boolean;
@@ -59,6 +58,10 @@ export interface PlaceCandidate {
   item: TourItem;
   tagScores: Record<TagKey, number>;
   tags: TagKey[];
+  // 사용자가 선택한(tagWeights>0) 태그 중 이 장소의 tagScores가 가장 높은 것.
+  // 온보딩 4문항이 전부 "반대쪽"이라 선택된 태그가 하나도 없으면 null — 직접
+  // 선택 진입(selectPlace/selectFestival)도 온보딩 매칭 개념이 없어 null.
+  topPreferenceTag: TagKey | null;
   score: number;
   available: boolean;
   availabilityUncertain: boolean;
@@ -87,6 +90,7 @@ export interface CoursePlace {
   images: string[];
   coord: { lat: number; lng: number } | null;
   tags: TagKey[];
+  topPreferenceTag: TagKey | null;
   score: number;
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;

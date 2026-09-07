@@ -1,5 +1,5 @@
 import type { DurationRange } from "@/shared/utils/duration";
-import type { Prefs } from "@/shared/constants/preferences";
+import type { Prefs, TagKey } from "@/shared/constants/preferences";
 import type { AvailabilityStatus } from "@/shared/types/availability.types";
 
 export type BadgeVariant = "accent" | "secondary" | "point" | "outline";
@@ -44,6 +44,10 @@ export type JourneyPlace = {
   availabilityUncertain: boolean;
   estimatedDuration: DurationRange;
   tags: string[];
+  // 사용자가 선택한 온보딩 태그 중 이 장소의 점수가 가장 높았던 것. 선택된 태그가
+  // 없거나(온보딩 4문항 전부 반대쪽) 직접 선택 진입이면 null. 구버전 localStorage
+  // 페이로드엔 없을 수 있어 optional.
+  topPreferenceTag?: TagKey | null;
   // 이 장소가 취향 추천(stage4 점수화)으로 왔는지, 홈 근처 카드에서 직접 선택했는지.
   // 구버전 localStorage 페이로드엔 없을 수 있어 optional.
   origin?: "recommended" | "selected";

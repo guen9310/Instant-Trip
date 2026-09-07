@@ -38,7 +38,7 @@ import type {
   WeatherSwitchReason,
   ConcentrationSwitchReason,
 } from "@/shared/types/course.types";
-import type { Prefs } from "@/shared/constants/preferences";
+import type { Prefs, TagKey } from "@/shared/constants/preferences";
 import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
 import { CourseMap } from "@/components/domains/course/CourseMap";
@@ -46,9 +46,12 @@ import { HoursInfoCard } from "@/components/domains/course/HoursInfoCard";
 import { PlaceDescription } from "@/components/domains/course/PlaceDescription";
 import { CourseResultSkeleton } from "@/components/domains/course/CourseResultSkeleton";
 
-const TRAVEL_REASON: Record<string, string> = {
-  walk: "걷는 게 좋아요",
-  min: "이동 최소화",
+// 취향 칩 문구 — 온보딩 4문항 중 이 장소의 원점수가 가장 높았던 태그 1개만 노출한다.
+const TAG_REASON_LABEL: Record<TagKey, string> = {
+  도보친화: "걷는 게 좋아요",
+  "1인여행": "혼자 여행",
+  실내: "실내 활동",
+  조용함: "조용한 분위기",
 };
 
 const REJECT_REASONS = [
@@ -361,11 +364,11 @@ export function CourseResultView({
         {/* 취향 칩 + 재추천 사유 칩 — 세로 스택(gap 6px). 사유 칩은 리롤이 실제로
             그 사유를 해소했을 때만 useCourseResult가 채워준다(거짓 주장 방지 —
             useCourseResult.ts의 검증 로직 참고). */}
-        {(prefs || reasonChip) && (
+        {(currentPlace.topPreferenceTag || reasonChip) && (
           <div className="flex flex-col items-start gap-1.5 mb-5">
-            {prefs && (
+            {currentPlace.topPreferenceTag && (
               <div className="inline-flex self-start items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-primary/8 text-primary text-[12px] font-medium">
-                {`'${TRAVEL_REASON[prefs.travel] ?? prefs.travel}' 취향에 맞게 골랐어요`}
+                {`'${TAG_REASON_LABEL[currentPlace.topPreferenceTag]}' 취향에 맞게 골랐어요`}
               </div>
             )}
             {reasonChip && (
@@ -403,14 +406,15 @@ export function CourseResultView({
           </div>
         )}
 
-        {/* 집중률 게이트 안내 — 취향 매칭 성공을 알리는 긍정 톤(accent) */}
+        {/* 집중률 게이트 안내 — 날씨 배너(primary)와 같은 계열이되 다른 명도(secondary)로
+            구분한다. accent(초록)는 화면 내 다른 요소와 어울리는 곳이 없어 튀는 문제가 있었다. */}
         {concentrationSwitch && (
-          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-accent/8 border border-accent/20 mb-4">
+          <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-secondary/8 border border-secondary/20 mb-4">
             {(() => {
               const Icon = CONCENTRATION_SWITCH_ICON[concentrationSwitch];
-              return <Icon size={16} className="text-accent shrink-0 mt-0.5" />;
+              return <Icon size={16} className="text-secondary shrink-0 mt-0.5" />;
             })()}
-            <p className="text-[13px] text-accent leading-snug">
+            <p className="text-[13px] text-secondary leading-snug">
               {CONCENTRATION_SWITCH_TEXT[concentrationSwitch]}
             </p>
           </div>

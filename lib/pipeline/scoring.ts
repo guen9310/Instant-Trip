@@ -241,7 +241,20 @@ export async function scoreCandidates(
     const tags = (Object.entries(tagScores) as [TagKey, number][])
       .filter(([, s]) => s > 0)
       .map(([t]) => t);
-    return { item, tagScores, tags, score, available: true, availabilityUncertain: false, estimatedDuration: dur, hours: null, restDayNote: null };
+
+    // 사용자가 선택한(weight>0) 태그 중 이 장소의 원점수가 가장 높은 것을 뽑는다.
+    // 동점은 tagWeights 선언 순서(도보친화→1인여행→실내→조용함)로 결정론적으로 해소.
+    const selectedTags = (Object.keys(profile.tagWeights) as TagKey[]).filter(
+      (t) => (profile.tagWeights[t] ?? 0) > 0,
+    );
+    const topPreferenceTag =
+      selectedTags.length > 0
+        ? selectedTags.reduce((best, t) =>
+            (tagScores[t] ?? 0) > (tagScores[best] ?? 0) ? t : best,
+          )
+        : null;
+
+    return { item, tagScores, tags, topPreferenceTag, score, available: true, availabilityUncertain: false, estimatedDuration: dur, hours: null, restDayNote: null };
   });
 
   scored.sort((a, b) => b.score - a.score);
