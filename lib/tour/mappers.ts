@@ -81,6 +81,7 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     availabilityUncertain: p.availabilityUncertain,
     estimatedDuration: p.estimatedDuration,
     tags: p.tags,
+    topPreferenceTag: p.topPreferenceTag,
     origin: p.origin,
     placeUrl: p.placeUrl,
     programInfo: p.programInfo,

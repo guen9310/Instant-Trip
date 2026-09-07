@@ -119,6 +119,7 @@ export async function generateCourseFromFestival(
       images: imageUrl ? [imageUrl] : [],
       coord: { lat, lng },
       tags: [],
+      topPreferenceTag: null,
       score: 0,
       // 이 플래그는 날짜(YYYY-MM-DD) 기준 확실성만 본다 — 날짜는 항상 확실한 값이라
       // false로 고정한다. playtime(당일 시간대) 판정의 no_data/uncertain 여부는 아래

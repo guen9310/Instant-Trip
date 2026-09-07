@@ -103,6 +103,8 @@ export async function generateCourseFromPlace(
       item,
       tagScores,
       tags,
+      // 직접 선택된 장소라 온보딩 매칭 개념 자체가 없다 — score와 동일한 "적용 불가" 취급.
+      topPreferenceTag: null,
       // 직접 선택된 장소라 순위가 없다 — score는 추천 점수와 비교되지 않는 "적용 불가" 값.
       score: 0,
       available: true,

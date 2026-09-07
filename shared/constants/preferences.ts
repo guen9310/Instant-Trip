@@ -14,6 +14,13 @@ import {
 
 export type PrefKey = "travel" | "party" | "vibe" | "food" | "indoor";
 
+// 온보딩 답변이 매핑되는 추천 점수 태그. lib/pipeline/scoring.ts(장소 분류 코드 →
+// 태그 점수)와 lib/tour/mappers.ts(온보딩 답변 → 태그 가중치) 양쪽이 공유하는
+// 어휘라 shared에 둔다 — lib는 shared를 import할 수 있지만 반대는 불가능하므로.
+export type TagKey = "도보친화" | "1인여행" | "실내" | "조용함";
+
+export type TagWeights = Record<TagKey, number>;
+
 export type Prefs = {
   travel: "walk" | "min";
   party: "solo" | "group";

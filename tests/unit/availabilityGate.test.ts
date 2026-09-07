@@ -37,6 +37,7 @@ function makeCandidate(
     item,
     tagScores: { 도보친화: 0, "1인여행": 0, 실내: 0, 조용함: 0 },
     tags: [],
+    topPreferenceTag: null,
     score,
     available: true,
     availabilityUncertain: false,
