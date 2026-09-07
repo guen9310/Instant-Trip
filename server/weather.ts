@@ -156,7 +156,10 @@ async function weatherFetch<T>(
   let rawBody: string | null = null;
 
   try {
-    const res = await fetch(url);
+    // 기상청 API(공공데이터포털)도 Tour API(lib/tour/client.ts)와 같은 이유로
+    // TCP 연결 후 무응답 상태가 될 수 있다. 타임아웃 없이 기다리면
+    // weatherSignalPromise가 pending 상태로 남아 코스 생성 파이프라인 전체가 멈춘다.
+    const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
     httpStatus = res.status;
 
     if (!res.ok) {

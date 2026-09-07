@@ -64,7 +64,10 @@ async function requestFestivals(
     type:      "json",
   });
 
-  const res = await fetch(`${BASE_URL}?${query}`);
+  // 공공데이터포털 API는 Tour API(lib/tour/client.ts)와 같은 이유로 TCP 연결 후
+  // 무응답 상태가 될 수 있다. 타임아웃 없이 기다리면 festivalPromise가 pending
+  // 상태로 남아 파이프라인 전체와 /api/cultural-festivals 응답이 멈춘다.
+  const res = await fetch(`${BASE_URL}?${query}`, { signal: AbortSignal.timeout(10_000) });
   if (!res.ok) throw new Error(`문화축제 API 오류: ${res.status} ${res.statusText}`);
 
   const data = await res.json() as GovApiResponse;
