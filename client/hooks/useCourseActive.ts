@@ -107,12 +107,20 @@ export function useCourseActive(
   useEffect(() => {
     if (!coordKey) return;
     const [lat, lng] = coordKey.split(",").map(Number);
-    fetchNearbyPoisAction(lat, lng).then((result) => {
-      if (result.ok) {
-        setPois(result.pois);
-      }
-      setFetchedKey(coordKey);
-    });
+    fetchNearbyPoisAction(lat, lng)
+      .then((result) => {
+        if (result.ok) {
+          setPois(result.pois);
+        }
+        setFetchedKey(coordKey);
+      })
+      .catch((err) => {
+        // reject(네트워크 단절 등)로 setFetchedKey를 못 부르면 poisLoading이
+        // (coordKey !== fetchedKey) 영구히 true로 남아 주변 정보 섹션이 로딩
+        // 상태에 고착된다 — 실패해도 반드시 fetchedKey는 갱신한다.
+        console.error("[nearby] 주변 정보 조회 실패:", err);
+        setFetchedKey(coordKey);
+      });
   }, [coordKey]);
 
   if (!current) {

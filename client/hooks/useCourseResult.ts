@@ -105,15 +105,26 @@ export function useCourseResult({
     const prevId = currentPlace.id;
     const prevCoord = currentPlace.coord;
 
-    const result = await generateCourseAction({
-      mapX,
-      mapY,
-      scale: scale as "light" | "moderate" | "leisurely",
-      prefs,
-      excludeIds,
-      maxDistanceKm: opts.maxDistanceKm,
-      strictOpenOnly: opts.strictOpenOnly,
-    });
+    let result: Awaited<ReturnType<typeof generateCourseAction>>;
+    try {
+      result = await generateCourseAction({
+        mapX,
+        mapY,
+        scale: scale as "light" | "moderate" | "leisurely",
+        prefs,
+        excludeIds,
+        maxDistanceKm: opts.maxDistanceKm,
+        strictOpenOnly: opts.strictOpenOnly,
+      });
+    } catch (err) {
+      // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면
+      // setRerolling(false)를 못 돌아 재추천 버튼이 "재추천 중..."에 영구히
+      // 갇힌다 — 반드시 감싼다(useStartCourse.ts와 같은 결).
+      console.error("[reroll] 코스 재생성 실패:", err);
+      setRerolling(false);
+      setRerollExhausted(true);
+      return;
+    }
 
     setRerolling(false);
 
