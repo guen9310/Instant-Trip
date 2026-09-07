@@ -202,7 +202,12 @@ export function useCourseResult({
   // 거절 이유 확정 — 원래 PlaceDetailSheet(드로어)의 "여기 말고 다른 곳으로"와 동일하게,
   // 리롤 성공/실패 여부와 무관하게 완료 후 패널을 닫는다(실패 시엔 rerollExhausted 배너가 안내).
   const confirmReject = async () => {
-    if (!rejectReason) return;
+    // isMaxRerolls/rerolling 검증은 지금까지 "이런 곳은 싫어요" 버튼의 disabled
+    // 속성에만 있었다 — 패널을 연 시점과 확정을 누른 시점 사이에 상태가 바뀌면
+    // (다른 탭에서 리롤 소진, 재클릭 등) 이 함수 자체엔 방어가 없어 소진 후에도
+    // 재추천이 실행될 수 있었다. useStartCourse.ts의 startingId 가드와 같은 결로,
+    // 핸들러 자체에도 재검증을 둔다.
+    if (!rejectReason || isMaxRerolls || rerolling) return;
     console.log(
       `[reroll] 거절 — placeId: ${currentPlace.id}, reason: ${rejectReason}`,
     );
