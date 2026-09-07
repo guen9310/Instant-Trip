@@ -8,6 +8,8 @@ import { generateCourseAction } from "@/app/actions/course";
 import { saveCourseCompletionAction } from "@/app/actions/completion";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { buildCompletionPayload } from "@/shared/utils/completionPayload";
+import { withTimeout } from "@/shared/utils/withTimeout";
+import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type { PendingCourse } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 
@@ -71,19 +73,24 @@ export function useGenerateCourse(prefs: Prefs) {
 
     // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면 아래 로직이
     // 전혀 실행되지 않고 setLoading(false)도 못 돌아 무한 로딩에 빠진다 — 반드시 감싼다.
+    // withTimeout: 서버 액션 자체는 reject조차 안 되고 영원히 pending일 수 있어(진짜
+    // 네트워크 hang — withTimeout.ts 참고) try/catch만으론 부족하다.
     try {
       // "이런 곳은 싫어요"로 거절했던 장소는 /start를 거쳐 새로 생성해도 다시 뜨면
       // 안 된다 — 누적된 거절 이력을 그대로 excludeIds로 넘긴다.
       const { rejectedPlaceIds } = useCourseProgressStore.getState();
-      const result = await generateCourseAction({
-        mapX: coords.lng,
-        mapY: coords.lat,
-        scale,
-        prefs,
-        radiusM,
-        excludeIds: rejectedPlaceIds,
-        debugWeather: readDebugWeather(searchParams),
-      });
+      const result = await withTimeout(
+        generateCourseAction({
+          mapX: coords.lng,
+          mapY: coords.lat,
+          scale,
+          prefs,
+          radiusM,
+          excludeIds: rejectedPlaceIds,
+          debugWeather: readDebugWeather(searchParams),
+        }),
+        COURSE_ACTION_TIMEOUT_MS,
+      );
 
       if (!result.ok) {
         if (result.code === "UNAUTHENTICATED") {

@@ -10,6 +10,8 @@ import {
 import type { FestivalSummary, JourneyPlace, PendingCourse } from "@/shared/types/course.types";
 import type { TourItem } from "@/lib/tour/types";
 import type { PlaceAvailability } from "@/lib/pipeline";
+import { withTimeout } from "@/shared/utils/withTimeout";
+import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 
 const GENERIC_COURSE_ERROR = "갈 곳을 찾는 중 문제가 생겼어요. 다시 시도해주세요.";
 
@@ -63,14 +65,25 @@ export function useStartCourse(onError: (message: string) => void) {
     if (startingId) return;
     setStartingId(id);
 
-    const result = await generate();
-    if (!result.ok) {
-      setStartingId(null);
-      onError(errorMessage(result.code));
-      return;
-    }
+    // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면 아래 로직이
+    // 전혀 실행되지 않고 setStartingId(null)도 못 돌아, 위쪽의 `if (startingId) return`
+    // 가드 때문에 이후 어떤 카드를 눌러도 무반응 상태에 영구히 갇힌다 — 반드시 감싼다.
+    // withTimeout: 서버 액션 자체는 reject조차 안 되고 영원히 pending일 수 있어(진짜
+    // 네트워크 hang — withTimeout.ts 참고) try/catch만으론 부족하다.
+    try {
+      const result = await withTimeout(generate(), COURSE_ACTION_TIMEOUT_MS);
+      if (!result.ok) {
+        setStartingId(null);
+        onError(errorMessage(result.code));
+        return;
+      }
 
-    startPendingCourse(result, lat, lng);
+      startPendingCourse(result, lat, lng);
+    } catch (err) {
+      console.error("[start] 코스 생성 실패:", err);
+      setStartingId(null);
+      onError(GENERIC_COURSE_ERROR);
+    }
   };
 
   const selectPlace = (place: TourItem) => {

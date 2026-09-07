@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { fetchNearbyPoisAction } from "@/app/actions/course";
+import { withTimeout } from "@/shared/utils/withTimeout";
+import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type {
   JourneyPlace,
   NearbyCategory,
@@ -107,12 +109,22 @@ export function useCourseActive(
   useEffect(() => {
     if (!coordKey) return;
     const [lat, lng] = coordKey.split(",").map(Number);
-    fetchNearbyPoisAction(lat, lng).then((result) => {
-      if (result.ok) {
-        setPois(result.pois);
-      }
-      setFetchedKey(coordKey);
-    });
+    // withTimeout: 서버 액션 자체는 reject조차 안 되고 영원히 pending일 수 있어(진짜
+    // 네트워크 hang — withTimeout.ts 참고) .catch()만으론 부족하다.
+    withTimeout(fetchNearbyPoisAction(lat, lng), COURSE_ACTION_TIMEOUT_MS)
+      .then((result) => {
+        if (result.ok) {
+          setPois(result.pois);
+        }
+        setFetchedKey(coordKey);
+      })
+      .catch((err) => {
+        // reject(네트워크 단절 등)로 setFetchedKey를 못 부르면 poisLoading이
+        // (coordKey !== fetchedKey) 영구히 true로 남아 주변 정보 섹션이 로딩
+        // 상태에 고착된다 — 실패해도 반드시 fetchedKey는 갱신한다.
+        console.error("[nearby] 주변 정보 조회 실패:", err);
+        setFetchedKey(coordKey);
+      });
   }, [coordKey]);
 
   if (!current) {

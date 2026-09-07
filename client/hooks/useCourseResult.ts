@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useCourseProgressStore, MAX_REROLLS } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
 import { haversineKm } from "@/shared/utils/geo";
+import { withTimeout } from "@/shared/utils/withTimeout";
+import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type {
   JourneyPlace,
   PendingCourse,
@@ -105,15 +107,31 @@ export function useCourseResult({
     const prevId = currentPlace.id;
     const prevCoord = currentPlace.coord;
 
-    const result = await generateCourseAction({
-      mapX,
-      mapY,
-      scale: scale as "light" | "moderate" | "leisurely",
-      prefs,
-      excludeIds,
-      maxDistanceKm: opts.maxDistanceKm,
-      strictOpenOnly: opts.strictOpenOnly,
-    });
+    let result: Awaited<ReturnType<typeof generateCourseAction>>;
+    try {
+      // withTimeout: 서버 액션 자체는 reject조차 안 되고 영원히 pending일 수 있어
+      // (진짜 네트워크 hang — withTimeout.ts 참고) try/catch만으론 부족하다.
+      result = await withTimeout(
+        generateCourseAction({
+          mapX,
+          mapY,
+          scale: scale as "light" | "moderate" | "leisurely",
+          prefs,
+          excludeIds,
+          maxDistanceKm: opts.maxDistanceKm,
+          strictOpenOnly: opts.strictOpenOnly,
+        }),
+        COURSE_ACTION_TIMEOUT_MS,
+      );
+    } catch (err) {
+      // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면
+      // setRerolling(false)를 못 돌아 재추천 버튼이 "재추천 중..."에 영구히
+      // 갇힌다 — 반드시 감싼다(useStartCourse.ts와 같은 결).
+      console.error("[reroll] 코스 재생성 실패:", err);
+      setRerolling(false);
+      setRerollExhausted(true);
+      return;
+    }
 
     setRerolling(false);
 
@@ -191,7 +209,12 @@ export function useCourseResult({
   // 거절 이유 확정 — 원래 PlaceDetailSheet(드로어)의 "여기 말고 다른 곳으로"와 동일하게,
   // 리롤 성공/실패 여부와 무관하게 완료 후 패널을 닫는다(실패 시엔 rerollExhausted 배너가 안내).
   const confirmReject = async () => {
-    if (!rejectReason) return;
+    // isMaxRerolls/rerolling 검증은 지금까지 "이런 곳은 싫어요" 버튼의 disabled
+    // 속성에만 있었다 — 패널을 연 시점과 확정을 누른 시점 사이에 상태가 바뀌면
+    // (다른 탭에서 리롤 소진, 재클릭 등) 이 함수 자체엔 방어가 없어 소진 후에도
+    // 재추천이 실행될 수 있었다. useStartCourse.ts의 startingId 가드와 같은 결로,
+    // 핸들러 자체에도 재검증을 둔다.
+    if (!rejectReason || isMaxRerolls || rerolling) return;
     console.log(
       `[reroll] 거절 — placeId: ${currentPlace.id}, reason: ${rejectReason}`,
     );
