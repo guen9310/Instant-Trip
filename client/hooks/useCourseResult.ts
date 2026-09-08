@@ -145,10 +145,6 @@ export function useCourseResult({
     setCurrentCourseName(result.courseName);
     setWeatherSwitch(result.weatherSwitch);
     setConcentrationSwitch(result.concentrationSwitch);
-    console.log(
-      `[festival] 재추천 후 수신 — ${result.festivals.length}건`,
-      result.festivals,
-    );
 
     // 사유 칩 — 주장한 게 실제로 참인지 직접 검증한다. maxDistanceKm/strictOpenOnly는
     // 우선순위일 뿐 하드 보장이 아니라서(lib/pipeline/index.ts의 폴백 참조), 검증 없이
@@ -215,9 +211,6 @@ export function useCourseResult({
     // 재추천이 실행될 수 있었다. useStartCourse.ts의 startingId 가드와 같은 결로,
     // 핸들러 자체에도 재검증을 둔다.
     if (!rejectReason || isMaxRerolls || rerolling) return;
-    console.log(
-      `[reroll] 거절 — placeId: ${currentPlace.id}, reason: ${rejectReason}`,
-    );
     addRejection(currentPlace.id);
 
     // 거절 사유가 다음 리롤에 실제로 반영되도록 사유별 파라미터를 계산한다.
