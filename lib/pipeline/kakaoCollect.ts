@@ -23,8 +23,30 @@ interface CacheEntry {
 const _cache = new Map<string, CacheEntry>();
 const KAKAO_CACHE_TTL = 30 * 60 * 1000; // 30분
 
+// 좌표그리드×반경 조합이 계속 늘어나며 무제한으로 쌓이는 것을 막기 위한 상한.
+// 서버리스/엣지 환경이라 프로세스 생명주기 동안만 유효 — LRU 라이브러리 없이
+// 만료 정리 + 상한 초과 시 가장 오래된 항목 제거로 충분.
+const MAX_CACHE_ENTRIES = 500;
+
 function makeCacheKey(lat: number, lng: number, radiusM: number): string {
   return `${Math.round(lat / GRID)}_${Math.round(lng / GRID)}_${radiusM}`;
+}
+
+// TTL 만료 항목을 먼저 제거하고, 그래도 상한을 넘으면 가장 오래 전에
+// 삽입된 항목부터 제거한다 (Map은 삽입 순서를 유지하므로 첫 키 = 최고참).
+function pruneCache(): void {
+  const now = Date.now();
+  for (const [key, entry] of _cache) {
+    if (now - entry.cachedAt >= KAKAO_CACHE_TTL) {
+      _cache.delete(key);
+    }
+  }
+
+  while (_cache.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = _cache.keys().next().value;
+    if (oldestKey === undefined) break;
+    _cache.delete(oldestKey);
+  }
 }
 
 function normalizeKakaoPlace(place: KakaoPlaceTagged): TourItem {
@@ -93,6 +115,7 @@ export async function supplementWithKakao(
     const result = await fetchCourseKakao(lat, lng, radiusM);
     kakaoItems = result.items.map(normalizeKakaoPlace);
     rawCounts = result.rawCounts;
+    pruneCache();
     _cache.set(key, { items: kakaoItems, rawCounts, cachedAt: Date.now() });
   }
 
