@@ -1,3 +1,5 @@
+"use client";
+
 import { create } from "zustand";
 
 export const MAX_REROLLS = 3;
