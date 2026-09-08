@@ -27,6 +27,13 @@ export default defineConfig({
     globals: true,
     // 실제 외부 API(TourAPI, Kakao)를 호출하는 수동 진단 테스트 — pnpm test:diagnostic으로 별도 실행
     exclude: [...configDefaults.exclude, 'tests/unit/pipeline-diagnostic.test.ts'],
+    // 기본 pool('threads')은 워커 스레드 간 console 포워딩 RPC와 jsdom 환경 teardown이
+    // 경합하면 "Closing rpc while onUserConsoleLog was pending"로 간헐적으로 exit 1이
+    // 된다(전부 통과해도 CI만 실패 — vitest의 알려진 워커 스레드 이슈). fire-and-forget
+    // 콜백(예: getCurrentPosition 성공 콜백)이 테스트 종료 직후 console.log를 남기면
+    // 재현되는데, 어느 테스트가 원인인지 특정해 고치기보다 이 경합 자체가 안 생기는
+    // pool로 바꾸는 게 근본적이다. forks는 프로세스 격리라 이 RPC 경합이 없다.
+    pool: 'forks',
   },
   resolve: {
     alias: {
