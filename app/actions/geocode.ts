@@ -1,6 +1,7 @@
 "use server";
 
 import { resolveRegion } from "@/shared/utils/regionMap";
+import { geocodeInputSchema } from "@/shared/schemas/actionInputs";
 
 export type GeocodedCity = {
   displayName: string;  // 화면 표시용 — "울산 북구"처럼 시·도 축약형 + 읍/면/동 수준 이름
@@ -36,17 +37,23 @@ export async function fetchCityAction(
   lat: number,
   lon: number,
 ): Promise<GeocodedCity> {
+  const FALLBACK: GeocodedCity = { displayName: "현재 위치", sidoName: null };
+
+  // 위경도 범위를 벗어난 값(오조작·비정상 클라이언트 호출)은 VWorld 호출 없이
+  // 바로 폴백 — 어차피 그런 좌표는 VWorld도 NOT_FOUND로 응답할 값이라 동작은
+  // 동일하지만, 외부 API 호출 자체를 아낀다.
+  const parsed = geocodeInputSchema.safeParse({ lat, lon });
+  if (!parsed.success) return FALLBACK;
+
   if (!VWORLD_KEY) {
     console.log("[geocode] VWORLD_KEY 없음 — 지오코딩 스킵");
-    return { displayName: "현재 위치", sidoName: null };
+    return FALLBACK;
   }
 
   // point는 "경도,위도"(x,y) 순서 — lat/lon을 바꿔 넣으면 조용히 엉뚱한 위치로 조회된다.
   const url =
     "https://api.vworld.kr/req/address?service=address&request=GetAddress" +
     `&key=${VWORLD_KEY}&point=${lon},${lat}&crs=EPSG:4326&type=BOTH&format=json`;
-
-  const FALLBACK: GeocodedCity = { displayName: "현재 위치", sidoName: null };
 
   let res: Response;
   try {

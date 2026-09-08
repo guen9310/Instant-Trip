@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  currentWeatherInputSchema,
   generateCourseFromFestivalInputSchema,
   generateCourseInputSchema,
+  geocodeInputSchema,
   homeLocationInputSchema,
   nearbyPoisInputSchema,
 } from "@/shared/schemas/actionInputs";
@@ -51,6 +53,26 @@ describe("Server Action 입력 스키마", () => {
     expect(
       generateCourseInputSchema.safeParse({ ...validCourseInput, radiusM: 20_001 }).success,
     ).toBe(false);
+  });
+
+  it("유효한 좌표의 날씨·지오코딩 요청을 통과시킨다", () => {
+    expect(
+      currentWeatherInputSchema.safeParse({ lat: 35.5384, lng: 129.3114 }).success,
+    ).toBe(true);
+    expect(
+      geocodeInputSchema.safeParse({ lat: 35.5384, lon: 129.3114 }).success,
+    ).toBe(true);
+  });
+
+  it("범위를 벗어나거나 숫자가 아닌 날씨·지오코딩 요청은 거부한다", () => {
+    expect(currentWeatherInputSchema.safeParse({ lat: 91, lng: 129.3114 }).success).toBe(
+      false,
+    );
+    expect(
+      currentWeatherInputSchema.safeParse({ lat: 35.5384, lng: "129.3114" }).success,
+    ).toBe(false);
+    expect(geocodeInputSchema.safeParse({ lat: 35.5384, lon: 181 }).success).toBe(false);
+    expect(geocodeInputSchema.safeParse({ lat: NaN, lon: 129.3114 }).success).toBe(false);
   });
 
   it("종료일보다 늦은 시작일의 축제 요청을 거부한다", () => {

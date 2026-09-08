@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   courseCompletionSchema,
+  startCourseInputSchema,
   type CourseCompletionPayload,
 } from "@/shared/schemas/courseCompletion";
 
@@ -89,5 +90,77 @@ describe("courseCompletionSchema", () => {
       rating: null,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+const validStartCourseInput = {
+  courseName: "한적한 오후 산책",
+  scale: "light",
+  place: {
+    name: "울산대공원",
+    cat: "도시공원",
+    addr: "울산 남구 대공원로 94",
+    coord: { lat: 35.5384, lng: 129.3114 },
+    estimatedDuration: { min: 30, max: 60 },
+    availabilityUncertain: false,
+    desc: "도심 속 대형 공원",
+    badge: { text: "공원", variant: "secondary" },
+  },
+};
+
+describe("startCourseInputSchema", () => {
+  it("유효한 페이로드(JourneyPlace 형태)를 통과시킨다", () => {
+    const result = startCourseInputSchema.safeParse(validStartCourseInput);
+    expect(result.success).toBe(true);
+  });
+
+  it("estimatedDuration.min > max는 거부한다", () => {
+    const result = startCourseInputSchema.safeParse({
+      ...validStartCourseInput,
+      place: {
+        ...validStartCourseInput.place,
+        estimatedDuration: { min: 90, max: 60 },
+      },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("coord null(좌표 없는 장소)을 허용한다", () => {
+    const result = startCourseInputSchema.safeParse({
+      ...validStartCourseInput,
+      place: { ...validStartCourseInput.place, coord: null },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("courseName 빈 문자열은 거부한다", () => {
+    const result = startCourseInputSchema.safeParse({
+      ...validStartCourseInput,
+      courseName: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("scale이 허용값 밖이면 거부한다", () => {
+    const result = startCourseInputSchema.safeParse({
+      ...validStartCourseInput,
+      scale: "extreme",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("place 자체가 없거나 형태가 다르면 거부한다", () => {
+    expect(
+      startCourseInputSchema.safeParse({
+        courseName: "테스트",
+        scale: "light",
+      }).success,
+    ).toBe(false);
+    expect(
+      startCourseInputSchema.safeParse({
+        ...validStartCourseInput,
+        place: { name: "이름만 있음" },
+      }).success,
+    ).toBe(false);
   });
 });

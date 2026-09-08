@@ -27,6 +27,18 @@ export const nearbyPoisInputSchema = z.object({
   lng: longitudeSchema,
 });
 
+// fetchWeatherAction(app/actions/weather.ts) — 현재 실황 조회 입력값.
+export const currentWeatherInputSchema = z.object({
+  lat: latitudeSchema,
+  lng: longitudeSchema,
+});
+
+// fetchCityAction(app/actions/geocode.ts) — 브이월드 역지오코딩 입력값.
+export const geocodeInputSchema = z.object({
+  lat: latitudeSchema,
+  lon: longitudeSchema,
+});
+
 export const weatherForecastAlertInputSchema = z.object({
   lat: latitudeSchema,
   lng: longitudeSchema,
