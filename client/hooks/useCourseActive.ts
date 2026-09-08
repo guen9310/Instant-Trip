@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { fetchNearbyPoisAction } from "@/app/actions/course";
+import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { withTimeout } from "@/shared/utils/withTimeout";
 import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type {
@@ -62,6 +63,10 @@ export function useCourseActive(
   // "이어서"가 클라이언트 courseId가 아닌 DB courses.id를 가리켜 애초에 로컬에 매칭되는
   // 세션이 없는 경우) 화면을 복원할 서버 측 대비책. page.tsx가 미리 조회해 내려준다.
   dbFallback: ResumableCourse | null,
+  // page.tsx가 getAuthState()로 미리 판정 — 세션이 서버에서 무효화된 경우에만 true.
+  // dbFallback이 없을 때(로컬도 DB도 복원 못함) 이 값에 따라 /start로 조용히 보낼지,
+  // 로그인 화면의 만료 배너로 보낼지를 가른다.
+  sessionExpired: boolean,
 ): CourseActiveState {
   const router = useRouter();
   const complete = useCourseProgressStore((s) => s.complete);
@@ -82,6 +87,14 @@ export function useCourseActive(
     if (session !== null) return; // 로딩 중이거나 이미 유효한 로컬 세션이 있음
 
     if (!dbFallback) {
+      // 세션이 서버에서 무효화된 경우엔 "저장된 코스가 없어요" 취급으로 조용히
+      // /start로 보내지 않고, CourseResultView·SettingsView와 동일하게 로그인 화면의
+      // 만료 배너로 보낸다 — redirectToSignIn은 하드 네비게이션이라 컴포넌트 언마운트
+      // 여부와 무관하게 항상 배너가 뜬다.
+      if (sessionExpired) {
+        redirectToSignIn("session_expired");
+        return;
+      }
       router.push("/start");
       return;
     }
@@ -98,7 +111,7 @@ export function useCourseActive(
       dbCourseId: dbFallback.courseId,
     };
     localStorage.setItem("pendingCourse", JSON.stringify(pending));
-  }, [session, dbFallback, router]);
+  }, [session, dbFallback, sessionExpired, router]);
 
   // 좌표를 문자열 키로 변환해 객체 참조 문제 없이 의존성 비교
   const coordKey = searchCoord ? `${searchCoord.lat},${searchCoord.lng}` : null;

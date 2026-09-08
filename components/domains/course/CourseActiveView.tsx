@@ -16,13 +16,16 @@ type Props = {
   // localStorage에 세션이 없을 때(다른 기기·저장소 초기화 등) 쓰는 서버 측 대비책.
   // page.tsx가 미리 조회해둔다 — 자세한 이유는 useCourseActive.ts 참고.
   dbFallback: ResumableCourse | null;
+  // page.tsx가 getAuthState()로 미리 판정 — 세션이 서버에서 무효화된 경우에만 true.
+  // (CoursePreviewClient의 동일 이름 prop과 같은 계약)
+  sessionExpired: boolean;
 };
 
 // 진행 중인 외출은 "곧" 비가 오는지가 중요하므로 홈보다 짧은 창을 본다.
 const FORECAST_WINDOW_HOURS = 1;
 
-export function CourseActiveView({ courseId, dbFallback }: Props) {
-  const state = useCourseActive(courseId, dbFallback);
+export function CourseActiveView({ courseId, dbFallback, sessionExpired }: Props) {
+  const state = useCourseActive(courseId, dbFallback, sessionExpired);
   const [descOpen, setDescOpen] = useState(false);
   const [nearbyExpanded, setNearbyExpanded] = useState(true);
 
