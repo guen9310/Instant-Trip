@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
@@ -71,11 +71,13 @@ export function OnboardingForm() {
   const [selectedValue, setSelectedValue] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Partial<Prefs>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
+  const isAdvancingRef = useRef(false);
 
   const step = STEPS[stepIdx];
   const isLast = stepIdx === STEPS.length - 1;
 
   const handleBack = () => {
+    if (isAdvancingRef.current) return;
     const prevIdx = stepIdx - 1;
     setDirection(-1);
     setStepIdx(prevIdx);
@@ -83,6 +85,12 @@ export function OnboardingForm() {
   };
 
   const handleChoose = (value: string) => {
+    // 스텝 전환(setStepIdx)이 280ms 뒤 타임아웃 콜백에서 일어나기 때문에,
+    // 그 사이 카드가 다시 클릭되면 setTimeout이 중복 예약되어 스텝이
+    // 한 번에 두 칸씩 넘어가는 문제가 있었다. 진행 중에는 재진입을 막는다.
+    if (isAdvancingRef.current) return;
+    isAdvancingRef.current = true;
+
     setSelectedValue(value);
     setSaveError(null);
     const newAnswers = { ...answers, [step.id]: value };
@@ -104,11 +112,13 @@ export function OnboardingForm() {
           router.push("/onboarding/done");
         } catch {
           setSaveError("저장에 실패했어요. 다시 시도해 주세요.");
+          isAdvancingRef.current = false;
         }
       } else {
         setDirection(1);
         setStepIdx((prev) => prev + 1);
         setSelectedValue(null);
+        isAdvancingRef.current = false;
       }
     }, 280);
   };
