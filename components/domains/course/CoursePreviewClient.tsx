@@ -12,7 +12,9 @@ function readPendingCourse(): PendingCourse | null {
     if (!raw) return null;
     const parsed: PendingCourse = JSON.parse(raw);
     if (!parsed.courseId || !parsed.place || !parsed.courseName) return null;
-    return parsed;
+    // tags는 나중에 추가된 필드라 구버전 localStorage 페이로드엔 없을 수 있음 —
+    // useCourseActive.ts의 readSession()과 동일한 패턴으로 읽기 시점에 정규화한다.
+    return { ...parsed, place: { ...parsed.place, tags: parsed.place.tags ?? [] } };
   } catch {
     return null;
   }
