@@ -57,6 +57,7 @@ export function SignInForm() {
         <button
           type="button"
           onClick={goBack}
+          aria-label="뒤로 가기"
           className="flex h-9 w-9 items-center justify-center rounded-full text-text-secondary"
         >
           <ArrowLeft size={22} />

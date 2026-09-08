@@ -325,6 +325,7 @@ export function CourseMap({
           <button
             type="button"
             onClick={() => onSelectPoi?.(null)}
+            aria-label="선택한 장소 해제"
             className="shrink-0 text-text-secondary p-0.5"
           >
             <X size={12} strokeWidth={2} />
@@ -359,6 +360,7 @@ export function CourseMap({
           <button
             type="button"
             onClick={() => setLegendOpen((v) => !v)}
+            aria-label={legendOpen ? "범례 숨기기" : "범례 보기"}
             className="w-8.5 h-8.5 rounded-full bg-background flex items-center justify-center shrink-0 active:scale-95 transition-transform"
           >
             <Palette size={16} strokeWidth={2} />
