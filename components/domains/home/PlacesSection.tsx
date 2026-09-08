@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, type PointerEvent, type RefObject } from "react";
+import { FilterX } from "lucide-react";
 import { PlaceCard } from "@/components/domains/home/PlaceCard";
 import { CHIP_TO_TYPE, FILTER_CHIPS, type FilterChip } from "@/components/domains/home/homeFilters";
 import type { TourItem } from "@/lib/tour/types";
@@ -152,7 +153,22 @@ export function PlacesSection({
         가로 방향 움직임만 우리 포인터 핸들러가 판정하게 한다.
       */}
       <div className="touch-pan-y" onPointerDown={handlePointerDown}>
-        {filteredPlaces.length === 0 ? null : (
+        {filteredPlaces.length === 0 ? (
+          // NearbyPanel(코스 진행 화면 주변 정보 패널)의 "필터 결과 없음" 안내와
+          // 동일한 톤(FilterX 아이콘 + 중앙 정렬 안내문 + 전체 보기 리셋)을 재사용한다.
+          <div className="flex flex-col items-center gap-2 py-10">
+            <FilterX size={20} className="text-text-secondary" strokeWidth={1.5} />
+            <p className="text-[12px] text-text-secondary">{filter}에 해당하는 장소가 없어요</p>
+            {filter !== "전체" && (
+              <button
+                onClick={() => onFilter("전체")}
+                className="text-[12px] font-semibold text-primary"
+              >
+                전체 보기
+              </button>
+            )}
+          </div>
+        ) : (
           <div className="grid grid-cols-2 gap-3">
             {filteredPlaces.map((place) => (
               <PlaceCard
