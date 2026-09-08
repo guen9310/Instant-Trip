@@ -130,6 +130,7 @@ export function OnboardingForm() {
         <div className="mb-8 flex items-center gap-2.5">
           <button
             onClick={handleBack}
+            aria-label="뒤로 가기"
             className={cn(
               "w-7 h-7 flex items-center justify-center rounded-full text-text-secondary transition-opacity shrink-0",
               stepIdx === 0 ? "opacity-0 pointer-events-none" : "opacity-100"
