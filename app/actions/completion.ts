@@ -6,21 +6,15 @@ import { courses, coursePlaces, courseCompletions } from "@/server/schema";
 import { getFreshAuthState } from "@/server/session";
 import {
   courseCompletionSchema,
+  startCourseInputSchema,
   type CourseCompletionPayload,
 } from "@/shared/schemas/courseCompletion";
-import type { JourneyPlace } from "@/shared/types/course.types";
 import type { AuthFailureReason } from "@/shared/types/auth.types";
 
 // ─── 코스 시작 시 DB 행 생성 ───────────────────────────────────────────────────
 // 프리뷰 화면에서 "이 코스로 갈게요" 탭 시 호출.
 // courses + course_places + course_completions(status='active')를 원자적으로 삽입하고
 // 생성된 ID를 반환한다 — 클라이언트는 이를 localStorage에 저장해 완료 시 UPDATE에 사용.
-
-type StartCoursePayload = {
-  courseName: string;
-  scale: string;
-  place: JourneyPlace;
-};
 
 type StartCourseResult =
   | { ok: true; completionId: string; dbCourseId: string }
@@ -29,7 +23,7 @@ type StartCourseResult =
   | { ok: false; reason?: AuthFailureReason };
 
 export async function startCourseAction(
-  payload: StartCoursePayload,
+  input: unknown,
 ): Promise<StartCourseResult> {
   try {
     const authState = await getFreshAuthState();
@@ -37,6 +31,10 @@ export async function startCourseAction(
       return { ok: false, reason: authState.status };
     }
     const { session } = authState;
+
+    const parsed = startCourseInputSchema.safeParse(input);
+    if (!parsed.success) return { ok: false };
+    const payload = parsed.data;
 
     const dbCourseId = crypto.randomUUID();
     const completionId = crypto.randomUUID();
