@@ -28,6 +28,25 @@ export type WeatherSwitchReason = "rain" | "snow" | "heatwave";
 // ENABLED가 꺼져 있거나 집중률 데이터가 매칭 안 된 경우도 null.
 export type ConcentrationSwitchReason = "quiet" | "lively";
 
+// 무장애 편의시설 대상 그룹 — TourAPI 무장애여행(KorWithService2) detailWithTour2 응답이
+// 필드를 지체장애/시각장애/청각장애/영유아가족 4개 묶음으로 나누는 구분을 그대로 따른다.
+export type BarrierFreeGroupKey = "mobility" | "visual" | "hearing" | "infant";
+
+// 편의시설 1건 — labels는 배지 문구(같은 그룹 안에서 겹칠 수 있음, 예: 접근로·출입통로 둘 다
+// "휠체어 접근"), name은 원 항목명, detail은 원문을 정리한 설명. "기타 상세"는 원문 하나에
+// 여러 시설이 적혀 있어 배지가 여러 개일 수 있고, 알아볼 키워드가 없으면 빈 배열이라 배지 없이
+// 상세 목록에만 나온다.
+export type BarrierFreeFacility = {
+  labels: string[];
+  name: string;
+  detail: string;
+};
+
+export type BarrierFreeGroup = {
+  group: BarrierFreeGroupKey;
+  facilities: BarrierFreeFacility[];
+};
+
 // 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)
 export type JourneyPlace = {
   id: string;

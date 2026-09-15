@@ -64,6 +64,15 @@ export const generateCourseInputSchema = z.object({
   debugWeather: z.enum(["clear", "cloudy", "rain", "snow", "heatwave"]).optional(),
 });
 
+// TourAPI 표준 contentid — 숫자 문자열. 카카오 출처("kakao_…")나 Tour API 미매칭 축제
+// ("YYYY-MM-DD_축제명")처럼 같은 id 필드에 섞여 들어오는 다른 체계를 걸러내는 데 쓴다.
+export const tourContentIdSchema = z.string().regex(/^\d{1,20}$/);
+
+// fetchBarrierFreeAction(app/actions/course.ts) — 무장애 편의시설 조회 입력값.
+export const barrierFreeInputSchema = z.object({
+  contentId: tourContentIdSchema,
+});
+
 export const generateCourseFromPlaceInputSchema = z.object({
   contentId: z.string().trim().min(1).max(100),
   contentTypeId: z.string().regex(/^\d{1,5}$/),

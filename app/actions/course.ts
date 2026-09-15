@@ -15,6 +15,7 @@ import {
 } from "@/lib/tour/mappers";
 import { fetchNearby } from "@/lib/clients/kakaoLocal";
 import type { NearbyCategoryCode } from "@/lib/clients/kakaoLocal";
+import { getBarrierFreeInfo } from "@/lib/clients/barrierFreeTour";
 import { getAuthState } from "@/server/session";
 import { getRecentlyVisitedCoords } from "@/server/queries";
 import type {
@@ -24,8 +25,10 @@ import type {
   FestivalSummary,
   WeatherSwitchReason,
   ConcentrationSwitchReason,
+  BarrierFreeGroup,
 } from "@/shared/types/course.types";
 import {
+  barrierFreeInputSchema,
   generateCourseFromFestivalInputSchema,
   generateCourseFromPlaceInputSchema,
   generateCourseInputSchema,
@@ -125,6 +128,15 @@ export async function fetchNearbyPoisAction(
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "조회 실패" };
   }
+}
+
+// 코스 추천 화면의 무장애 편의시설 배지용 — 추천·선택·축제 세 진입 경로 모두 같은 화면을
+// 쓰므로 코스 생성 액션에 섞지 않고 화면이 확정된 장소 기준으로 따로 조회한다(생성 지연 없음).
+// TourAPI contentid가 아닌 id(카카오·미매칭 축제)나 조회 실패는 빈 배열로 폴백한다.
+export async function fetchBarrierFreeAction(input: unknown): Promise<BarrierFreeGroup[]> {
+  const parsed = barrierFreeInputSchema.safeParse(input);
+  if (!parsed.success) return [];
+  return getBarrierFreeInfo(parsed.data.contentId);
 }
 
 export async function generateCourseAction(
