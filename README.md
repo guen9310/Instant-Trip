@@ -15,6 +15,8 @@
 - **오늘 열리는 축제·행사**도 함께 조회해 홈 화면에서 확인
 - **단 하나의 장소**만 제시 — 비교 과정 제거
 - **거절 기반 재추천** — 싫은 이유를 선택하면 즉시 재생성 (최대 3회)
+- **날씨·혼잡도 반영** — 비·눈·폭염 예보 시 실내 장소를 우선하고, 관광지 집중률 예측으로 조용한 곳/활기찬 곳 취향에 맞게 순위 조정
+- **무장애·반려동물 동반 정보** — 추천 장소의 무장애 편의시설과 반려동물 동반 조건을 배지로 표시
 - **홈 화면 인기 장소·주변 축제를 직접 선택**해 취향 추천 절차 없이 바로 코스 생성
 
 ## 🛠 기술 스택
@@ -52,6 +54,14 @@
 | detailImage2       | 장소 카드 썸네일 이미지                              |
 | searchFestival2    | 오늘 날짜 기준 진행 중인 축제·행사 조회              |
 
+### 한국관광공사 부가 서비스
+
+| 서비스 | API | 용도 |
+| --- | --- | --- |
+| 관광지 집중률 방문자 추이 예측 정보 (`TatsCnctrRateService`) | tatsCnctrRatedList | 추천 후보의 예상 혼잡도로 순위 조정(조용함/활기참 성향) + 코스 추천 화면 안내 배너 |
+| 무장애 여행 정보 (`KorWithService2`) | detailWithTour2 | 코스 추천 화면 무장애 편의시설 배지 (휠체어·시각·청각·영유아 동반) |
+| 반려동물 동반여행 서비스 (`KorPetTourService2`) | detailPetTour2 | 코스 추천 화면 반려동물 동반 조건 배지 (동반 범위·크기 제한·챙길 것) |
+
 ### 외부 API
 
 | API                          | 용도                                                     |
@@ -61,7 +71,7 @@
 | Kakao 지도 JS SDK (Map)       | 외출 추천 결과 화면의 장소 지도 미리보기                 |
 | Kakao 지도 JS SDK (Places)    | 근처 맛집 섹션 (음식 선호 취향 선택 시)                  |
 | 국토교통부 브이월드 지오코더  | 위치 권한 승인 시 좌표 → 주소 역지오코딩                 |
-| 기상청 단기예보 조회서비스 (getUltraSrtNcst·getUltraSrtFcst) | 홈 화면 현재 날씨 표시(초단기실황) + 홈·코스 진행 화면 날씨 변화 예보 안내(초단기예보) |
+| 기상청 단기예보 조회서비스 (getUltraSrtNcst·getUltraSrtFcst) | 홈 화면 현재 날씨 표시(초단기실황) + 홈·코스 진행 화면 날씨 변화 예보 안내(초단기예보) + 추천 파이프라인 날씨 게이트 |
 
 ### 데이터 출처 표시
 
@@ -75,14 +85,13 @@
 ## 📱 화면 구조
 
 ```
-/sign-in              이메일 입력 (회원가입/로그인 통합)
-/sign-in/verify       OTP 6자리 코드 입력
+/sign-in              이메일 입력 → OTP 6자리 코드 입력 (회원가입/로그인 통합, 한 화면 2단계)
 /onboarding           최초 1회 yes/no 성향 질문 (5문항)
 /onboarding/done      성향 요약 확인
 /                     홈 (위치 기반 근처 장소·축제, 카드를 직접 탭해 바로 코스 생성 가능)
 /start                위치 확인 + 외출 규모 선택
-/course/preview       외출 추천/선택 결과 (지도 미리보기 + 인라인 거절 패널)
-/course/active/[id]   외출 진행 중 (장소 체크리스트 + 주변 정보 펼치기 섹션)
+/course/preview       외출 추천/선택 결과 (지도 미리보기 + 무장애·반려동물 배지 + 인라인 거절 패널)
+/course/active/[id]   외출 진행 중 (체류 시간 안내 + 주변 정보 펼치기 섹션)
 /course/done/[id]     외출 완료 + 별점 후기
 /profile              내 정보 + 완료 기록 목록
 /settings             성향 재설정
@@ -97,11 +106,12 @@
 ├── shared/           # 공용 코드 (types, constants, schemas, utils)
 ├── components/
 │   ├── commons/      # 도메인 무관 UI 컴포넌트 (Button, Card, …)
-│   └── domains/      # 기능별 컴포넌트 (auth, course, home, location, onboarding, profile, settings, start)
+│   ├── domains/      # 기능별 컴포넌트 (auth, course, home, location, onboarding, profile, settings, start)
+│   └── layout/       # 앱 셸·내비게이션 (BottomTabBar, GlobalNav, …)
 └── lib/
     ├── pipeline/     # 외출 추천 파이프라인
     ├── tour/         # TourAPI 클라이언트 + 매퍼
-    ├── clients/      # 외부 API 클라이언트 (Kakao, 문화축제)
+    ├── clients/      # 외부 API 클라이언트 (Kakao, 문화축제, 관광지 집중률, 무장애·반려동물 동반여행)
     ├── home/         # 홈 화면 데이터 조회 (장소·축제 병렬 조회)
     └── cache/        # DB 기반 캐시 (TTL 관리)
 ```
@@ -141,7 +151,7 @@
 
 ## 🧠 외출 추천 파이프라인
 
-`/start`에서 외출 규모를 선택했을 때만 도는 파이프라인입니다. 가용성 검사(영업 여부 확인)를 먼저 몰아서 하지 않고, **점수화를 끝낸 뒤 점수 순으로 하나씩만 확인해 최초로 열려 있는 곳을 채택**하는 구조입니다 — 전체 후보를 미리 다 검사하는 것보다 외부 API 호출량이 훨씬 적습니다.
+`/start`에서 외출 규모를 선택했을 때만 도는 파이프라인입니다. 가용성 검사(영업 여부 확인)를 먼저 몰아서 하지 않고, **점수화와 날씨·집중률 보정을 끝낸 뒤 점수 순으로 하나씩만 확인해 최초로 열려 있는 곳을 채택**하는 구조입니다 — 전체 후보를 미리 다 검사하는 것보다 외부 API 호출량이 훨씬 적습니다.
 
 ```
 1. 후보지 수집
@@ -153,11 +163,17 @@
 3. 태그 기반 점수화
    온보딩 성향 태그 × 관광지 태그 매핑으로 적합도 산출, 거절 이력 실시간 반영
 
-4. 가용성 게이트
+4. 날씨 게이트
+   비·눈·폭염 예보 시 실외 후보를 소프트 감점 (배제가 아니라 순위 조정)
+
+5. 관광지 집중률 게이트
+   시군구 단위 집중률 예측을 조회해 조용함/활기참 성향에 맞게 순위를 소프트 보정
+
+6. 가용성 게이트
    점수 순으로 하나씩 요일별 운영시간·입장마감·예상 체류시간을 확인해
    최초로 "지금 갈 수 있는" 곳을 채택 (판정이 불확실하면 보수적으로 통과)
 
-5. 상세 조회
+7. 상세 조회
    채택된 후보의 상세 정보와 썸네일을 조회해 결과 화면 구성
 ```
 
@@ -171,7 +187,7 @@
 | --- | --- | --- | --- |
 | **온보딩 화면** (`OnboardingForm`)<br>yes/no 성향 질문 UI | <img src=".github/screenshots/OnboardingForm.png" width="200" /> | **홈 화면** (`HomeView`)<br>위치 기반 근처 장소·축제, 날씨 표시 | <img src=".github/screenshots/HomeView.png" width="200" /> |
 | **출발 설정 화면** (`StartView`)<br>외출 규모 선택 | <img src=".github/screenshots/StartView.png" width="200" /> | **코스 추천 화면** (`CourseResultView`)<br>지도 미리보기 + 거절 재추천 패널 | <img src=".github/screenshots/CourseResultView.png" width="200" /> |
-| **코스 진행 화면** (`CourseActiveView`)<br>장소 체크리스트 + 주변 정보 펼치기 섹션 | <img src=".github/screenshots/CourseActiveView.png" width="200" /> | **코스 완료 화면** (`CourseDoneView`)<br>별점 후기 | <img src=".github/screenshots/CourseDoneView.png" width="200" /> |
+| **코스 진행 화면** (`CourseActiveView`)<br>체류 시간 안내 + 주변 정보 펼치기 섹션 | <img src=".github/screenshots/CourseActiveView.png" width="200" /> | **코스 완료 화면** (`CourseDoneView`)<br>별점 후기 | <img src=".github/screenshots/CourseDoneView.png" width="200" /> |
 | **프로필 화면** (`ProfileView`)<br>완료 기록 목록 | <img src=".github/screenshots/ProfileView.png" width="200" /> | **날씨 전환 안내 배너** (코스 추천 화면)<br>실외 후보 감점으로 실내 장소가 채택되면 사유 노출 | <img src=".github/screenshots/WeatherSwitchBanner.png" width="200" /> |
 
 ## 🚀 시작하기
@@ -191,7 +207,7 @@ DB(Neon)·인증(better-auth)·TourAPI·Kakao 등 외부 서비스 연동에 필
 
 ## 🧪 테스트 · CI/CD
 
-- `pnpm test`(vitest run) — 30개 파일, 223개 테스트 전부 통과
+- `pnpm test`(vitest run) — 39개 파일, 301개 테스트 전부 통과
 - `pnpm type-check`(tsc --noEmit) — 에러 0건
 - `pnpm lint`(eslint) — 에러 0건
 - CI(`.github/workflows/ci.yml`) — PR 시 lint → type-check → test → build 순으로 검증
@@ -209,7 +225,7 @@ DB(Neon)·인증(better-auth)·TourAPI·Kakao 등 외부 서비스 연동에 필
 - [x] 요일 인지 실시간 운영시간 판정 (detailIntro2)
 - [x] 축제·행사 조회 및 홈 화면 표시 (searchFestival2 + 공공데이터포털)
 - [x] 외출 추천 결과 화면 + 거절 재추천 (최대 3회)
-- [x] 외출 진행 화면 (체크리스트 + 주변 POI)
+- [x] 외출 진행 화면 (체류 시간 안내 + 주변 POI)
 - [x] 외출 완료 화면 (별점 후기)
 
 ### 2순위 — 완료
@@ -222,10 +238,15 @@ DB(Neon)·인증(better-auth)·TourAPI·Kakao 등 외부 서비스 연동에 필
 - [x] 다크 모드
 - [x] 날씨 예보 안내 (초단기예보 기반, 홈·코스 진행 화면) + 공공데이터 출처 표시
 
-### 3순위 — 예정
+### 3순위 — 완료
 
-- [ ] 날씨 예보 기반 실내/실외 추천 가중치 조정
-- [ ] 애완동물 동반 장소 추천 및 온보딩 항목 추가
+- [x] 날씨 예보 기반 실내/실외 추천 가중치 조정
+- [x] 관광지 집중률 예측 기반 추천 순위 조정 (조용함/활기참 성향)
+- [x] 코스 추천 화면 무장애 편의시설 배지
+- [x] 코스 추천 화면 반려동물 동반 조건 배지
+
+### 4순위 — 예정
+
 - [ ] 다국어 지원
 
 ---

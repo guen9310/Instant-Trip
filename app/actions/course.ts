@@ -16,6 +16,7 @@ import {
 import { fetchNearby } from "@/lib/clients/kakaoLocal";
 import type { NearbyCategoryCode } from "@/lib/clients/kakaoLocal";
 import { getBarrierFreeInfo } from "@/lib/clients/barrierFreeTour";
+import { getPetTourInfo } from "@/lib/clients/petTour";
 import { getAuthState } from "@/server/session";
 import { getRecentlyVisitedCoords } from "@/server/queries";
 import type {
@@ -26,6 +27,7 @@ import type {
   WeatherSwitchReason,
   ConcentrationSwitchReason,
   BarrierFreeGroup,
+  PetTourInfo,
 } from "@/shared/types/course.types";
 import {
   barrierFreeInputSchema,
@@ -33,6 +35,7 @@ import {
   generateCourseFromPlaceInputSchema,
   generateCourseInputSchema,
   nearbyPoisInputSchema,
+  petTourInputSchema,
 } from "@/shared/schemas/actionInputs";
 import type { AuthFailureReason } from "@/shared/types/auth.types";
 
@@ -137,6 +140,14 @@ export async function fetchBarrierFreeAction(input: unknown): Promise<BarrierFre
   const parsed = barrierFreeInputSchema.safeParse(input);
   if (!parsed.success) return [];
   return getBarrierFreeInfo(parsed.data.contentId);
+}
+
+// 코스 추천 화면의 반려동물 동반 조건 배지용 — fetchBarrierFreeAction과 같은 이유로 코스 생성과
+// 분리해 확정된 장소 기준으로 따로 조회한다. 미등록·비 TourAPI id·조회 실패는 null로 폴백한다.
+export async function fetchPetTourAction(input: unknown): Promise<PetTourInfo | null> {
+  const parsed = petTourInputSchema.safeParse(input);
+  if (!parsed.success) return null;
+  return getPetTourInfo(parsed.data.contentId);
 }
 
 export async function generateCourseAction(

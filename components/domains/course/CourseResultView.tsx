@@ -43,7 +43,7 @@ import { PlaceThumbnail } from "@/components/domains/course/PlaceThumbnail";
 import { NearbyRestaurants } from "@/components/domains/course/NearbyRestaurants";
 import { CourseMap } from "@/components/domains/course/CourseMap";
 import { HoursInfoCard } from "@/components/domains/course/HoursInfoCard";
-import { BarrierFreeBadges } from "@/components/domains/course/BarrierFreeBadges";
+import { VisitInfoBadges } from "@/components/domains/course/VisitInfoBadges";
 import { PlaceDescription } from "@/components/domains/course/PlaceDescription";
 import { CourseResultSkeleton } from "@/components/domains/course/CourseResultSkeleton";
 
@@ -543,9 +543,8 @@ export function CourseResultView({
           <HoursInfoCard placeName={currentPlace.name} />
         )}
 
-        {/* 무장애 편의시설 — TourAPI contentid 장소 중 무장애 정보가 등록된 곳만 렌더된다.
-            재추천으로 장소가 바뀌면 key로 리마운트해 "자세히" 펼침 상태를 초기화한다. */}
-        <BarrierFreeBadges key={currentPlace.id} placeId={currentPlace.id} />
+        {/* 알아두면 좋아요 — 무장애 편의시설·반려동물 동반 조건 중 등록된 정보가 있는 장소만 렌더된다. */}
+        <VisitInfoBadges placeId={currentPlace.id} />
 
         {/* 소개 — 2줄 클램프 + 더보기/접기 토글. AnimatePresence는 mode="wait"를 쓰지
             않는다 — PlaceDescription은 key 변경 시 리마운트되어 마운트 직후 useEffect로
