@@ -302,9 +302,10 @@ export function CourseResultView({
       if (isBadgeSnapshotStale) return null;
 
       if (!isSelectedEntry) {
-        return currentPlace.availabilityUncertain
-          ? { text: "운영시간 확인 필요", variant: "outline" }
-          : { text: "지금 출발 가능", variant: "accent" };
+        if (currentPlace.availabilityUncertain) return { text: "운영시간 확인 필요", variant: "outline" };
+        // 곧 여는 곳 — 게이트가 개점까지 30분 이내일 때만 채택한다(availabilityGate.ts).
+        if (currentPlace.opensAt) return { text: `${currentPlace.opensAt}부터 운영`, variant: "outline" };
+        return { text: "지금 출발 가능", variant: "accent" };
       }
 
       // availability 자체가 없는 경우 — 구버전 localStorage 페이로드(이 필드 도입 전에
@@ -320,6 +321,10 @@ export function CourseResultView({
         case "no_data":
         case "uncertain":
           return { text: "운영시간 확인 필요", variant: "outline" };
+        case "before_open":
+          return availability.opensAt
+            ? { text: `${availability.opensAt}부터 운영`, variant: "outline" }
+            : { text: "운영시간 확인 필요", variant: "outline" };
         default:
           // closed_restday/closed_hours/past_admission_cutoff/insufficient_time —
           // 실제로 닫혀 있다는 근거가 있는 상태(게이트가 없어 여기까지 올라옴).

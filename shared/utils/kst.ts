@@ -44,3 +44,8 @@ export function parseKstDateTime(fcstDate: string, fcstTime: string): Date {
   const mi = Number(fcstTime.slice(2, 4));
   return new Date(Date.UTC(y, mo, d, h, mi) - 9 * 60 * 60 * 1000);
 }
+
+// Returns "HH:MM" (24h) in KST — 운영시간 개점 시각 표시용
+export function formatKstHHMM(date: Date): string {
+  return `${String(getKstHour(date)).padStart(2, "0")}:${String(getKstMinute(date)).padStart(2, "0")}`;
+}

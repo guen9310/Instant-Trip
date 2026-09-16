@@ -182,8 +182,8 @@ describe("generateCourseFromFestival", () => {
     });
 
     describe("playtime 기반 당일 운영시간 판정 (lib/tour/hours.ts로 통일)", () => {
-      it("날짜 범위 안이라도 playtime 시간대 밖이면 status는 closed_hours", async () => {
-        // 08:00 — playtime(18:00~22:00) 밖
+      it("날짜 범위 안이고 playtime 시작 전이면 status는 before_open", async () => {
+        // 08:00 — playtime(18:00~22:00) 시작 전. 오늘 18시에 열리므로 운영 종료(closed_hours)와 구분한다.
         vi.setSystemTime(new Date("2026-08-01T08:00:00+09:00"));
         mockedFetchDetail.mockResolvedValue({ overview: "", homepage: "" });
         mockedGetFestivalIntro.mockResolvedValue({
@@ -195,7 +195,8 @@ describe("generateCourseFromFestival", () => {
         const result = await generateCourseFromFestival(baseInput({ contentId: "12345" }));
         if (!result.ok) throw new Error("expected ok:true");
         expect(result.mainPlace.festivalPhase).toBe("ongoing");
-        expect(result.availability.status).toBe("closed_hours");
+        expect(result.availability.status).toBe("before_open");
+        expect(result.availability.opensAt).toBe("18:00");
         expect(result.mainPlace.hours).toBe("07.29 ~ 08.29 · 18:00~22:00");
       });
 
@@ -211,6 +212,20 @@ describe("generateCourseFromFestival", () => {
         const result = await generateCourseFromFestival(baseInput({ contentId: "12345" }));
         if (!result.ok) throw new Error("expected ok:true");
         expect(result.availability.status).toBe("open");
+      });
+
+      it("playtime이 끝난 뒤면 status는 closed_hours", async () => {
+        vi.setSystemTime(new Date("2026-08-01T22:30:00+09:00"));
+        mockedFetchDetail.mockResolvedValue({ overview: "", homepage: "" });
+        mockedGetFestivalIntro.mockResolvedValue({
+          program: "",
+          playtime: "18:00~22:00",
+          eventhomepage: "",
+        });
+
+        const result = await generateCourseFromFestival(baseInput({ contentId: "12345" }));
+        if (!result.ok) throw new Error("expected ok:true");
+        expect(result.availability.status).toBe("closed_hours");
       });
 
       it("playtime이 파싱 불가능한 형식이면 status는 uncertain이다 (과거엔 날짜 판정만으로 관대하게 open 취급했으나, lib/tour/hours.ts로 통일되며 '판정 불가'가 명시적으로 드러난다)", async () => {

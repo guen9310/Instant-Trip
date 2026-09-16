@@ -161,19 +161,86 @@ describe("parseUseTime", () => {
 
   it("화~금 범위를 화,수,목,금 4일로 확장한다", () => {
     const parsed = parseUseTime("화~금 09:00~17:30");
-    expect(parsed?.byDay[2]).toBeDefined(); // 화
-    expect(parsed?.byDay[3]).toBeDefined(); // 수
-    expect(parsed?.byDay[4]).toBeDefined(); // 목
-    expect(parsed?.byDay[5]).toBeDefined(); // 금
+    expect([...(parsed?.rules[0].days ?? [])].sort()).toEqual([2, 3, 4, 5]);
+    expect(parsed?.unread).toBe(false);
+  });
+
+  it("문장 속 '월'·'일' 글자는 요일로 읽지 않는다", () => {
+    const parsed = parseUseTime("- 3~10월 09:00~18:00\n- 11~2월 09:00~17:00");
+    expect(parsed?.rules.map((r) => r.days)).toEqual([null, null]);
+    expect(parsed?.rules.map((r) => r.months)).toEqual([
+      [3, 10],
+      [11, 2],
+    ]);
   });
 });
 
 describe("parseRestDate", () => {
-  it("null은 빈 배열을 반환한다", () => {
-    expect(parseRestDate(null)).toEqual([]);
+  it("null은 휴무 요일이 없다", () => {
+    expect([...parseRestDate(null).weekdays]).toEqual([]);
   });
 
   it("매주 X요일 패턴에서 요일 인덱스를 추출한다", () => {
-    expect(parseRestDate("매주 월요일")).toEqual([1]);
+    expect([...parseRestDate("매주 월요일").weekdays]).toEqual([1]);
+  });
+
+  it("휴무 요일은 목록 끝까지 읽는다", () => {
+    expect([...parseRestDate("매주 일요일 / 월요일").weekdays].sort()).toEqual([0, 1]);
+    expect([...parseRestDate("매주 토요일~일요일").weekdays].sort()).toEqual([0, 6]);
+    expect([...parseRestDate("주말 / 법정 공휴일").weekdays].sort()).toEqual([0, 6]);
+  });
+
+  it("매주 반복이 아닌 요일(매월 둘째 주)은 매주 휴무로 읽지 않고, 그 요일에만 영업을 단정하지 않는다", () => {
+    const parsed = parseRestDate("매월 둘째 주, 넷째 주 월요일");
+    expect([...parsed.weekdays]).toEqual([]);
+    expect([...parsed.irregularWeekdays]).toEqual([1]);
+
+    const monday = checkOpenByDayAwareHours("09:00~18:00", "매월 둘째 주, 넷째 주 월요일", {
+      now: new Date("2026-09-14T12:00:00+09:00"),
+    });
+    const wednesday = checkOpenByDayAwareHours("09:00~18:00", "매월 둘째 주, 넷째 주 월요일", {
+      now: new Date("2026-09-16T12:00:00+09:00"),
+    });
+    expect(monday.status).toBe("uncertain");
+    expect(wednesday.status).toBe("open");
+  });
+
+  it("방문 조건이 아닌 안내문은 판정에 영향을 주지 않고, 방문 조건은 영업을 단정하지 않는다", () => {
+    const at = { now: new Date("2026-09-16T12:00:00+09:00") };
+    expect(checkOpenByDayAwareHours("10:00~18:00\n※ 주일단위 전시", "연중무휴", at).status).toBe("open");
+    expect(checkOpenByDayAwareHours("10:00~18:00\n※ 사전 예약제로 운영", "연중무휴", at).status).toBe("uncertain");
+    expect(checkOpenByDayAwareHours("상시 개방\n※ 내부 인원들만 이용 가능", "연중무휴", at).status).toBe(
+      "uncertain",
+    );
+  });
+
+  it("궁궐 공통 휴무 문구는 공휴일 월요일 개방·다음 날 휴무로 읽고, '마지막 해설'은 휴무 조건이 아니다", () => {
+    const usetime = "[일반관람] 09:00~21:00 (입장마감 20:00)\n- 석조전 09:30~17:30 (마지막 해설 16:30)";
+    const restdate =
+      "매주 월요일\n※ 단, 정기휴일이 공휴일 및 대체공휴일과 겹칠 경우에는 개방하며, 그 다음의 첫 번째 비공휴일이 정기휴일임";
+    const at = (iso: string) => checkOpenByDayAwareHours(usetime, restdate, { now: new Date(iso) }).status;
+    expect(at("2026-09-19T15:00:00+09:00")).toBe("open"); // 토요일
+    expect(at("2026-10-05T12:00:00+09:00")).toBe("open"); // 대체공휴일 월요일
+    expect(at("2026-10-06T12:00:00+09:00")).toBe("closed_restday"); // 그다음 화요일
+  });
+
+  it("기념일 뒤 괄호의 점 표기 날짜를 휴무일로 읽는다", () => {
+    const result = checkOpenByDayAwareHours("10:00~17:00", "공휴일 / 창립기념일 (12.9)", {
+      now: new Date("2026-12-09T11:00:00+09:00"),
+    });
+    expect(result.status).toBe("closed_restday");
+  });
+
+  it("점심시간은 휴게시간으로 읽는다", () => {
+    const result = checkOpenByDayAwareHours("10:00~17:00 (점심시간 12:00~13:00)", "공휴일", {
+      now: new Date("2026-09-16T12:30:00+09:00"),
+    });
+    expect(result.status).toBe("before_open");
+  });
+
+  it("정기 휴무 요일 없는 '공휴일 제외'는 공휴일 휴무로 읽는다", () => {
+    const parsed = parseRestDate("연중무휴(공휴일 제외)");
+    expect(parsed.onHolidays).toBe(true);
+    expect(parsed.holidayException).toBeNull();
   });
 });

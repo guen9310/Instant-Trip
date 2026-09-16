@@ -12,6 +12,7 @@ import { TTL } from "@/lib/cache/ttl";
 import { checkOpenByDayAwareHours } from "@/lib/tour/hours";
 import type { AvailabilityStatus } from "@/shared/types/availability.types";
 import { estimateStayDuration } from "@/lib/pipeline/stayDuration";
+import { formatKstHHMM } from "@/shared/utils/kst";
 
 export type AvailableItem = TourItem & {
   availabilityUncertain: boolean;
@@ -56,6 +57,9 @@ export type PlaceAvailabilityCheck = {
   reason: string;
   hours: string | null; // usetime 원문 (없으면 null)
   restDayNote: string | null; // restdate 원문 (없으면 null)
+  // status === "before_open"일 때만 채워진다 — 문을 여는(휴게 후 재개 포함) 시각 "HH:MM"과 남은 분.
+  opensAt?: string;
+  minutesUntilOpen?: number;
 };
 
 // [stage2 코어] 장소 1건의 운영시간(usetime)·휴무일(restdate)을 detailIntro2로 조회해
@@ -136,10 +140,20 @@ export async function checkPlaceAvailability(
     ? `${fields.restdate}="${restdate ?? ""}" ${fields.usetime}="${(usetime ?? "").slice(0, 40)}"`
     : `(알수없는타입=${item.contenttypeid})`;
   console.log(
-    `${logPrefix} | ${fieldLog} | 예상체류=${expectedDurationMinutes}분\n         → status=${result.status} ${result.reason} (${elapsed}ms)`,
+    `${logPrefix} | ${fieldLog} | 예상체류=${expectedDurationMinutes}분\n         → status=${result.status} ${result.reason} (${elapsed}ms)` +
+      // 해석하지 못한 조각 — 자주 나오는 표현부터 lib/tour/hours.ts 규칙에 추가한다.
+      (result.unreadFragments?.length ? `\n         → 미해석 조각: ${result.unreadFragments.map((f) => `"${f}"`).join(", ")}` : ""),
   );
 
-  return { status: result.status, reason: result.reason, hours: usetime, restDayNote: restdate };
+  return {
+    status: result.status,
+    reason: result.reason,
+    hours: usetime,
+    restDayNote: restdate,
+    ...(result.status === "before_open" && result.opensAt
+      ? { opensAt: formatKstHHMM(result.opensAt), minutesUntilOpen: result.minutesUntilOpen }
+      : {}),
+  };
 }
 
 // status가 "open"이 아니어도 채택 후보로 남겨두는 상태 — README의 "판정 불가한 형식은

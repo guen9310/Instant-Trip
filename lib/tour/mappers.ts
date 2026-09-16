@@ -79,6 +79,7 @@ export function coursePlaceToJourneyPlace(p: CoursePlace): JourneyPlace {
     coord:    p.coord,
     imageUrl: p.images?.[0] ?? null,
     availabilityUncertain: p.availabilityUncertain,
+    ...(p.opensAt ? { opensAt: p.opensAt } : {}),
     estimatedDuration: p.estimatedDuration,
     tags: p.tags,
     topPreferenceTag: p.topPreferenceTag,

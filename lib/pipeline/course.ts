@@ -201,6 +201,7 @@ export async function buildCoursePlace(
     estimatedDuration: candidate.estimatedDuration,
     origin,
     hours: synthesizeHours(candidate.hours, candidate.restDayNote),
+    ...(candidate.opensAt ? { opensAt: candidate.opensAt } : {}),
   };
 }
 
