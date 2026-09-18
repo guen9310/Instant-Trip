@@ -32,19 +32,21 @@ export type ConcentrationSwitchReason = "quiet" | "lively";
 // 필드를 지체장애/시각장애/청각장애/영유아가족 4개 묶음으로 나누는 구분을 그대로 따른다.
 export type BarrierFreeGroupKey = "mobility" | "visual" | "hearing" | "infant";
 
-// 편의시설 1건 — labels는 배지 문구(같은 그룹 안에서 겹칠 수 있음, 예: 접근로·출입통로 둘 다
-// "휠체어 접근"), name은 원 항목명, detail은 원문을 정리한 설명. "기타 상세"는 원문 하나에
-// 여러 시설이 적혀 있어 배지가 여러 개일 수 있고, 알아볼 키워드가 없으면 빈 배열이라 배지 없이
-// 상세 목록에만 나온다.
-export type BarrierFreeFacility = {
-  labels: string[];
-  name: string;
-  detail: string;
-};
-
+// 그룹 1개의 배지 문구 목록 — 중복 없이, 배지가 1개 이상인 그룹만 담긴다.
 export type BarrierFreeGroup = {
   group: BarrierFreeGroupKey;
-  facilities: BarrierFreeFacility[];
+  labels: string[];
+};
+
+// 반려동물 동반 범위 — detailPetTour2 acmpyTypeCd 원문("전구역 동반가능"/"일부구역 동반가능").
+export type PetZone = "all" | "partial";
+
+// 반려동물 동반 조건 배지 요약 — TourAPI 반려동물 동반여행(KorPetTourService2) detailPetTour2 1건.
+// 배지 규칙에 안 맞는 원문(예: "안내견")은 버린다. 셋 중 하나 이상은 항상 채워져 있다.
+export type PetTourInfo = {
+  zone: PetZone | null;
+  sizeLabel: string | null;
+  needLabels: string[];
 };
 
 // 추천된 장소 1곳의 상세 데이터 (프리뷰/진행 화면에서 사용)

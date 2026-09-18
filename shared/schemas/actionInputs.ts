@@ -73,6 +73,11 @@ export const barrierFreeInputSchema = z.object({
   contentId: tourContentIdSchema,
 });
 
+// fetchPetTourAction(app/actions/course.ts) — 반려동물 동반 조건 조회 입력값.
+export const petTourInputSchema = z.object({
+  contentId: tourContentIdSchema,
+});
+
 export const generateCourseFromPlaceInputSchema = z.object({
   contentId: z.string().trim().min(1).max(100),
   contentTypeId: z.string().regex(/^\d{1,5}$/),

@@ -11,11 +11,7 @@ import { createApiFetch, extractItems } from "@/lib/tour/client";
 import { readCache, writeCache, writeCacheEmpty, CACHE_EMPTY } from "@/lib/tour/cache";
 import { TTL } from "@/lib/cache/ttl";
 import { stripBrTags } from "@/lib/pipeline/availability";
-import type {
-  BarrierFreeFacility,
-  BarrierFreeGroup,
-  BarrierFreeGroupKey,
-} from "@/shared/types/course.types";
+import type { BarrierFreeGroup, BarrierFreeGroupKey } from "@/shared/types/course.types";
 
 const BASE_URL = "https://apis.data.go.kr/B551011/KorWithService2";
 const fetchBarrierFree = createApiFetch(BASE_URL);
@@ -27,48 +23,47 @@ export type DetailWithTourItem = { contentid: string } & Partial<
 
 type DetailWithTourField = (typeof FIELD_SPECS)[number]["field"];
 
-// 매뉴얼(v4.3) 응답 명세의 그룹 구분·항목명을 그대로 따른다. label은 배지 문구 —
+// 매뉴얼(v4.3) 응답 명세의 그룹 구분을 그대로 따른다. label은 배지 문구 —
 // 원문이 자유 서술이라 고정 문구로 요약할 수 없는 항목(기타 상세·매표소·홍보물)은 null이다.
 // 이 중 "기타 상세"는 아래 ETC_LABEL_RULES로 원문 키워드에서 배지를 뽑는다.
 const FIELD_SPECS = [
-  { field: "parking",            group: "mobility", name: "주차",               label: "장애인 주차" },
-  { field: "route",              group: "mobility", name: "접근로",             label: "휠체어 접근" },
-  { field: "exit",               group: "mobility", name: "출입통로",           label: "휠체어 접근" },
-  { field: "wheelchair",         group: "mobility", name: "휠체어",             label: "휠체어 대여" },
-  { field: "elevator",           group: "mobility", name: "엘리베이터",         label: "엘리베이터" },
-  { field: "restroom",           group: "mobility", name: "화장실",             label: "장애인 화장실" },
-  { field: "auditorium",         group: "mobility", name: "관람석",             label: "장애인 관람석" },
-  { field: "room",               group: "mobility", name: "객실",               label: "장애인 객실" },
-  { field: "publictransport",    group: "mobility", name: "대중교통",           label: "대중교통 안내" },
-  { field: "ticketoffice",       group: "mobility", name: "매표소",             label: null },
-  { field: "promotion",          group: "mobility", name: "홍보물",             label: null },
-  { field: "handicapetc",        group: "mobility", name: "기타",               label: null },
-  { field: "braileblock",        group: "visual",   name: "점자블록",           label: "점자블록" },
-  { field: "helpdog",            group: "visual",   name: "보조견 동반",        label: "보조견 동반" },
-  { field: "guidehuman",         group: "visual",   name: "안내요원",           label: "안내요원" },
-  { field: "audioguide",         group: "visual",   name: "오디오 가이드",      label: "오디오 가이드" },
-  { field: "bigprint",           group: "visual",   name: "큰 활자 홍보물",     label: "점자·큰글자 안내" },
-  { field: "brailepromotion",    group: "visual",   name: "점자 홍보물·표지판", label: "점자·큰글자 안내" },
-  { field: "guidesystem",        group: "visual",   name: "유도 안내 설비",     label: "유도 안내 설비" },
-  { field: "blindhandicapetc",   group: "visual",   name: "기타",               label: null },
-  { field: "signguide",          group: "hearing",  name: "수화 안내",          label: "수어 안내" },
-  { field: "videoguide",         group: "hearing",  name: "자막 안내",          label: "자막 안내" },
-  { field: "hearingroom",        group: "hearing",  name: "객실",               label: "청각장애 객실" },
-  { field: "hearinghandicapetc", group: "hearing",  name: "기타",               label: null },
-  { field: "stroller",           group: "infant",   name: "유모차",             label: "유모차 대여" },
-  { field: "lactationroom",      group: "infant",   name: "수유실",             label: "수유실" },
-  { field: "babysparechair",     group: "infant",   name: "유아용 보조의자",    label: "유아 의자" },
-  { field: "infantsfamilyetc",   group: "infant",   name: "기타",               label: null },
+  { field: "parking",            group: "mobility", label: "장애인 주차" },
+  { field: "route",              group: "mobility", label: "휠체어 접근" },
+  { field: "exit",               group: "mobility", label: "휠체어 접근" },
+  { field: "wheelchair",         group: "mobility", label: "휠체어 대여" },
+  { field: "elevator",           group: "mobility", label: "엘리베이터" },
+  { field: "restroom",           group: "mobility", label: "장애인 화장실" },
+  { field: "auditorium",         group: "mobility", label: "장애인 관람석" },
+  { field: "room",               group: "mobility", label: "장애인 객실" },
+  { field: "publictransport",    group: "mobility", label: "대중교통 안내" },
+  { field: "ticketoffice",       group: "mobility", label: null },
+  { field: "promotion",          group: "mobility", label: null },
+  { field: "handicapetc",        group: "mobility", label: null },
+  { field: "braileblock",        group: "visual",   label: "점자블록" },
+  { field: "helpdog",            group: "visual",   label: "보조견 동반" },
+  { field: "guidehuman",         group: "visual",   label: "안내요원" },
+  { field: "audioguide",         group: "visual",   label: "오디오 가이드" },
+  { field: "bigprint",           group: "visual",   label: "점자·큰글자 안내" },
+  { field: "brailepromotion",    group: "visual",   label: "점자·큰글자 안내" },
+  { field: "guidesystem",        group: "visual",   label: "유도 안내 설비" },
+  { field: "blindhandicapetc",   group: "visual",   label: null },
+  { field: "signguide",          group: "hearing",  label: "수어 안내" },
+  { field: "videoguide",         group: "hearing",  label: "자막 안내" },
+  { field: "hearingroom",        group: "hearing",  label: "청각장애 객실" },
+  { field: "hearinghandicapetc", group: "hearing",  label: null },
+  { field: "stroller",           group: "infant",   label: "유모차 대여" },
+  { field: "lactationroom",      group: "infant",   label: "수유실" },
+  { field: "babysparechair",     group: "infant",   label: "유아 의자" },
+  { field: "infantsfamilyetc",   group: "infant",   label: null },
 ] as const satisfies readonly {
   field: string;
   group: BarrierFreeGroupKey;
-  name: string;
   label: string | null;
 }[];
 
 // "기타 상세" 원문 → 배지 문구. 실측 응답(서울·원주·부산·제주·대전·전주 반경 샘플)에서
-// 반복 등장한 편의시설 표현만 규칙으로 둔다. 매칭 안 되는 원문은 배지 없이 상세 목록에만
-// 남긴다 — 기타 상세엔 "장애인 활동보조 필요_어려움"·"차가 다니는 곳으로 주의 필요"처럼
+// 반복 등장한 편의시설 표현만 규칙으로 둔다. 매칭 안 되는 원문은 배지를 만들지 않는다 —
+// 기타 상세엔 "장애인 활동보조 필요_어려움"·"차가 다니는 곳으로 주의 필요"처럼
 // 편의시설이 아니라 주의사항인 문장도 섞여 있어, 키워드 없이 배지를 만들면 거짓 주장이 된다.
 const ETC_LABEL_RULES: Partial<Record<DetailWithTourField, readonly [RegExp, string][]>> = {
   handicapetc: [
@@ -124,10 +119,11 @@ function isNegativeOnly(detail: string): boolean {
   return NEGATIVE.test(detail) && !POSITIVE.test(detail);
 }
 
-// detailWithTour2 원본 1건을 그룹별 편의시설 목록으로 요약한다. 채워진 항목이 하나도
-// 없으면 빈 배열 — 화면 층은 빈 배열이면 섹션 자체를 렌더하지 않는다.
+// detailWithTour2 원본 1건을 그룹별 배지 문구로 요약한다. 같은 그룹 안에서 겹치는 문구
+// (접근로·출입통로 → "휠체어 접근")는 한 번만 담고, 배지가 하나도 없는 그룹은 뺀다.
+// 배지가 하나도 없으면 빈 배열 — 화면 층은 빈 배열이면 섹션 자체를 렌더하지 않는다.
 export function summarizeBarrierFree(item: DetailWithTourItem): BarrierFreeGroup[] {
-  const byGroup = new Map<BarrierFreeGroupKey, BarrierFreeFacility[]>();
+  const byGroup = new Map<BarrierFreeGroupKey, Set<string>>();
 
   for (const spec of FIELD_SPECS) {
     const raw = item[spec.field];
@@ -135,14 +131,14 @@ export function summarizeBarrierFree(item: DetailWithTourItem): BarrierFreeGroup
     const detail = cleanDetail(raw);
     if (!detail || isNegativeOnly(detail)) continue;
 
-    const list = byGroup.get(spec.group) ?? [];
-    list.push({ labels: labelsFor(spec, detail), name: spec.name, detail });
-    byGroup.set(spec.group, list);
+    const labels = byGroup.get(spec.group) ?? new Set<string>();
+    for (const label of labelsFor(spec, detail)) labels.add(label);
+    byGroup.set(spec.group, labels);
   }
 
   return GROUP_ORDER.flatMap((group) => {
-    const facilities = byGroup.get(group);
-    return facilities ? [{ group, facilities }] : [];
+    const labels = byGroup.get(group);
+    return labels && labels.size > 0 ? [{ group, labels: [...labels] }] : [];
   });
 }
 
