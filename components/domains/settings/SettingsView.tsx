@@ -8,6 +8,7 @@ import { Button } from "@/components/commons/Button";
 import { PREF_KEYS, PREF_META, type Prefs } from "@/shared/constants/preferences";
 import { authClient } from "@/client/authClient";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
+import { clearCourseStorage } from "@/client/startedCourseStorage";
 
 const OPTION_TITLES: Record<string, string> = {
   walk: "걷는 게 좋아요",
@@ -67,6 +68,9 @@ export function SettingsView({ initialPrefs }: { initialPrefs: Prefs }) {
   const handleSignOut = async () => {
     await authClient.signOut();
     queryClient.clear();
+    // 같은 브라우저에서 다른 계정으로 로그인했을 때 이전 사용자의 미리보기·진행 중 코스가
+    // 섞이지 않도록 로컬 코스 데이터를 함께 지운다.
+    clearCourseStorage();
     // router.push(소프트 네비게이션)는 방문했던 페이지의 클라이언트 캐시를 그대로
     // 남긴다 — 로그아웃 후 뒤로가기를 누르면 서버 재검증 없이 그 캐시가 재사용돼
     // 로그인 화면이 다시 보이는 문제가 있었다. 하드 네비게이션으로 캐시를 통째로

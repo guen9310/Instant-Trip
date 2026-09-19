@@ -5,36 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
-import { saveCourseCompletionAction } from "@/app/actions/completion";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
-import { buildCompletionPayload } from "@/shared/utils/completionPayload";
 import { withTimeout } from "@/shared/utils/withTimeout";
 import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type { PendingCourse } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
-
-// 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체될 때 abandoned로 기록한다.
-// 조건: 진행 스토어의 courseId가 덮어써질 pendingCourse와 일치할 때만 — 중복 기록 방지.
-function recordAbandonedIfAny() {
-  try {
-    const raw = localStorage.getItem("pendingCourse");
-    if (!raw) return;
-    const prev = JSON.parse(raw) as Partial<PendingCourse>;
-    const { courseId, startedAt, completedAt } =
-      useCourseProgressStore.getState();
-    if (!startedAt || completedAt || !courseId || courseId !== prev.courseId)
-      return;
-    const payload = buildCompletionPayload({
-      pending: prev,
-      status: "abandoned",
-      startedAt,
-      completedAt: null,
-    });
-    if (payload) void saveCourseCompletionAction(payload).catch(() => {});
-  } catch {
-    // 텔레메트리 — 실패해도 코스 생성 흐름은 그대로 진행
-  }
-}
 
 // 데모/QA 전용 — /start?debugWeather=rain으로 날씨 게이트를 강제 트리거한다.
 const DEBUG_WEATHER_VALUES = ["clear", "cloudy", "rain", "snow", "heatwave"] as const;
@@ -105,10 +80,6 @@ export function useGenerateCourse(prefs: Prefs) {
         }
         return;
       }
-
-      // 암묵 abandoned — 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체되는 순간,
-      // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
-      recordAbandonedIfAny();
 
       // 방금 받은 추천에는 위에서 넘긴 excludeIds가 이미 반영돼 있어 직전 거절 장소가
       // 다시 나올 일은 없다 — 그러니 여기서 거절 이력을 지워도 "거절한 곳이 재추천됨"

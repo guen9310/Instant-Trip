@@ -44,7 +44,19 @@ export function CourseActiveView({ courseId, dbFallback, sessionExpired }: Props
     );
   }
 
-  const { place, placeCoord, cat, setCat, filteredPois, poisLoading, selectedPoiId, selectPoi, handleComplete } = state;
+  const {
+    place,
+    placeCoord,
+    cat,
+    setCat,
+    filteredPois,
+    poisLoading,
+    selectedPoiId,
+    selectPoi,
+    handleComplete,
+    completing,
+    completeError,
+  } = state;
   // 우산 안내는 비/눈으로 바뀔 때만 의미가 있다(흐려지거나 갤 땐 카드를 띄우지 않는다).
   const rainAlert =
     forecastAlert && (forecastAlert.condition === "rain" || forecastAlert.condition === "snow")
@@ -240,9 +252,14 @@ export function CourseActiveView({ courseId, dbFallback, sessionExpired }: Props
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] shrink-0">
-        <Button size="cta" className="w-full gap-2" onClick={handleComplete}>
-          방문 완료
-          <Check size={16} />
+        {completeError && (
+          <p role="alert" className="text-center text-[12px] text-red-500 mb-2">
+            {completeError}
+          </p>
+        )}
+        <Button size="cta" className="w-full gap-2" onClick={handleComplete} disabled={completing}>
+          {completing ? "저장 중…" : "방문 완료"}
+          {!completing && <Check size={16} />}
         </Button>
       </div>
     </>

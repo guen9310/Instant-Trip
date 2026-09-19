@@ -15,8 +15,18 @@ const REACTION_TAGS = [
   "또 올래요",
 ];
 
-export function CourseDoneView() {
-  const { place, stars, setStars, reactions, toggleReaction, handleDone } = useCourseDone();
+export function CourseDoneView({ courseId }: { courseId: string }) {
+  const {
+    place,
+    stars,
+    setStars,
+    reactions,
+    toggleReaction,
+    handleReview,
+    handleSkip,
+    saving,
+    saveError,
+  } = useCourseDone(courseId);
 
   return (
     <>
@@ -117,12 +127,18 @@ export function CourseDoneView() {
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
-        <Button size="cta" onClick={handleDone} disabled={stars === 0}>
-          후기 남기기
+        {saveError && (
+          <p role="alert" className="text-center text-[12px] text-red-500">
+            {saveError}
+          </p>
+        )}
+        <Button size="cta" onClick={handleReview} disabled={stars === 0 || saving}>
+          {saving ? "저장 중…" : "후기 남기기"}
         </Button>
         <button
-          onClick={handleDone}
-          className="w-full h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center"
+          onClick={handleSkip}
+          disabled={saving}
+          className="w-full h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center disabled:opacity-50"
         >
           그냥 넘기기
         </button>

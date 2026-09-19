@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CourseResultView } from "@/components/domains/course/CourseResultView";
@@ -57,7 +57,7 @@ describe("CourseResultView — '여기로 갈게요' 인증 상태별 분기 (�
     mockPush.mockClear();
     mockStartCourseAction.mockClear();
     mockRedirectToSignIn.mockClear();
-    useCourseProgressStore.getState().reset();
+    useCourseProgressStore.getState().resetRerolls();
   });
 
   it("정상 로그인 상태면 낙관적으로 진행 화면에 이동하고 시작 액션을 호출한다", async () => {
@@ -76,6 +76,53 @@ describe("CourseResultView — '여기로 갈게요' 인증 상태별 분기 (�
     expect(mockPush).toHaveBeenCalledWith("/course/active/course-1");
     await waitFor(() => expect(mockStartCourseAction).toHaveBeenCalled());
     expect(mockRedirectToSignIn).not.toHaveBeenCalled();
+  });
+
+  it("출발하면 미리보기를 진행 중 코스로 옮겨 적는다", async () => {
+    localStorage.clear();
+    mockStartCourseAction.mockResolvedValue({ ok: true, completionId: "c1", dbCourseId: "d1" });
+    const user = userEvent.setup();
+    renderWithClient(
+      <CourseResultView {...BASE_PROPS} isAuthenticated sessionExpired={false} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "여기로 갈게요" }));
+
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem("startedCourse")!)).toMatchObject({
+        courseId: "course-1",
+        completionId: "c1",
+        dbCourseId: "d1",
+        startedAt: expect.any(Number),
+      }),
+    );
+  });
+
+  it("시작 응답이 늦는 사이 다른 코스로 바뀌면 그 코스에 이전 코스의 기록 ID를 붙이지 않는다", async () => {
+    localStorage.clear();
+    let resolveStart!: (v: { ok: true; completionId: string; dbCourseId: string }) => void;
+    mockStartCourseAction.mockReturnValue(new Promise((r) => (resolveStart = r)));
+    const user = userEvent.setup();
+    renderWithClient(
+      <CourseResultView {...BASE_PROPS} isAuthenticated sessionExpired={false} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "여기로 갈게요" }));
+    // 응답 대기 중 다른 코스(B)를 미리보기·출발
+    localStorage.setItem(
+      "pendingCourse",
+      JSON.stringify({ courseId: "course-B", courseName: "B", place: PLACE }),
+    );
+    localStorage.setItem(
+      "startedCourse",
+      JSON.stringify({ courseId: "course-B", courseName: "B", place: PLACE }),
+    );
+    await act(async () => resolveStart({ ok: true, completionId: "c-A", dbCourseId: "d-A" }));
+
+    const started = JSON.parse(localStorage.getItem("startedCourse")!);
+    expect(started.courseId).toBe("course-B");
+    expect(started.completionId).toBeUndefined();
+    expect(JSON.parse(localStorage.getItem("pendingCourse")!).completionId).toBeUndefined();
   });
 
   it("세션이 무효화된 상태(sessionExpired)면 안내 토스트 없이 곧바로 만료 배너로 보낸다", async () => {
@@ -112,7 +159,7 @@ describe("CourseResultView — '여기로 갈게요' 인증 상태별 분기 (�
 
 describe("CourseResultView — 집중률 게이트 배너", () => {
   beforeEach(() => {
-    useCourseProgressStore.getState().reset();
+    useCourseProgressStore.getState().resetRerolls();
   });
 
   it("concentrationSwitch='quiet'면 한산함 안내 문구를 보여준다", () => {
@@ -166,7 +213,7 @@ describe("CourseResultView — 집중률 게이트 배너", () => {
 
 describe("CourseResultView — 운영 상태 배지", () => {
   beforeEach(() => {
-    useCourseProgressStore.getState().reset();
+    useCourseProgressStore.getState().resetRerolls();
   });
 
   it("추천 진입에서 곧 여는 곳(opensAt)으로 채택되면 '지금 출발 가능' 대신 개점 시각을 보여준다", () => {

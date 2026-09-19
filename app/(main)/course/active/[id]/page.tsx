@@ -9,7 +9,7 @@ export default async function ActiveCoursePage({
 }) {
   const { id } = await params;
   const authState = await getAuthState();
-  // localStorage의 pendingCourse가 없을 때(다른 기기·저장소 초기화 등)를 위한 서버 측 대비책 —
+  // URL과 일치하는 localStorage의 startedCourse가 없을 때(다른 기기·저장소 초기화 등)를 위한 서버 측 대비책 —
   // 프로필 "이어서"가 가리키는 courseId(DB courses.id)로 복원 가능한지 미리 조회해둔다.
   const dbFallback =
     authState.status === "authenticated"

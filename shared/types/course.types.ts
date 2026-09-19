@@ -137,7 +137,7 @@ export type NearbyPoi = {
   placeUrl: string;
 };
 
-// localStorage "pendingCourse" — 생성된 추천을 프리뷰/진행 화면으로 전달
+// localStorage "pendingCourse" — 생성된 추천을 프리뷰 화면으로 전달(출발하면 startedCourse로 옮겨 적음)
 export type PendingCourse = {
   courseId: string;
   place: JourneyPlace;
@@ -165,9 +165,19 @@ export type PendingCourse = {
   concentrationSwitch?: ConcentrationSwitchReason | null;
 };
 
+// localStorage "startedCourse" — "여기로 갈게요"로 실제 출발한 코스. 미리보기(pendingCourse)와
+// 키를 분리해, 진행 중에 다른 코스를 미리보기만 해도 진행 중 기록이 덮어써지지 않게 한다.
+export type StartedCourse = PendingCourse & {
+  // 출발 시각(epoch ms). DB에서 복원한 경우엔 없다 — 서버가 DB의 기존 시작 시각을 보존한다.
+  startedAt?: number;
+  // 방문 완료가 서버에 저장 성공한 시각. 있으면 완료 기록은 이미 남았고, 완료 화면은
+  // 후기(별점·반응)만 덧붙인다.
+  completedAt?: number;
+};
+
 // /course/active/[id] 서버 컴포넌트가 미리 조회해두는 DB 기반 이어서 데이터.
-// localStorage의 pendingCourse가 없거나(다른 기기·저장소 초기화) URL의 courseId와
-// 다를 때, 프로필 "이어서"가 가리키는 courseId(DB courses.id)로 화면을 복원하는 데 쓴다.
+// URL의 courseId와 일치하는 localStorage의 startedCourse가 없을 때(다른 기기·저장소 초기화 등),
+// 프로필 "이어서"가 가리키는 courseId(DB courses.id)로 화면을 복원하는 데 쓴다.
 export type ResumableCourse = {
   completionId: string;
   courseId: string;
