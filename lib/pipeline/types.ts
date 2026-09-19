@@ -70,6 +70,8 @@ export interface PlaceCandidate {
   // 배치 필터(filterByAvailability) 경로에서만 채워진다.
   hours?: string | null;
   restDayNote?: string | null;
+  // 가용성 게이트가 곧 여는 곳(before_open)으로 채택했을 때만 채워지는 개점 시각 "HH:MM".
+  opensAt?: string;
   // 관광지 집중률(TatsCnctrRateService) 매칭 값(0~100) — concentrationGate.ts가 이름
   // 매칭에 성공한 후보에만 채운다. CONCENTRATION_GATE_ENABLED가 꺼져 있거나 매칭
   // 안 되면 undefined — index.ts가 이 값의 유무로 배너 노출 여부를 판단한다.
@@ -97,6 +99,8 @@ export interface CoursePlace {
   origin: PlaceOrigin;
   // usetime/restdate 원문을 합성한 표시용 문자열. 데이터 없으면 "".
   hours: string;
+  // 곧 여는 곳으로 추천됐을 때의 개점(또는 휴게 후 재개) 시각 "HH:MM". 그 외 undefined.
+  opensAt?: string;
   // 카카오 로컬 출처(item.source === "kakao")일 때만 채워지는 카카오 장소 상세 페이지 URL.
   // TourAPI 출처는 카카오 장소 ID가 없어 undefined.
   placeUrl?: string;

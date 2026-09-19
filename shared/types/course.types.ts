@@ -63,6 +63,8 @@ export type JourneyPlace = {
   coord: { lat: number; lng: number } | null;
   imageUrl: string | null;
   availabilityUncertain: boolean;
+  // 곧 여는 곳으로 추천됐을 때의 개점(또는 휴게 후 재개) 시각 "HH:MM" — 추천 진입에서만 채워진다.
+  opensAt?: string;
   estimatedDuration: DurationRange;
   tags: string[];
   // 사용자가 선택한 온보딩 태그 중 이 장소의 점수가 가장 높았던 것. 선택된 태그가
@@ -95,6 +97,8 @@ export type PlaceAvailabilitySnapshot = {
   status: AvailabilityStatus;
   hours: string | null;
   restDayNote: string | null;
+  // status === "before_open"일 때만 — 문을 여는(휴게 후 재개 포함) 시각 "HH:MM".
+  opensAt?: string;
 };
 
 // 코스 결과의 보조 정보 — 진행중/예정 축제 (product-plan.md 4번 "부가" 참조)

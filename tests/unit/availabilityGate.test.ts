@@ -172,3 +172,50 @@ describe("selectAvailableCandidate", () => {
     expect(mockedCheck).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("selectAvailableCandidate — 곧 여는 곳(before_open)", () => {
+  beforeEach(() => {
+    mockedCheck.mockReset();
+  });
+
+  function beforeOpenResult(minutesUntilOpen: number, opensAt = "12:00") {
+    return {
+      status: "before_open",
+      reason: `아직 문을 열기 전입니다(${opensAt} 개점).`,
+      hours: "12:00~21:00",
+      restDayNote: "매주 화요일",
+      opensAt,
+      minutesUntilOpen,
+    };
+  }
+
+  it("개점까지 30분 이내면 채택하고 개점 시각을 넘긴다 (확인 필요 아님)", async () => {
+    mockedCheck.mockResolvedValueOnce(beforeOpenResult(20));
+
+    const result = await selectAvailableCandidate([makeCandidate("1", 0.9), makeCandidate("2", 0.8)]);
+
+    expect(result?.winner.item.contentid).toBe("1");
+    expect(result?.winner.opensAt).toBe("12:00");
+    expect(result?.winner.availabilityUncertain).toBe(false);
+    expect(mockedCheck).toHaveBeenCalledTimes(1);
+  });
+
+  it("개점까지 30분보다 멀면 다음 순위로 넘어간다", async () => {
+    mockedCheck.mockResolvedValueOnce(beforeOpenResult(60)).mockResolvedValueOnce(openResult());
+
+    const result = await selectAvailableCandidate([makeCandidate("1", 0.9), makeCandidate("2", 0.8)]);
+
+    expect(result?.winner.item.contentid).toBe("2");
+    expect(result?.winner.opensAt).toBeUndefined();
+  });
+
+  it("'시간이 안 맞아요' 리롤(strict)에서는 곧 여는 곳도 채택하지 않는다", async () => {
+    mockedCheck.mockResolvedValueOnce(beforeOpenResult(10)).mockResolvedValueOnce(openResult());
+
+    const result = await selectAvailableCandidate([makeCandidate("1", 0.9), makeCandidate("2", 0.8)], {
+      strictOpenOnly: true,
+    });
+
+    expect(result?.winner.item.contentid).toBe("2");
+  });
+});

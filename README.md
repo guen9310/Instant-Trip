@@ -207,7 +207,7 @@ DB(Neon)·인증(better-auth)·TourAPI·Kakao 등 외부 서비스 연동에 필
 
 ## 🧪 테스트 · CI/CD
 
-- `pnpm test`(vitest run) — 39개 파일, 301개 테스트 전부 통과
+- `pnpm test`(vitest run) — 40개 파일, 350개 테스트 전부 통과
 - `pnpm type-check`(tsc --noEmit) — 에러 0건
 - `pnpm lint`(eslint) — 에러 0건
 - CI(`.github/workflows/ci.yml`) — PR 시 lint → type-check → test → build 순으로 검증

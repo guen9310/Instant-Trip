@@ -16,6 +16,11 @@ const ADOPTABLE_STATUSES: ReadonlySet<AvailabilityStatus> = new Set(["open", "no
 // 취지이지, Kakao 후보 자체를 배제하는 정책은 아니다.
 const STRICT_ADOPTABLE_STATUSES: ReadonlySet<AvailabilityStatus> = new Set(["open"]);
 
+// 곧 여는 곳(before_open)을 후보로 남기는 창. 개점(또는 휴게 후 재개)까지 이 시간 안이면
+// "지금 출발하면 도착할 즈음 연다"고 보고 채택한다. 파이프라인에 이동시간 데이터가 없어
+// 거리로 추정하지 않고 보수적인 고정값을 쓴다 — 늘리면 문 앞에서 기다리는 시간이 길어진다.
+export const BEFORE_OPEN_ADOPT_WINDOW_MINUTES = 30;
+
 // 순차 확인 상한. 점수 순으로 이 개수까지 확인해도 전부 운영종료로 판정되면
 // 점수 1위를 관대하게(uncertain=true) 채택한다 — API 오류 시 관대 통과와 같은 철학.
 export const MAX_AVAILABILITY_CHECKS = 30;
@@ -79,7 +84,29 @@ export async function selectAvailableCandidate(
         exhausted: false,
       };
     }
-    // closed_restday/closed_hours/past_admission_cutoff/insufficient_time → 다음 순위 후보로 계속
+
+    // 곧 여는 곳 — 기본 모드에서만 채택한다. "시간이 안 맞아요" 리롤(strict)은 지금 확실히
+    // 열려 있는 곳만 원하므로 제외한다. 운영시간을 읽어낸 결과라 availabilityUncertain은 false다.
+    if (
+      !opts.strictOpenOnly &&
+      result.status === "before_open" &&
+      result.opensAt &&
+      (result.minutesUntilOpen ?? Infinity) <= BEFORE_OPEN_ADOPT_WINDOW_MINUTES
+    ) {
+      return {
+        winner: {
+          ...candidate,
+          availabilityUncertain: false,
+          hours: result.hours,
+          restDayNote: result.restDayNote,
+          opensAt: result.opensAt,
+        },
+        checksPerformed,
+        exhausted: false,
+      };
+    }
+    // closed_restday/closed_hours/past_admission_cutoff/insufficient_time, 창 밖의 before_open
+    // → 다음 순위 후보로 계속
   }
 
   // 전원 운영종료로 판정됐거나 상한을 소진함 — 점수 1위를 관대하게 채택한다.

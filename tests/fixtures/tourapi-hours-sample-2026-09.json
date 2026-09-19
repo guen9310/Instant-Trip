@@ -1,0 +1,674 @@
+[
+  {
+    "contentId": "309307",
+    "title": "백련사(강북)",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "128622",
+    "title": "서대문독립공원",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2500207",
+    "title": "상수동 카페거리",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1364975",
+    "title": "충무공 이순신 동상",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1364932",
+    "title": "세종대왕 동상",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "809190",
+    "title": "북악산",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "[3월~4월]<br>\n- 07:00~18:00 (입산 가능 16:00)<br>\n[5월~8월]<br>\n- 07:00~19:00 (입산 가능 17:00)<br>\n[9월~10월]<br>\n- 07:00~18:00 (입산 가능 16:00)<br>\n[11월~2월]<br>\n- 09:00~17:00 (입산 가능 15:00)",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "699249",
+    "title": "신당동 떡볶이타운",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "점포 별로 상이함",
+    "restdate": "점포 별로 상이함"
+  },
+  {
+    "contentId": "127557",
+    "title": "삼천사(서울)",
+    "contentTypeId": "12",
+    "city": "서울",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "229901",
+    "title": "코엑스",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "※ 시설 별로 상이하므로 홈페이지 참조",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "130629",
+    "title": "백악미술관",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "10:00~18:00<br />\n※ 매주 목요일~다음주 수요일 (주일단위 전시)",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "129928",
+    "title": "이목화랑",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "- 평일 11:00~18:00<br>\n- 주말 11:00~17:00<br>\n※ 자세한 사항은 전화문의 요망",
+    "restdate": "매주 월요일"
+  },
+  {
+    "contentId": "130573",
+    "title": "갤러리에스피",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "10:00~18:00",
+    "restdate": "매주 일요일, 월요일 / 1월1일 / 설·추석"
+  },
+  {
+    "contentId": "130699",
+    "title": "나루아트센터",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "09:00~18:00 (준비 시간 12:00~13:00)",
+    "restdate": "매주 월요일"
+  },
+  {
+    "contentId": "2553377",
+    "title": "김달진미술자료박물관",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "[평일]<br>\n- 10:00~17:00<br>\n※ 매월 말 마지막 평일은 15시부터 관람 가능<br>\n[토요일]<br>\n- 10:00~14:00",
+    "restdate": "매주 일요일 / 공휴일"
+  },
+  {
+    "contentId": "2714028",
+    "title": "쾨닉 서울",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "11:00~18:00",
+    "restdate": "매주 일요일 / 월요일"
+  },
+  {
+    "contentId": "130511",
+    "title": "간송미술관(서울 보화각)",
+    "contentTypeId": "14",
+    "city": "서울",
+    "usetime": "[정기전시]<br>\n- 춘계전시 4월 말~5월 초<br>\n- 추계전시 9월 말~10월 초<br>\n[관람시간] <br>\n- 10:00~18:00<br>\n※ 일정은 미술관 및 재단 사정에 의해 변동 가능하므로 홈페이지 참조 또는 전화 문의 요망<br>\n※ 전시 관람은 사전 예약제로 운영",
+    "restdate": "매주 월요일 / 전시 또는 프로그램 운영 기간이 아닌 경우"
+  },
+  {
+    "contentId": "2406564",
+    "title": "북한산 자락길",
+    "contentTypeId": "28",
+    "city": "서울",
+    "usetime": "",
+    "restdate": ""
+  },
+  {
+    "contentId": "131534",
+    "title": "사당청소년센터",
+    "contentTypeId": "28",
+    "city": "서울",
+    "usetime": "- 화요일~토요일 09:00~21:00<br>- 일요일 / 공휴일 09:00~18:00",
+    "restdate": "매주 월요일"
+  },
+  {
+    "contentId": "2778036",
+    "title": "단관공원",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "125757",
+    "title": "국형사",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "09:00~18:00",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2702481",
+    "title": "원주 부흥사지 석탑재",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "252554",
+    "title": "원주 운곡원천석묘역",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "252551",
+    "title": "원주 조엄묘역",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "125781",
+    "title": "원주향교",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "09:00~18:00",
+    "restdate": "매주 토요일~일요일 / 공휴일"
+  },
+  {
+    "contentId": "753732",
+    "title": "봉산동 당간지주",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2705223",
+    "title": "장미공원",
+    "contentTypeId": "12",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2764837",
+    "title": "조엄기념관",
+    "contentTypeId": "14",
+    "city": "원주",
+    "usetime": "10:00~17:00",
+    "restdate": "매주 월요일 / 1월 1일 / 설·추석 당일"
+  },
+  {
+    "contentId": "2714800",
+    "title": "기후변화홍보관",
+    "contentTypeId": "14",
+    "city": "원주",
+    "usetime": "09:00~18:00",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2555010",
+    "title": "강원감영관찰사·무릉고서화미술박물관",
+    "contentTypeId": "14",
+    "city": "원주",
+    "usetime": "- 월요일~금요일 10:00~17:00(입장 마감 16:30)<br>\n- 토요일 10:00~13:00(입장 마감 12:30)<br>\n※ 방문 전 전화 문의 필수",
+    "restdate": "매주 일요일 / 공휴일"
+  },
+  {
+    "contentId": "2651025",
+    "title": "독립서점 틔움",
+    "contentTypeId": "14",
+    "city": "원주",
+    "usetime": "09:30~17:30",
+    "restdate": "매주 토요일~일요일 / 공휴일"
+  },
+  {
+    "contentId": "2651026",
+    "title": "동네책방 스몰굿씽",
+    "contentTypeId": "14",
+    "city": "원주",
+    "usetime": "12:00~21:00",
+    "restdate": "매주 화요일"
+  },
+  {
+    "contentId": "131367",
+    "title": "파크밸리골프클럽",
+    "contentTypeId": "28",
+    "city": "원주",
+    "usetime": "05:00~19:00",
+    "restdate": "공휴일"
+  },
+  {
+    "contentId": "2778061",
+    "title": "[치악산 둘레길 1코스] 꽃밭머리길",
+    "contentTypeId": "28",
+    "city": "원주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2753136",
+    "title": "노암터널",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2773046",
+    "title": "사천진항",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "상시 개방",
+    "restdate": ""
+  },
+  {
+    "contentId": "2775508",
+    "title": "순포습지",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2641014",
+    "title": "뒷뜨루관광농원",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "[하절기(3~10월)]<br>\n10:00~18:00 (입장 마감 17:00)<br>\n[동절기(11~2월)]<br>\n10:00~17:00 (입장 마감 16:00)",
+    "restdate": "매주 목요일(단, 법정공휴일 제외)"
+  },
+  {
+    "contentId": "3454461",
+    "title": "경포호수광장",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "",
+    "restdate": "연중무휴 24시개방"
+  },
+  {
+    "contentId": "125748",
+    "title": "남대천(강릉)",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "125768",
+    "title": "보현사(강릉)",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2713848",
+    "title": "수상한마법학교",
+    "contentTypeId": "12",
+    "city": "강릉",
+    "usetime": "- 평일 13:00~17:00 (휴게시간 13:30~14:30)<br>\n- 토요일 13:00~19:00 (휴게시간 15:30~16:30)<br>\n- 일요일 10:00~16:00 (휴게시간 12:30~13:30)",
+    "restdate": "매주 화요일"
+  },
+  {
+    "contentId": "2706817",
+    "title": "강릉시립미술관 교동",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "10:00~18:00",
+    "restdate": "매주 월요일 (단, 월요일이 공휴일인 경우 정상 개관 후, 익일 휴관) / 1월 1일 / 설·추석 당일"
+  },
+  {
+    "contentId": "2782914",
+    "title": "고래책방",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "08:30~19:30",
+    "restdate": "설·추석 당일"
+  },
+  {
+    "contentId": "1722228",
+    "title": "강릉단오제전수교육관",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "09:00~18:00",
+    "restdate": "1월 1일 / 설날 / 추석 / 일요일"
+  },
+  {
+    "contentId": "2774692",
+    "title": "강릉자동차극장",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "영화 상영시간별 상이",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2551386",
+    "title": "강릉원주대학교 박물관",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "09:00~18:00",
+    "restdate": "매주 토요일~일요일 / 법정 공휴일"
+  },
+  {
+    "contentId": "3532282",
+    "title": "단오타운전시관",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "09:00 ~ 18:00",
+    "restdate": ""
+  },
+  {
+    "contentId": "3539725",
+    "title": "갈골한과체험전시관",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "예약시 운영",
+    "restdate": "예약시 운영"
+  },
+  {
+    "contentId": "3531540",
+    "title": "강릉올림픽뮤지엄",
+    "contentTypeId": "14",
+    "city": "강릉",
+    "usetime": "10:00 ~ 17:00 (입장마감 16:30)",
+    "restdate": "매주 월요일, 법정공휴일 및 대체휴무일"
+  },
+  {
+    "contentId": "131862",
+    "title": "사기막저수지",
+    "contentTypeId": "28",
+    "city": "강릉",
+    "usetime": "",
+    "restdate": "연중 무휴"
+  },
+  {
+    "contentId": "298099",
+    "title": "국청사(부산)",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방<br>\n※ 자세한 사항은 전화문의 요망",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "128134",
+    "title": "옥련선원",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "129140",
+    "title": "금련산",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "128810",
+    "title": "동백공원",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2617724",
+    "title": "마린시티",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2782626",
+    "title": "삼익비치수변공원",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2677748",
+    "title": "백양산 웰빙숲",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1607440",
+    "title": "금강사(부산)",
+    "contentTypeId": "12",
+    "city": "부산",
+    "usetime": "10:00~17:00",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "130834",
+    "title": "부산점자도서관",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "- 3~10월 09:00~18:00 <br>\n- 11~2월 09:00~17:00",
+    "restdate": "매주 주말 / 법정공휴일"
+  },
+  {
+    "contentId": "1945293",
+    "title": "장기려기념 더 나눔센터",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "- 화요일~토요일 10:00~19:00<br>\n- 일요일 09:00~18:00",
+    "restdate": "매주 월요일"
+  },
+  {
+    "contentId": "3451794",
+    "title": "해성아트베이",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "",
+    "restdate": "매주 월요일 휴관"
+  },
+  {
+    "contentId": "2782757",
+    "title": "책방오월",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "10:00~18:00",
+    "restdate": "매주 일요일"
+  },
+  {
+    "contentId": "2782714",
+    "title": "책방봄봄",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "- 평일 14:00~20:00<br>- 토요일 10:00~17:30<br>※ 책방 방문은 예약제로 운영됨",
+    "restdate": "매주 일요일 / 월요일"
+  },
+  {
+    "contentId": "130381",
+    "title": "동래문화원",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "09:00~18:00",
+    "restdate": "매주 토요일~일요일 / 법정공휴일"
+  },
+  {
+    "contentId": "3017112",
+    "title": "동래읍성 임진왜란 역사관",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "10:00~19:00",
+    "restdate": "매주 월요일 (단, 월요일이 공휴일인 경우 그 다음날 휴관) / 1월 1일 / 설·추석 당일"
+  },
+  {
+    "contentId": "3083767",
+    "title": "부산근현대역사관 본관",
+    "contentTypeId": "14",
+    "city": "부산",
+    "usetime": "09:00~18:00",
+    "restdate": "매주 월요일 (단, 월요일이 공휴일인 경우 다음날 화요일 휴관) / 1월 1일"
+  },
+  {
+    "contentId": "2381567",
+    "title": "문탠로드",
+    "contentTypeId": "28",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1878262",
+    "title": "[부산 갈맷길] 2코스 2구간",
+    "contentTypeId": "28",
+    "city": "부산",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "2946402",
+    "title": "한벽굴",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "상시 개방",
+    "restdate": ""
+  },
+  {
+    "contentId": "337432",
+    "title": "약수암(전주)",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "319707",
+    "title": "승암사(전주)",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "317526",
+    "title": "불정사(전주)",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "485691",
+    "title": "학소암(전주)",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1597967",
+    "title": "관응사(김제)",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1599550",
+    "title": "봉황사(김제)",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "상시 개방",
+    "restdate": "연중무휴"
+  },
+  {
+    "contentId": "1996240",
+    "title": "두억행복드림마을",
+    "contentTypeId": "12",
+    "city": "전주",
+    "usetime": "09:00~18:00",
+    "restdate": ""
+  },
+  {
+    "contentId": "130445",
+    "title": "전주역사박물관",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "09:00~18:00<br>\n※ 관람마감 30분 전까지 입장 가능",
+    "restdate": "매주 월요일 / 1월 1일"
+  },
+  {
+    "contentId": "2606578",
+    "title": "전주부채문화관",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "10:00~18:00",
+    "restdate": "매주 월요일 / 설·추석 당일 / 1월 1일"
+  },
+  {
+    "contentId": "130055",
+    "title": "전북특별자치도립국악원",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "공연에 따라 다름",
+    "restdate": "공연에 따라 다름"
+  },
+  {
+    "contentId": "1626068",
+    "title": "전주완산도서관",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "[종합자료실]<br>\n- 월~목요일 09:00~18:00<br>\n- 토~일요일 09:00~18:00<br>\n[어린이자료실]<br>\n- 월~목요일 09:00~18:00<br>\n- 토~일요일 09:00~18:00<br>\n[열람실] 08:00~22:00",
+    "restdate": "- 자료실 매주 금요일 / 법정공휴일<br>- 열람실 1월 1일, 설/추석 당일"
+  },
+  {
+    "contentId": "2445701",
+    "title": "전북도청도서관",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "09:00~18:00",
+    "restdate": "주말 / 법정 공휴일"
+  },
+  {
+    "contentId": "1625244",
+    "title": "전북대학교 박물관",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "09:30~17:30",
+    "restdate": "매주 일요일 / 법정공휴일 / 개교기념일 (10월 15일)"
+  },
+  {
+    "contentId": "129937",
+    "title": "미술관 솔",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "10:00~17:00",
+    "restdate": "매주 월요일 / 연휴 및 공휴일"
+  },
+  {
+    "contentId": "1586964",
+    "title": "전주자연생태관",
+    "contentTypeId": "14",
+    "city": "전주",
+    "usetime": "09:00~18:00(하절기(5~9월) 1시간연장)<br />\n※ 매표시간 : 마감 1시간 전까지 가능",
+    "restdate": "매주 월요일(공휴일인 경우 다음날) / 1월 1일 /설·추석 당일"
+  }
+]

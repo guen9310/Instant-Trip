@@ -4,7 +4,7 @@ import { fetchNearbyFestivals } from "@/lib/pipeline/festival";
 import { checkOpenByDayAwareHours } from "@/lib/tour/hours";
 import type { AvailabilityStatus } from "@/shared/types/availability.types";
 import { STAY_DURATION_DEFAULT } from "@/lib/pipeline/stayDuration";
-import { getKstDateString } from "@/shared/utils/kst";
+import { formatKstHHMM, getKstDateString } from "@/shared/utils/kst";
 import { isBlank } from "@/shared/utils";
 import type { CoursePlace } from "@/lib/pipeline/types";
 import type { PlaceAvailability } from "@/lib/pipeline/selectPlace";
@@ -98,12 +98,15 @@ export async function generateCourseFromFestival(
     // 같은 status 체계에서 당일 시간대를 판정한다(요일 개념이 없어 restdate는 null로
     // 넘긴다). playtime이 없으면 시각 단위 정보가 없다는 뜻이므로 no_data.
     let dayStatus: AvailabilityStatus;
+    let opensAt: string | undefined;
     if (!inDateRange) {
       dayStatus = "closed_hours";
     } else if (!playtime) {
       dayStatus = "no_data";
     } else {
-      dayStatus = checkOpenByDayAwareHours(playtime, null, { restDateApplicable: false }).status;
+      const check = checkOpenByDayAwareHours(playtime, null, { restDateApplicable: false });
+      dayStatus = check.status;
+      if (check.status === "before_open" && check.opensAt) opensAt = formatKstHHMM(check.opensAt);
     }
 
     const period = `${formatShortDate(startDate)} ~ ${formatShortDate(endDate)}`;
@@ -138,6 +141,7 @@ export async function generateCourseFromFestival(
       status: dayStatus,
       hours: hours || null,
       restDayNote: null,
+      ...(opensAt ? { opensAt } : {}),
     };
 
     const festivals = await fetchNearbyFestivals(lat, lng, SELECTED_FESTIVAL_RADIUS_KM);

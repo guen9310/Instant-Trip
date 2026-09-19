@@ -14,6 +14,7 @@ export type PlaceAvailability = {
   status: AvailabilityStatus;
   hours: string | null; // usetime 원문
   restDayNote: string | null; // restdate 원문
+  opensAt?: string; // status === "before_open"일 때 여는 시각 "HH:MM"
 };
 
 export type GenerateCourseFromPlaceInput = {
@@ -108,7 +109,9 @@ export async function generateCourseFromPlace(
       // 직접 선택된 장소라 순위가 없다 — score는 추천 점수와 비교되지 않는 "적용 불가" 값.
       score: 0,
       available: true,
-      availabilityUncertain: availabilityCheck.status !== "open",
+      // 곧 여는 곳(before_open)은 운영시간을 읽어낸 결과라 "확인 필요"가 아니다.
+      availabilityUncertain:
+        availabilityCheck.status !== "open" && availabilityCheck.status !== "before_open",
       estimatedDuration,
       hours: availabilityCheck.hours,
       restDayNote: availabilityCheck.restDayNote,
@@ -123,6 +126,7 @@ export async function generateCourseFromPlace(
       status: availabilityCheck.status,
       hours: availabilityCheck.hours,
       restDayNote: availabilityCheck.restDayNote,
+      ...(availabilityCheck.opensAt ? { opensAt: availabilityCheck.opensAt } : {}),
     };
 
     return { ok: true, mainPlace, availability, festivals };

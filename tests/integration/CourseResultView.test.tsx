@@ -163,3 +163,39 @@ describe("CourseResultView — 집중률 게이트 배너", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("CourseResultView — 운영 상태 배지", () => {
+  beforeEach(() => {
+    useCourseProgressStore.getState().reset();
+  });
+
+  it("추천 진입에서 곧 여는 곳(opensAt)으로 채택되면 '지금 출발 가능' 대신 개점 시각을 보여준다", () => {
+    renderWithClient(
+      <CourseResultView
+        {...BASE_PROPS}
+        place={{ ...PLACE, opensAt: "12:00" }}
+        generatedAt={Date.now()}
+        isAuthenticated
+        sessionExpired={false}
+      />,
+    );
+
+    expect(screen.getByText("12:00부터 운영")).toBeInTheDocument();
+    expect(screen.queryByText("지금 출발 가능")).not.toBeInTheDocument();
+  });
+
+  it("직접 선택한 장소가 개점 전(before_open)이면 개점 시각을 보여준다", () => {
+    renderWithClient(
+      <CourseResultView
+        {...BASE_PROPS}
+        place={{ ...PLACE, origin: "selected" }}
+        availability={{ status: "before_open", hours: "13:00~21:00", restDayNote: null, opensAt: "13:00" }}
+        generatedAt={Date.now()}
+        isAuthenticated
+        sessionExpired={false}
+      />,
+    );
+
+    expect(screen.getByText("13:00부터 운영")).toBeInTheDocument();
+  });
+});
