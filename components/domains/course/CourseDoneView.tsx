@@ -69,7 +69,14 @@ export function CourseDoneView({ courseId }: { courseId: string }) {
           <p className="text-[15px] font-bold text-text-primary mb-3">별점</p>
           <div className="flex gap-2 justify-center">
             {[1, 2, 3, 4, 5].map((i) => (
-              <button key={i} onClick={() => setStars(i)} className="p-1">
+              <button
+                key={i}
+                type="button"
+                onClick={() => setStars(i)}
+                aria-label={`별점 ${i}점`}
+                aria-pressed={stars === i}
+                className="p-1"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   className={cn(
@@ -78,6 +85,7 @@ export function CourseDoneView({ courseId }: { courseId: string }) {
                   )}
                   stroke="currentColor"
                   strokeWidth={1.5}
+                  aria-hidden="true"
                 >
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>

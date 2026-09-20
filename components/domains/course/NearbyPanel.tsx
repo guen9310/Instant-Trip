@@ -141,33 +141,39 @@ export function NearbyPanel({
               const Icon = meta.icon;
               const isSelected = selectedPoiId === poi.id;
               return (
-                <button
+                // 선택 버튼과 외부 링크를 형제로 둔다 — <button> 안에 <a>를 넣으면 중첩 인터랙티브
+                // 요소가 돼 스크린리더·키보드 포커스가 어느 쪽을 누르는지 알 수 없다.
+                <div
                   key={poi.id}
-                  type="button"
-                  onClick={() => onSelect(isSelected ? null : poi.id)}
-                  aria-pressed={isSelected}
                   className={cn(
-                    "flex items-center gap-3 w-full text-left rounded-lg px-2 py-1.5 transition-colors border",
+                    "flex items-center gap-1 w-full rounded-lg transition-colors border",
                     isSelected ? "bg-primary/8 border-primary/30" : "border-transparent",
                   )}
                 >
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", meta.bg)}>
-                    <Icon size={14} strokeWidth={2.2} className={meta.color} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-text-primary truncate">{poi.name}</p>
-                    <p className="text-[11px] text-text-secondary">{poi.dist}</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(isSelected ? null : poi.id)}
+                    aria-pressed={isSelected}
+                    className="flex flex-1 min-w-0 items-center gap-3 text-left px-2 py-1.5"
+                  >
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", meta.bg)}>
+                      <Icon size={14} strokeWidth={2.2} className={meta.color} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-text-primary truncate">{poi.name}</p>
+                      <p className="text-[11px] text-text-secondary">{poi.dist}</p>
+                    </div>
+                  </button>
                   <a
                     href={poi.placeUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="shrink-0 text-text-secondary hover:text-primary transition-colors p-1"
+                    aria-label={`${poi.name} 카카오맵에서 보기`}
+                    className="shrink-0 text-text-secondary hover:text-primary transition-colors p-1 mr-1"
                   >
                     <ExternalLink size={13} strokeWidth={2} />
                   </a>
-                </button>
+                </div>
               );
             })}
           </div>

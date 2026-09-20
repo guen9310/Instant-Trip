@@ -87,6 +87,34 @@ describe("진행 화면 — URL 코스와 로컬 기록 대조", () => {
   });
 });
 
+describe("진행 화면 — 주변 정보 필터", () => {
+  it("장소를 고른 뒤 카테고리를 바꾸면 선택이 풀린다", async () => {
+    mockNearby.mockResolvedValue({
+      ok: true,
+      pois: [
+        { id: "c1", category: "cafe", name: "카페", dist: "10m", coord: { lat: 37.5, lng: 127 }, placeUrl: "" },
+        { id: "p1", category: "pharmacy", name: "약국", dist: "20m", coord: { lat: 37.5, lng: 127 }, placeUrl: "" },
+      ],
+    });
+    const { result } = renderHook(() => useCourseActive("db-A", DB_A, false));
+    await waitFor(() => {
+      if (result.current.status !== "ready") throw new Error("not ready");
+      expect(result.current.poisLoading).toBe(false);
+    });
+
+    act(() => {
+      if (result.current.status === "ready") result.current.selectPoi("c1");
+    });
+    act(() => {
+      if (result.current.status === "ready") result.current.setCat("pharmacy");
+    });
+
+    if (result.current.status !== "ready") throw new Error("not ready");
+    expect(result.current.selectedPoiId).toBeNull();
+    expect(result.current.filteredPois.map((p) => p.id)).toEqual(["p1"]);
+  });
+});
+
 describe("진행 화면 — 방문 완료 저장 확인", () => {
   const started: StartedCourse = {
     courseId: "A",

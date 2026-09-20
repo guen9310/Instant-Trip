@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "docs/**",
+    // 에이전트 작업용 git worktree — 다른 브랜치의 전체 사본(빌드 산출물 포함)이라 린트 대상이 아니다.
+    ".claude/**",
   ]),
 ]);
 

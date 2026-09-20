@@ -74,7 +74,7 @@ export function useCourseActive(
   // URL의 코스 ID와 일치하는 진행 중 코스만 읽는다 — 다른 코스의 로컬 데이터가 남아 있어도
   // (다른 코스 미리보기·이전 계정 등) 이 화면에는 섞이지 않고 dbFallback으로 넘어간다.
   const local = useClientRead(() => readStartedCourse(courseId));
-  const [cat, setCat] = useState<NearbyCategory>("all");
+  const [cat, setCatState] = useState<NearbyCategory>("all");
   const [pois, setPois] = useState<NearbyPoi[]>([]);
   const [fetchedKey, setFetchedKey] = useState<string | null>(null);
   const [selectedPoiId, selectPoi] = useState<string | null>(null);
@@ -143,6 +143,13 @@ export function useCourseActive(
   }
 
   const filteredPois = cat === "all" ? pois : pois.filter((p) => p.category === cat);
+
+  // 카테고리를 바꾸면 선택도 함께 푼다 — 이전 카테고리에서 고른 장소는 새 목록에 없어
+  // 선택이 남아 있으면 리스트·지도가 빈 것처럼 보인다(NearbyPanel의 visiblePois 참고).
+  const setCat = (next: NearbyCategory) => {
+    setCatState(next);
+    selectPoi(null);
+  };
 
   // 방문 완료 — 완료 기록은 프로필의 근거라, 서버 저장 성공을 확인한 뒤에만 완료 화면으로
   // 넘어간다. 완료 화면은 후기만 덧붙이므로, 거기서 그냥 떠나도 완료 사실은 이미 남아 있다.
