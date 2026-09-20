@@ -109,23 +109,6 @@ export async function generateCourse(
     `[pipeline] stage1 수집 ${items.length}건 | ${elapsed(Date.now() - ts)}`,
   );
 
-  if (items.length === 0) {
-    console.log(`[pipeline] 후보지 없음 — 종료`);
-    const empty: CourseResult = {
-      mainPlace: null,
-      nearbyPlaces: [],
-      festivals: { ongoing: [], upcoming: [] },
-      scale: profile.scale,
-      generatedAt: new Date().toISOString(),
-      weatherSwitch: null,
-      concentrationSwitch: null,
-    };
-    return {
-      course: empty,
-      debug: { collected: [], available: [], scored: [] },
-    };
-  }
-
   // stage3.5: 가볍게 + stage1 원본 수집 건수 부족 시 카카오 후보 보충
   // (트리거 기준이 가용성 통과분 → 원본 수집분으로 변경됨: 아래 신규 순차 가용성
   // 게이트 이전이라 아직 "가용 통과 건수"라는 개념 자체가 없기 때문)
@@ -151,6 +134,25 @@ export async function generateCourse(
     );
   }
 
+  // 후보 없음 판단은 카카오 보충 뒤에 한다 — 수집 0건은 보충이 가장 필요한 경우인데,
+  // 보충 전에 종료하면 보충이 1~4건일 때만 실행되고 정작 0건일 때는 건너뛰게 된다.
+  if (mergedPool.length === 0) {
+    console.log(`[pipeline] 후보지 없음(보충 후) — 종료`);
+    const empty: CourseResult = {
+      mainPlace: null,
+      nearbyPlaces: [],
+      festivals: { ongoing: [], upcoming: [] },
+      scale: profile.scale,
+      generatedAt: new Date().toISOString(),
+      weatherSwitch: null,
+      concentrationSwitch: null,
+    };
+    return {
+      course: empty,
+      debug: { collected: [], available: [], scored: [] },
+    };
+  }
+
   // source 분포 로깅
   const tourCount = mergedPool.filter((i) => i.source !== "kakao").length;
   const kakaoCount = mergedPool.filter((i) => i.source === "kakao").length;
@@ -172,7 +174,7 @@ export async function generateCourse(
   // 명시적으로 거절한 장소를 다시 보여주지 않는다는 excludeIds의 보장과 달리,
   // 이 조건들을 적용한 결과 후보가 0건이 되면 조건을 접고 원래 풀로 되돌아간다
   // ("차선이라도 보여준다"). 완전히 배제해야 하는 규칙이 아니라 가능하면
-  // 지키고 싶은 선호이기 때문 — availabilityGate.ts의 "전원 미채택 시 1위 폴백"과
+  // 지키고 싶은 선호이기 때문 — availabilityGate.ts의 "상한 소진 시 미확인 후보 폴백"과
   // 같은 관대 통과 철학을 여기에도 적용한 것.
 
   // "이미 가봤어요" 쿨다운 — 최근 완료한 장소와 좌표가 일치하는 후보를 제외한다.
