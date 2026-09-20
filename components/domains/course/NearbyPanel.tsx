@@ -158,14 +158,6 @@ export function NearbyPanel({
                     <p className="text-[13px] font-semibold text-text-primary truncate">{poi.name}</p>
                     <p className="text-[11px] text-text-secondary">{poi.dist}</p>
                   </div>
-                  <span
-                    className={cn(
-                      "text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0",
-                      poi.isOpen ? "bg-accent/10 text-accent" : "bg-border text-text-secondary",
-                    )}
-                  >
-                    {poi.isOpen ? "영업중" : "영업종료"}
-                  </span>
                   <a
                     href={poi.placeUrl}
                     target="_blank"

@@ -309,11 +309,11 @@ export function CourseResultView({
   // 상태 배지 — lib/tour/hours.ts의 status 체계를 그대로 반영한다.
   // 추천 진입은 CoursePlace/PlaceCandidate가 status 필드 자체를 갖지 않는다 — 게이트
   // (availabilityGate.ts)를 거치며 이미 boolean(availabilityUncertain)으로 축약된
-  // 값만 여기까지 전달된다. 정상 채택 경로(open/no_data/uncertain 채택)는 이 boolean이
-  // 실제 status와 1:1로 대응하지만, 상한 소진·전 후보 거부 시의 1위 폴백 경로는 실제
-  // status(예: closed_hours로 거부됐던 후보일 수 있음)를 버리고 무조건 true로 덮어쓴다
-  // (availabilityGate.ts의 해당 주석 참고) — 그래서 여기서 신뢰할 수 있는 건 이 boolean
-  // 하나뿐이고, "status가 open/no_data/uncertain 중 하나로 좁혀져 있다"고 가정하면 안 된다.
+  // 값만 여기까지 전달된다. false는 운영시간으로 "지금 열려 있음"(또는 곧 엶, opensAt)을
+  // 확인했다는 뜻이고, true는 확인하지 못했다는 뜻이다 — 판정 불가(no_data/uncertain),
+  // 운영시간 데이터가 없는 카카오 후보, 상한 소진으로 검사하지 못한 후보 폴백이 모두 여기에
+  // 속한다. 게이트는 닫혔다고 확인한 후보를 채택하지 않으므로(폴백 포함) 추천 진입에서
+  // "닫혀 있음" 배지는 나올 일이 없다(availabilityGate.ts 참고).
   // 선택 진입(직접 고른 장소·축제)은 게이트를 거치지 않아(의도적 비차단) status 원본이
   // 그대로 넘어온다 — closed_restday/closed_hours/past_admission_cutoff/insufficient_time도
   // 실제로 올라올 수 있어 이 경우만 "확정적으로 닫혀 있음"을 point 배지로 구분해서 보여준다.

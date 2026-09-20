@@ -87,6 +87,8 @@ describe("selectAvailableCandidate", () => {
     expect(result?.winner.item.contentid).toBe("2");
     expect(result?.checksPerformed).toBe(1); // c1만 카운트, c2는 검사 안 함
     expect(mockedCheck).toHaveBeenCalledTimes(1);
+    // 운영시간을 확인한 게 아니므로 "확인 필요"로 표시한다
+    expect(result?.winner.availabilityUncertain).toBe(true);
   });
 
   it("Kakao가 1위면 tour 후보는 아예 확인하지 않는다", async () => {
@@ -99,7 +101,7 @@ describe("selectAvailableCandidate", () => {
     expect(mockedCheck).not.toHaveBeenCalled();
   });
 
-  it("상한을 소진하면 1위를 폴백으로 채택하고 uncertain=true로 표시한다", async () => {
+  it("상한을 소진하면 확인하지 못한 후보 중 최상위를 폴백으로 채택하고 uncertain=true로 표시한다", async () => {
     const candidates = Array.from({ length: 5 }, (_, i) =>
       makeCandidate(String(i + 1), 1 - i * 0.1),
     );
@@ -109,22 +111,38 @@ describe("selectAvailableCandidate", () => {
 
     expect(result?.checksPerformed).toBe(2);
     expect(result?.exhausted).toBe(true);
-    expect(result?.winner.item.contentid).toBe("1");
+    // 1·2위는 닫혔다고 확인됐으므로 되살리지 않는다
+    expect(result?.winner.item.contentid).toBe("3");
     expect(result?.winner.availabilityUncertain).toBe(true);
     expect(mockedCheck).toHaveBeenCalledTimes(2);
   });
 
-  it("상한 도달 전에 후보 자체가 소진되면(전부 closed) 1위로 폴백한다", async () => {
+  it("확인한 후보가 전부 닫혀 있으면(전원 휴무) 닫힌 곳을 추천하지 않고 null을 반환한다", async () => {
     const candidates = Array.from({ length: 3 }, (_, i) =>
+      makeCandidate(String(i + 1), 1 - i * 0.1),
+    );
+    mockedCheck.mockResolvedValue({
+      status: "closed_restday",
+      reason: "오늘은 휴무일입니다.",
+      hours: "09:00~18:00",
+      restDayNote: "매주 월요일",
+    });
+
+    const result = await selectAvailableCandidate(candidates, { maxChecks: 30 });
+
+    expect(result).toBeNull();
+    expect(mockedCheck).toHaveBeenCalledTimes(3);
+  });
+
+  it("strictOpenOnly: 상한을 소진해도 확인하지 못한 후보로 폴백하지 않는다", async () => {
+    const candidates = Array.from({ length: 5 }, (_, i) =>
       makeCandidate(String(i + 1), 1 - i * 0.1),
     );
     mockedCheck.mockResolvedValue(closedResult());
 
-    const result = await selectAvailableCandidate(candidates, { maxChecks: 30 });
+    const result = await selectAvailableCandidate(candidates, { maxChecks: 2, strictOpenOnly: true });
 
-    expect(result?.checksPerformed).toBe(3);
-    expect(result?.exhausted).toBe(true);
-    expect(result?.winner.item.contentid).toBe("1");
+    expect(result).toBeNull();
   });
 
   it("빈 배열을 넣으면 null을 반환하고 검사하지 않는다", async () => {
@@ -161,15 +179,28 @@ describe("selectAvailableCandidate", () => {
     expect(mockedCheck).toHaveBeenCalledTimes(2);
   });
 
-  it("strictOpenOnly: Kakao 후보는 기존과 동일하게 검사 없이 즉시 채택한다", async () => {
+  it("strictOpenOnly: 운영 여부를 확인할 수 없는 Kakao 후보는 건너뛰고 실측 open만 채택한다", async () => {
     const c1 = makeCandidate("1", 0.9, { source: "tour" });
     const c2 = makeCandidate("2", 0.8, { source: "kakao" });
-    mockedCheck.mockResolvedValueOnce(uncertainOpenResult());
+    const c3 = makeCandidate("3", 0.7, { source: "tour" });
+    mockedCheck
+      .mockResolvedValueOnce(uncertainOpenResult())
+      .mockResolvedValueOnce(openResult());
 
-    const result = await selectAvailableCandidate([c1, c2], { strictOpenOnly: true });
+    const result = await selectAvailableCandidate([c1, c2, c3], { strictOpenOnly: true });
 
-    expect(result?.winner.item.contentid).toBe("2");
-    expect(mockedCheck).toHaveBeenCalledTimes(1);
+    expect(result?.winner.item.contentid).toBe("3");
+    expect(result?.winner.availabilityUncertain).toBe(false);
+    expect(mockedCheck).toHaveBeenCalledTimes(2);
+  });
+
+  it("strictOpenOnly: Kakao 후보만 남으면 채택하지 않고 null을 반환한다", async () => {
+    const c1 = makeCandidate("1", 0.9, { source: "kakao" });
+
+    const result = await selectAvailableCandidate([c1], { strictOpenOnly: true });
+
+    expect(result).toBeNull();
+    expect(mockedCheck).not.toHaveBeenCalled();
   });
 });
 

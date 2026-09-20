@@ -127,12 +127,13 @@ export type FestivalSummary = {
 
 export type NearbyCategory = "all" | "cafe" | "convenience" | "pharmacy" | "restaurant" | "parking" | "gas_station";
 
+// 카카오 로컬 카테고리 검색 결과 — 운영시간 정보가 없어 영업 여부 필드를 두지 않는다
+// (예전엔 근거 없이 isOpen: true를 채워 모두 "영업중"으로 보였다).
 export type NearbyPoi = {
   id: string;
   category: Exclude<NearbyCategory, "all">;
   name: string;
   dist: string;
-  isOpen: boolean;
   coord: { lat: number; lng: number };
   placeUrl: string;
 };

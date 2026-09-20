@@ -269,7 +269,7 @@ export async function generateCourse(
   });
   console.log(
     gate
-      ? `[gate] 완료 — "${gate.winner.item.title}" 채택 (검사 ${gate.checksPerformed}건${gate.exhausted ? ", 상한소진→1위 폴백" : ""}) | ${elapsed(Date.now() - ts)}`
+      ? `[gate] 완료 — "${gate.winner.item.title}" 채택 (검사 ${gate.checksPerformed}건${gate.exhausted ? ", 상한소진→미확인 후보 폴백" : ""}) | ${elapsed(Date.now() - ts)}`
       : `[gate] 완료 — 채택 후보 없음 | ${elapsed(Date.now() - ts)}`,
   );
 
