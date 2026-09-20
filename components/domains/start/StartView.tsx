@@ -54,13 +54,15 @@ export function StartView({ prefs }: { prefs: Prefs }) {
   const [selected, setSelected] = useState<ScaleId>("moderate");
   const [showManualPicker, setShowManualPicker] = useState(false);
   const { state } = useLocationStore();
-  const { loading, noNearby, setNoNearby, searchRadiusM, generate } = useGenerateCourse(prefs);
+  const { loading, error, noNearby, setNoNearby, searchRadiusM, generate } = useGenerateCourse(prefs);
 
   useEffect(() => {
     // 렌더 스냅샷이 아니라 effect 시점의 스토어를 직접 읽는다 — 이유는 HomeView의
     // 같은 effect 주석 참고(하이드레이션 렌더는 복원 전 "idle"을 본다).
     const { state: current, requestPermission } = useLocationStore.getState();
     if (current.status === "idle") requestPermission();
+    // 새로고침 전에 저장된(restored) GPS 위치는 그사이 이동했을 수 있어 홈 화면과 같이 다시 확인한다.
+    else if (current.status === "granted" && current.source === "restored") requestPermission();
   }, []);
 
   const isDenied =
@@ -68,7 +70,9 @@ export function StartView({ prefs }: { prefs: Prefs }) {
     state.status === "system-denied" ||
     state.status === "timeout" ||
     state.status === "unavailable";
-  const city = state.status === "granted" ? state.city : null;
+  // 재확인 전 위치(restored)는 확정된 위치로 쓰지 않는다 — 확인 중으로 표시하고 추천을 막는다.
+  const isRestored = state.status === "granted" && state.source === "restored";
+  const city = state.status === "granted" && !isRestored ? state.city : null;
 
   // 위치 권한 거부/불가 → 지역 직접 선택 UI
   if (isDenied || showManualPicker) {
@@ -132,7 +136,7 @@ export function StartView({ prefs }: { prefs: Prefs }) {
               </div>
             </div>
           </div>
-        ) : state.status === "idle" || state.status === "requesting" ? (
+        ) : state.status === "idle" || state.status === "requesting" || isRestored ? (
           <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-point/8 border border-point/20 mb-7">
             <Loader2 size={20} className="text-point shrink-0 animate-spin" />
             <div className="flex-1 min-w-0">
@@ -206,6 +210,11 @@ export function StartView({ prefs }: { prefs: Prefs }) {
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))]">
+        {error && !loading && (
+          <p role="alert" className="text-center text-[12px] text-red-500 mb-2">
+            {error}
+          </p>
+        )}
         <Button
           size="cta"
           onClick={handleStart}
