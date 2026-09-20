@@ -13,6 +13,8 @@ import {
 import { clusterPoints } from "@/shared/utils/clusterPoints";
 import { cn } from "@/shared/utils";
 import { useIsDarkMode } from "@/client/hooks/useIsDarkMode";
+import { useClientRead, HYDRATING } from "@/client/hooks/useClientRead";
+import { isKakaoSdkAvailable } from "@/client/kakaoSdk";
 import { CourseMapPlaceholder } from "@/components/domains/course/CourseMapPlaceholder";
 import { StripCategoryIcon, POI_CATEGORY_ICON } from "@/components/domains/course/StripCategoryIcon";
 import { ClusterBadge } from "@/components/domains/course/ClusterBadge";
@@ -85,6 +87,7 @@ export function CourseMap({
   const isFullMode = poisProp !== undefined;
 
   const [loaded, setLoaded] = useState(false);
+  const sdkAvailable = useClientRead(isKakaoSdkAvailable);
   const [displayMode, setDisplayMode] = useState<MapDisplayMode>("full");
   const [legendOpen, setLegendOpen] = useState(false);
   const [mapInstance, setMapInstance] = useState<kakao.maps.Map | null>(null);
@@ -178,7 +181,23 @@ export function CourseMap({
   );
   const handleMapClick = useCallback(() => setOpenClusterKey(null), []);
 
-  if (!loaded) return <CourseMapPlaceholder />;
+  if (!loaded) {
+    // SDK 자체가 없으면 load 콜백이 영영 오지 않는다 — 실패를 알리고 카카오맵 웹 링크로 대신한다.
+    // 추천 화면(bare 모드)은 지도 카드 위에 이미 같은 링크를 얹어두므로 풀 모드에서만 넘긴다.
+    if (sdkAvailable !== HYDRATING && !sdkAvailable) {
+      return (
+        <CourseMapPlaceholder
+          failed
+          externalUrl={
+            isFullMode
+              ? `https://map.kakao.com/link/map/${encodeURIComponent(mainPlace.name)},${mainPlace.coord.lat},${mainPlace.coord.lng}`
+              : undefined
+          }
+        />
+      );
+    }
+    return <CourseMapPlaceholder />;
+  }
 
   // 카테고리 필터(pois)가 바뀔 때만 다시 fit한다 — selectedPoiId는 더 이상 관여하지
   // 않으므로 장소를 선택·해제해도 지도 줌·팬은 그대로 유지된다.

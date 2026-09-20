@@ -186,7 +186,7 @@ function calcTimeBonus(item: TourItem): number {
 // 계산되며 운영시간 데이터를 쓰지 않는다. 따라서 이 시점엔 가용성(hours/restDayNote/
 // availabilityUncertain)을 아직 모르며, 정직하게 null/null/false 기본값을 채운다 —
 // 이후 순차 가용성 게이트(availabilityGate.ts의 selectAvailableCandidate)가 채택된
-// 1건에만 실제 값을 덮어쓴다.
+// 1건에만 실제 값을 덮어쓴다(카카오 후보처럼 확인할 수 없으면 true로 덮어씀).
 export async function scoreCandidates(
   items: PlaceWithTags[],
   profile: UserProfile,

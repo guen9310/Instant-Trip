@@ -2,11 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 
 const INITIAL_STATE = {
-  courseId: null,
   rejectedPlaceIds: [],
   rerollCount: 0,
-  startedAt: null,
-  completedAt: null,
 };
 
 describe("useCourseProgressStore", () => {
@@ -28,14 +25,5 @@ describe("useCourseProgressStore", () => {
     const state = useCourseProgressStore.getState();
     expect(state.rerollCount).toBe(0);
     expect(state.rejectedPlaceIds).toEqual([]);
-  });
-
-  it("start는 courseId·startedAt을 채우고 completedAt을 지운다", () => {
-    useCourseProgressStore.setState({ completedAt: 123 });
-    useCourseProgressStore.getState().start("course-1");
-    const state = useCourseProgressStore.getState();
-    expect(state.courseId).toBe("course-1");
-    expect(state.startedAt).not.toBeNull();
-    expect(state.completedAt).toBeNull();
   });
 });

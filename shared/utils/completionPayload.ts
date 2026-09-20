@@ -1,7 +1,7 @@
 import type { PendingCourse } from "@/shared/types/course.types";
 import type { CourseCompletionPayload } from "@/shared/schemas/courseCompletion";
 
-// pendingCourse + 진행 타임스탬프 → 완료/포기 기록 페이로드.
+// 진행 중 코스(startedCourse) + 진행 타임스탬프 → 완료/포기 기록 페이로드.
 // 실제 추천 데이터가 없으면(estimatedDuration/courseName 누락) null — mock은 기록하지 않는다.
 export function buildCompletionPayload(args: {
   pending: Partial<PendingCourse> | null;

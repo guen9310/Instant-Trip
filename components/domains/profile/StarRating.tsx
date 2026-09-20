@@ -3,7 +3,8 @@ import { cn } from "@/shared/utils";
 
 export function StarRating({ rating }: { rating: number }) {
   return (
-    <div className="flex gap-0.5">
+    // 읽기 전용 별점 — 아이콘 5개 대신 "별점 N점" 한 번만 읽히게 한다.
+    <div className="flex gap-0.5" role="img" aria-label={`별점 ${rating}점`}>
       {[1, 2, 3, 4, 5].map((s) => (
         <Star
           key={s}

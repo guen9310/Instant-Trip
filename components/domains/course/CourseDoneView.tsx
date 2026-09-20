@@ -15,8 +15,18 @@ const REACTION_TAGS = [
   "또 올래요",
 ];
 
-export function CourseDoneView() {
-  const { place, stars, setStars, reactions, toggleReaction, handleDone } = useCourseDone();
+export function CourseDoneView({ courseId }: { courseId: string }) {
+  const {
+    place,
+    stars,
+    setStars,
+    reactions,
+    toggleReaction,
+    handleReview,
+    handleSkip,
+    saving,
+    saveError,
+  } = useCourseDone(courseId);
 
   return (
     <>
@@ -59,7 +69,14 @@ export function CourseDoneView() {
           <p className="text-[15px] font-bold text-text-primary mb-3">별점</p>
           <div className="flex gap-2 justify-center">
             {[1, 2, 3, 4, 5].map((i) => (
-              <button key={i} onClick={() => setStars(i)} className="p-1">
+              <button
+                key={i}
+                type="button"
+                onClick={() => setStars(i)}
+                aria-label={`별점 ${i}점`}
+                aria-pressed={stars === i}
+                className="p-1"
+              >
                 <svg
                   viewBox="0 0 24 24"
                   className={cn(
@@ -68,6 +85,7 @@ export function CourseDoneView() {
                   )}
                   stroke="currentColor"
                   strokeWidth={1.5}
+                  aria-hidden="true"
                 >
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
@@ -117,12 +135,18 @@ export function CourseDoneView() {
 
       {/* CTA 바 */}
       <div className="border-t border-border bg-background px-4 py-3 pb-[calc(12px+env(safe-area-inset-bottom,8px))] flex flex-col gap-2">
-        <Button size="cta" onClick={handleDone} disabled={stars === 0}>
-          후기 남기기
+        {saveError && (
+          <p role="alert" className="text-center text-[12px] text-red-500">
+            {saveError}
+          </p>
+        )}
+        <Button size="cta" onClick={handleReview} disabled={stars === 0 || saving}>
+          {saving ? "저장 중…" : "후기 남기기"}
         </Button>
         <button
-          onClick={handleDone}
-          className="w-full h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center"
+          onClick={handleSkip}
+          disabled={saving}
+          className="w-full h-12 text-[15px] font-medium text-text-secondary flex items-center justify-center disabled:opacity-50"
         >
           그냥 넘기기
         </button>

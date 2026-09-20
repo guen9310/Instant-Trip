@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   kmaToWeatherCondition,
+  weatherConditionForDisplay,
   groupForecastByTime,
   findUpcomingWeatherChange,
   isAdverseWeather,
@@ -200,5 +201,20 @@ describe("resolveWeatherGateSignal", () => {
     const signal = resolveWeatherGateSignal({}, [], now, 3);
     expect(signal.condition).toBe("clear");
     expect(signal.isHeatwave).toBe(false);
+  });
+});
+
+describe("weatherConditionForDisplay", () => {
+  it("조회 실패로 빈 응답이면 맑음이 아니라 null(정보 없음)이다", () => {
+    expect(weatherConditionForDisplay({})).toBeNull();
+    expect(weatherConditionForDisplay(undefined)).toBeNull();
+    // 점수 계산용 판정은 그대로 무감점(clear)을 유지한다
+    expect(kmaToWeatherCondition({})).toBe("clear");
+  });
+
+  it("강수형태가 있으면 기존 판정을 그대로 따른다", () => {
+    expect(weatherConditionForDisplay({ PTY: "0", T1H: "21" })).toBe("clear");
+    expect(weatherConditionForDisplay({ PTY: "1" })).toBe("rain");
+    expect(weatherConditionForDisplay({ PTY: "3" })).toBe("snow");
   });
 });

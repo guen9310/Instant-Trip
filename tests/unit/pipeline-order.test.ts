@@ -142,6 +142,40 @@ describe("generateCourse — stage2/4 순서 반전", () => {
     expect(firstArg).toEqual(items); // items(원본), available이 아님
   });
 
+  it("수집 0건이어도 가볍게면 카카오 보충을 실행하고 보충 후보로 추천한다", async () => {
+    const park = makeItem("k1", { source: "kakao", title: "동네 공원" });
+    mockedCollect.mockResolvedValue([]);
+    mockedKakao.mockResolvedValue([park]);
+
+    const { course } = await generateCourse(baseProfile({ scale: "가볍게" }));
+
+    expect(mockedKakao).toHaveBeenCalledTimes(1);
+    expect(mockedKakao.mock.calls[0][0]).toEqual([]);
+    expect(course.mainPlace?.contentId).toBe("k1");
+    // 카카오 후보는 운영 여부를 확인할 수 없어 "확인 필요"로 표시된다
+    expect(course.mainPlace?.availabilityUncertain).toBe(true);
+  });
+
+  it("수집 0건이고 보충도 0건이면 후보 없음으로 끝난다", async () => {
+    mockedCollect.mockResolvedValue([]);
+    mockedKakao.mockResolvedValue([]);
+
+    const { course } = await generateCourse(baseProfile({ scale: "가볍게" }));
+
+    expect(mockedKakao).toHaveBeenCalledTimes(1);
+    expect(course.mainPlace).toBeNull();
+    expect(mockedCheck).not.toHaveBeenCalled();
+  });
+
+  it("가볍게가 아니면 수집 0건이어도 보충하지 않고 후보 없음으로 끝난다", async () => {
+    mockedCollect.mockResolvedValue([]);
+
+    const { course } = await generateCourse(baseProfile({ scale: "적당히" }));
+
+    expect(mockedKakao).not.toHaveBeenCalled();
+    expect(course.mainPlace).toBeNull();
+  });
+
   it("수집 건수가 충분하면(≥5) 카카오 보충이 발동하지 않는다 — 가용성과 무관", async () => {
     const items = Array.from({ length: 6 }, (_, i) => makeItem(`t${i}`));
     mockedCollect.mockResolvedValue(items);

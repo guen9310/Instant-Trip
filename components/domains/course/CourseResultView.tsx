@@ -30,6 +30,7 @@ import type { ReasonChipKind } from "@/client/hooks/useCourseResult";
 import type { LucideIcon } from "lucide-react";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
 import { startCourseAction } from "@/app/actions/completion";
+import { updateStartedCourse, writeStartedCourse } from "@/client/startedCourseStorage";
 import type {
   JourneyPlace,
   PendingCourse,
@@ -162,7 +163,6 @@ export function CourseResultView({
 
   const router = useRouter();
   const queryClient = useQueryClient();
-  const startCourse = useCourseProgressStore((s) => s.start);
   const resetRerolls = useCourseProgressStore((s) => s.resetRerolls);
 
   const {
@@ -234,50 +234,72 @@ export function CourseResultView({
     proceedStart();
   };
 
+  // 출발 시점의 미리보기 스냅샷 — useCourseResult가 재추천마다 pendingCourse를 갱신하므로
+  // 보통은 저장소 값이 현재 화면과 같다. 혹시 다른 코스로 바뀌어 있으면(다른 탭 등)
+  // 화면이 들고 있는 값으로 최소 페이로드를 만든다.
+  const snapshotPreview = (): PendingCourse => {
+    try {
+      const raw = localStorage.getItem("pendingCourse");
+      if (raw) {
+        const pending = JSON.parse(raw) as PendingCourse;
+        if (pending.courseId === currentCourseId) return pending;
+      }
+    } catch {}
+    return {
+      courseId: currentCourseId,
+      place: currentPlace,
+      courseName: currentCourseName,
+      scale: scale ?? "moderate",
+    };
+  };
+
   const proceedStart = () => {
-    // 낙관적 이동 — startCourseAction 완료를 기다리지 않고 즉시 진행 화면으로 전환한다.
-    startCourse(currentCourseId);
+    // 요청 당시 코스 ID — 아래 비동기 응답은 이 코스에만 반영한다.
+    const startedCourseId = currentCourseId;
+    // 미리보기와 분리된 진행 중 코스로 옮겨 적는다 — 이후 다른 코스를 미리보기만 해도
+    // (pendingCourse 덮어쓰기) 이 기록은 그대로 남는다.
+    writeStartedCourse({ ...snapshotPreview(), startedAt: Date.now() });
     // 실제로 출발을 확정하는 지점 — 이번 탐색에서 쌓인 거절 이력을 여기서 끊는다.
     // (재추천 시점(useGenerateCourse)엔 일부러 안 지운다 — 거절한 장소가 같은 탐색
     // 안에서 계속 제외되게 하려는 목적이라, 실제 출발해야만 다음 탐색을 위해 리셋한다.)
     resetRerolls();
-    router.push(`/course/active/${currentCourseId}`);
+    // 낙관적 이동 — startCourseAction 완료를 기다리지 않고 즉시 진행 화면으로 전환한다.
+    router.push(`/course/active/${startedCourseId}`);
 
     void startCourseAction({
       courseName: currentCourseName,
       scale: scale ?? "moderate",
       place: currentPlace,
-    }).then((result) => {
-      // 세션 만료 등 엣지 — 이미 다른 화면(코스 진행)으로 낙관적 이동한 뒤라 이 컴포넌트는
-      // 대부분 이미 언마운트된 상태다. 그래서 로컬 토스트(authNotice)로는 안내가 보이지
-      // 않을 수 있어, 로그인 화면 쪽에서 사유를 읽어 배너로 보여주는 redirectToSignIn을 쓴다.
-      if (!result.ok) {
-        // "anonymous"는 이 화면에 이론상 나타나지 않는다(위 handleStart의 isAuthenticated
-        // 체크가 이미 막음) — 그래도 서버 액션의 계약을 그대로 존중해 invalid_session만
-        // 로그인 화면 배너로 연결한다.
-        if (result.reason === "invalid_session") {
-          queryClient.clear();
-          redirectToSignIn("session_expired");
+    })
+      .then((result) => {
+        // 세션 만료 등 엣지 — 이미 다른 화면(코스 진행)으로 낙관적 이동한 뒤라 이 컴포넌트는
+        // 대부분 이미 언마운트된 상태다. 그래서 로컬 토스트(authNotice)로는 안내가 보이지
+        // 않을 수 있어, 로그인 화면 쪽에서 사유를 읽어 배너로 보여주는 redirectToSignIn을 쓴다.
+        if (!result.ok) {
+          // "anonymous"는 이 화면에 이론상 나타나지 않는다(위 handleStart의 isAuthenticated
+          // 체크가 이미 막음) — 그래도 서버 액션의 계약을 그대로 존중해 invalid_session만
+          // 로그인 화면 배너로 연결한다.
+          if (result.reason === "invalid_session") {
+            queryClient.clear();
+            redirectToSignIn("session_expired");
+          }
+          return;
         }
-        return;
-      }
 
-      // 완료 시 completionId·dbCourseId를 localStorage에 기록해두면
-      // CourseDoneView가 INSERT 대신 UPDATE를 사용할 수 있다.
-      try {
-        const raw = localStorage.getItem("pendingCourse");
-        if (!raw) return;
-        const pending = JSON.parse(raw) as PendingCourse;
-        localStorage.setItem(
-          "pendingCourse",
-          JSON.stringify({
-            ...pending,
-            completionId: result.completionId,
-            dbCourseId: result.dbCourseId,
-          }),
+        // DB 행 ID를 진행 중 코스에 붙여두면 완료 시 INSERT 대신 UPDATE를 탄다.
+        // 응답이 늦는 사이 진행 중 코스가 다른 코스로 바뀌었으면 붙이지 않는다 — 다른 코스에
+        // 이 기록 ID가 붙으면 그 코스를 완료할 때 이 기록을 덮어쓴다. 이미 ID가 있으면
+        // (응답보다 먼저 방문 완료가 INSERT로 저장된 경우) 그 ID를 유지한다.
+        updateStartedCourse(startedCourseId, (current) =>
+          current.completionId
+            ? null
+            : { completionId: result.completionId, dbCourseId: result.dbCourseId },
         );
-      } catch {}
-    });
+      })
+      .catch((err) => {
+        // 네트워크 단절 등 — 진행은 로컬 기록으로 계속되고, 완료 시 INSERT fallback으로 저장된다.
+        console.error("[start] 시작 기록 저장 실패:", err);
+      });
   };
 
   if (isLoading) {
@@ -287,11 +309,11 @@ export function CourseResultView({
   // 상태 배지 — lib/tour/hours.ts의 status 체계를 그대로 반영한다.
   // 추천 진입은 CoursePlace/PlaceCandidate가 status 필드 자체를 갖지 않는다 — 게이트
   // (availabilityGate.ts)를 거치며 이미 boolean(availabilityUncertain)으로 축약된
-  // 값만 여기까지 전달된다. 정상 채택 경로(open/no_data/uncertain 채택)는 이 boolean이
-  // 실제 status와 1:1로 대응하지만, 상한 소진·전 후보 거부 시의 1위 폴백 경로는 실제
-  // status(예: closed_hours로 거부됐던 후보일 수 있음)를 버리고 무조건 true로 덮어쓴다
-  // (availabilityGate.ts의 해당 주석 참고) — 그래서 여기서 신뢰할 수 있는 건 이 boolean
-  // 하나뿐이고, "status가 open/no_data/uncertain 중 하나로 좁혀져 있다"고 가정하면 안 된다.
+  // 값만 여기까지 전달된다. false는 운영시간으로 "지금 열려 있음"(또는 곧 엶, opensAt)을
+  // 확인했다는 뜻이고, true는 확인하지 못했다는 뜻이다 — 판정 불가(no_data/uncertain),
+  // 운영시간 데이터가 없는 카카오 후보, 상한 소진으로 검사하지 못한 후보 폴백이 모두 여기에
+  // 속한다. 게이트는 닫혔다고 확인한 후보를 채택하지 않으므로(폴백 포함) 추천 진입에서
+  // "닫혀 있음" 배지는 나올 일이 없다(availabilityGate.ts 참고).
   // 선택 진입(직접 고른 장소·축제)은 게이트를 거치지 않아(의도적 비차단) status 원본이
   // 그대로 넘어온다 — closed_restday/closed_hours/past_admission_cutoff/insufficient_time도
   // 실제로 올라올 수 있어 이 경우만 "확정적으로 닫혀 있음"을 point 배지로 구분해서 보여준다.
@@ -770,9 +792,9 @@ export function CourseResultView({
           <div className="flex flex-col gap-2.5 mt-1">
             {activeCourse && (
               // "다녀오신 것 같은" 경우에도 곧장 완료 화면으로 보내지 않고 진행 화면으로
-              // 보낸다 — 완료 화면(useCourseDone)은 localStorage(pendingCourse)에
-              // 의존하는데, 다른 기기이거나 저장소가 비었으면 완료 기록이 저장되지
-              // 않고 조용히 홈으로 넘어가버릴 수 있다. 진행 화면은 이미 DB
+              // 보낸다 — 완료 기록은 진행 화면의 "방문 완료"에서 저장되고, 완료 화면
+              // (useCourseDone)은 그 로컬 기록(startedCourse)이 없으면 홈으로 돌려보낸다.
+              // 진행 화면은 DB
               // fallback(getResumableCourse)이 있어 기기와 무관하게 복원되고,
               // "방문 완료" 버튼 한 번이면 끝나므로 이쪽이 더 안전하다.
               <Button

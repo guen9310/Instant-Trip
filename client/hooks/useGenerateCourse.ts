@@ -5,36 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLocationStore } from "@/client/stores/useLocationStore";
 import { useCourseProgressStore } from "@/client/stores/useCourseProgressStore";
 import { generateCourseAction } from "@/app/actions/course";
-import { saveCourseCompletionAction } from "@/app/actions/completion";
 import { redirectToSignIn } from "@/client/redirectToSignIn";
-import { buildCompletionPayload } from "@/shared/utils/completionPayload";
 import { withTimeout } from "@/shared/utils/withTimeout";
 import { COURSE_ACTION_TIMEOUT_MS } from "@/shared/constants/courseAction";
 import type { PendingCourse } from "@/shared/types/course.types";
 import type { Prefs } from "@/shared/constants/preferences";
 
-// 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체될 때 abandoned로 기록한다.
-// 조건: 진행 스토어의 courseId가 덮어써질 pendingCourse와 일치할 때만 — 중복 기록 방지.
-function recordAbandonedIfAny() {
-  try {
-    const raw = localStorage.getItem("pendingCourse");
-    if (!raw) return;
-    const prev = JSON.parse(raw) as Partial<PendingCourse>;
-    const { courseId, startedAt, completedAt } =
-      useCourseProgressStore.getState();
-    if (!startedAt || completedAt || !courseId || courseId !== prev.courseId)
-      return;
-    const payload = buildCompletionPayload({
-      pending: prev,
-      status: "abandoned",
-      startedAt,
-      completedAt: null,
-    });
-    if (payload) void saveCourseCompletionAction(payload).catch(() => {});
-  } catch {
-    // 텔레메트리 — 실패해도 코스 생성 흐름은 그대로 진행
-  }
-}
+const GENERATE_ERROR = "갈 곳을 찾는 중 문제가 생겼어요. 다시 시도해주세요.";
 
 // 데모/QA 전용 — /start?debugWeather=rain으로 날씨 게이트를 강제 트리거한다.
 const DEBUG_WEATHER_VALUES = ["clear", "cloudy", "rain", "snow", "heatwave"] as const;
@@ -58,18 +35,23 @@ export function useGenerateCourse(prefs: Prefs) {
   const [noNearby, setNoNearby] = useState(false);
   // 마지막 생성 시도에 실제 사용된 검색 반경(m) — NoNearbyView 문구·확장 반경 계산용
   const [searchRadiusM, setSearchRadiusM] = useState<number | null>(null);
+  // NO_PLACE·세션 만료 외의 실패(UNKNOWN·예외·타임아웃) 안내 — 없으면 로딩만 끝나고
+  // 버튼이 아무 일도 안 한 것처럼 보인다.
+  const [error, setError] = useState<string | null>(null);
 
   const generate = async (
     scale: "light" | "moderate" | "leisurely",
     radiusM?: number,
   ) => {
-    if (state.status !== "granted" || !state.lat || !state.lng) {
+    // "restored"는 새로고침 전에 저장된 위치라 재확인 전에는 현재 위치로 쓰지 않는다.
+    if (state.status !== "granted" || state.source === "restored" || !state.lat || !state.lng) {
       console.warn("[StartView] coords 없음 — 코스 생성 중단");
       return;
     }
     const coords = { lat: state.lat, lng: state.lng };
 
     setLoading(true);
+    setError(null);
 
     // 세션 무효화 등 예상 밖의 예외(네트워크 단절 포함)로 await가 reject되면 아래 로직이
     // 전혀 실행되지 않고 setLoading(false)도 못 돌아 무한 로딩에 빠진다 — 반드시 감싼다.
@@ -102,13 +84,11 @@ export function useGenerateCourse(prefs: Prefs) {
         if (result.code === "NO_PLACE") {
           setSearchRadiusM(result.radiusM);
           setNoNearby(true);
+        } else {
+          setError(GENERATE_ERROR);
         }
         return;
       }
-
-      // 암묵 abandoned — 시작했지만 완료하지 않은 이전 코스가 새 코스로 대체되는 순간,
-      // 포기가 확정된다. 새 인터랙션 없이 이 시점에 기록만 남긴다(완료율 관측용).
-      recordAbandonedIfAny();
 
       // 방금 받은 추천에는 위에서 넘긴 excludeIds가 이미 반영돼 있어 직전 거절 장소가
       // 다시 나올 일은 없다 — 그러니 여기서 거절 이력을 지워도 "거절한 곳이 재추천됨"
@@ -138,11 +118,13 @@ export function useGenerateCourse(prefs: Prefs) {
     } catch (err) {
       console.error("[start] 코스 생성 실패:", err);
       setLoading(false);
+      setError(GENERATE_ERROR);
     }
   };
 
   return {
     loading,
+    error,
     noNearby,
     setNoNearby,
     searchRadiusM,

@@ -95,10 +95,16 @@ export async function startCourseAction(
 // ─── 완료/포기 기록 저장 ────────────────────────────────────────────────────────
 // completionId + dbCourseId가 있으면 코스 시작 시 생성한 기존 행을 UPDATE한다.
 // 없으면 INSERT fallback — startCourseAction 실패/미호출 시 기존 동작 유지.
-// 어떤 실패도 사용자 흐름으로 전파하지 않는다(조용히 skip).
+// 완료 기록은 프로필의 근거라, 실제로 저장됐는지를 결과로 정확히 돌려준다 — 호출부는
+// ok:true를 받은 뒤에만 로컬 데이터를 정리하고, 실패면 페이로드를 보존해 재시도한다.
+// 성공 시 반환하는 ID로 이후 저장(후기 덧붙이기·재시도)은 항상 같은 행을 UPDATE한다.
+type SaveCompletionResult =
+  | { ok: true; completionId: string; dbCourseId: string }
+  | { ok: false; reason?: AuthFailureReason };
+
 export async function saveCourseCompletionAction(
   payload: CourseCompletionPayload,
-): Promise<{ ok: boolean; reason?: AuthFailureReason }> {
+): Promise<SaveCompletionResult> {
   try {
     const authState = await getFreshAuthState();
     if (authState.status !== "authenticated") {
@@ -112,35 +118,43 @@ export async function saveCourseCompletionAction(
 
     const completedAt =
       d.status === "abandoned" ? null : new Date(d.completedAt ?? Date.now());
-    const startedAt = d.startedAt
-      ? new Date(d.startedAt)
-      : (completedAt ?? new Date());
 
     // ── UPDATE 경로 ────────────────────────────────────────────────────────────
     if (d.completionId && d.dbCourseId) {
-      await db
+      const updated = await db
         .update(courseCompletions)
         .set({
           status: d.status,
           rating: d.rating,
           review: d.reactions.length ? d.reactions.join(", ") : null,
-          startedAt,
+          // 클라이언트가 시작 시각을 모르면(새로고침·다른 기기에서 DB로 복원) 행에 이미
+          // 있는 시작 시각을 그대로 둔다 — 완료 시각으로 덮으면 체류 시간이 0분이 된다.
+          ...(d.startedAt ? { startedAt: new Date(d.startedAt) } : {}),
           completedAt,
         })
         .where(
           and(
             eq(courseCompletions.id, d.completionId),
             eq(courseCompletions.userId, session.user.id),
+            eq(courseCompletions.courseId, d.dbCourseId),
           ),
-        );
+        )
+        .returning({ id: courseCompletions.id });
 
-      return { ok: true };
+      // 0행 갱신 — 잘못된 기록 ID나 다른 계정의 로컬 데이터. 저장 성공으로 오인하지 않는다.
+      if (updated.length === 0) return { ok: false };
+      return { ok: true, completionId: d.completionId, dbCourseId: d.dbCourseId };
     }
+
+    const startedAt = d.startedAt
+      ? new Date(d.startedAt)
+      : (completedAt ?? new Date());
 
     // ── INSERT fallback ────────────────────────────────────────────────────────
     // neon-http는 트랜잭션 미지원 → db.batch(단일 HTTP 트랜잭션)로 원자성 확보.
     // batch는 RETURNING 체이닝이 불가하므로 course id를 사전 생성한다.
     const courseId = crypto.randomUUID();
+    const completionId = crypto.randomUUID();
 
     await db.batch([
       db.insert(courses).values({
@@ -167,6 +181,7 @@ export async function saveCourseCompletionAction(
         organizerUrl: d.place.organizerUrl ?? null,
       }),
       db.insert(courseCompletions).values({
+        id: completionId,
         userId: session.user.id,
         courseId,
         status: d.status,
@@ -177,7 +192,7 @@ export async function saveCourseCompletionAction(
       }),
     ]);
 
-    return { ok: true };
+    return { ok: true, completionId, dbCourseId: courseId };
   } catch (err) {
     console.error("[completion] 저장 실패:", err);
     return { ok: false };

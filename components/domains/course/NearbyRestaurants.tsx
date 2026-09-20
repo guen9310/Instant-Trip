@@ -5,6 +5,8 @@ import { UtensilsCrossed, ExternalLink } from "lucide-react";
 import { extractRegion } from "@/components/domains/course/extractRegion";
 import { FallbackLink } from "@/components/domains/course/FallbackLink";
 import { LoadingSkeleton } from "@/components/domains/course/LoadingSkeleton";
+import { useClientRead } from "@/client/hooks/useClientRead";
+import { isKakaoSdkAvailable } from "@/client/kakaoSdk";
 
 type PlaceItem = kakao.maps.services.PlacesSearchResultItem;
 
@@ -17,6 +19,8 @@ type Props = {
 export function NearbyRestaurants({ placeName, addr, coord }: Props) {
   const [places, setPlaces] = useState<PlaceItem[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // SDK가 없으면 검색 콜백이 오지 않아 스켈레톤에 영원히 머문다 — 바로 대안 링크로 넘긴다.
+  const sdkAvailable = useClientRead(isKakaoSdkAvailable);
 
   useEffect(() => {
     const win = window as unknown as {
@@ -47,7 +51,7 @@ export function NearbyRestaurants({ placeName, addr, coord }: Props) {
     });
   }, [placeName, addr, coord.lat, coord.lng]);
 
-  if (failed || (places !== null && places.length === 0)) {
+  if (sdkAvailable === false || failed || (places !== null && places.length === 0)) {
     return <FallbackLink placeName={placeName} addr={addr} />;
   }
 

@@ -106,7 +106,6 @@ export async function fetchNearbyPoisAction(
             category: cat,
             name:     p.place_name,
             dist:     `${p.distance}m`,
-            isOpen:   true,
             coord:    { lat: parseFloat(p.y), lng: parseFloat(p.x) },
             placeUrl: p.place_url,
           }));

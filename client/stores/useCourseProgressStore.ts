@@ -4,15 +4,11 @@ import { create } from "zustand";
 
 export const MAX_REROLLS = 3;
 
+// 추천 탐색 중의 거절·재추천 상태만 담는다. 진행 중 코스의 시작·완료 시각은 새로고침에도
+// 남아야 해서 메모리가 아닌 startedCourse 저장소(client/startedCourseStorage.ts)가 소유한다.
 type CourseProgressStore = {
-  courseId: string | null;
   rejectedPlaceIds: string[];
   rerollCount: number;
-  startedAt: number | null;
-  completedAt: number | null;
-  start: (courseId: string) => void;
-  complete: () => void;
-  reset: () => void;
   /** 실제 출발("여기로 갈게요")·장소 직접 선택·/start를 거친 재추천처럼 새 탐색이
    *  시작되는 지점에서 호출 — 거절 이력(rejectedPlaceIds)까지 전부 초기화한다. */
   resetRerolls: () => void;
@@ -21,22 +17,8 @@ type CourseProgressStore = {
 };
 
 export const useCourseProgressStore = create<CourseProgressStore>((set) => ({
-  courseId: null,
   rejectedPlaceIds: [],
   rerollCount: 0,
-  startedAt: null,
-  completedAt: null,
-  start: (courseId) =>
-    set({ courseId, startedAt: Date.now(), completedAt: null }),
-  complete: () => set({ completedAt: Date.now() }),
-  reset: () =>
-    set({
-      courseId: null,
-      rejectedPlaceIds: [],
-      rerollCount: 0,
-      startedAt: null,
-      completedAt: null,
-    }),
   resetRerolls: () => set({ rejectedPlaceIds: [], rerollCount: 0 }),
   addRejection: (placeId) =>
     set((s) => ({

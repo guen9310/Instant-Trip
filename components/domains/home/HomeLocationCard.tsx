@@ -6,7 +6,7 @@ import { useWeatherQuery } from "@/client/hooks/useWeatherQuery";
 import { useWeatherForecastAlertQuery } from "@/client/hooks/useWeatherForecastAlertQuery";
 import { AttributionNotice } from "@/components/commons/AttributionNotice";
 import {
-  kmaToWeatherCondition,
+  weatherConditionForDisplay,
   type WeatherCondition,
 } from "@/shared/utils/weatherContext";
 
@@ -60,12 +60,13 @@ export function HomeLocationCard({ regionLat, regionLng }: Props) {
 
   if (state.status === "granted") {
     const { city } = state;
-    const condition: WeatherCondition = weather
-      ? kmaToWeatherCondition(weather)
-      : "clear";
+    // 조회 실패(빈 응답·에러)면 null — 맑음으로 단정하지 않고 "정보 없음"으로 보여준다.
+    const condition = weatherConditionForDisplay(weather);
     const temp = weather?.T1H != null ? Math.round(Number(weather.T1H)) : null;
-    const { label, icon } = CONDITION_META[condition];
-    const message = WEATHER_MESSAGE[condition];
+    const { label, icon } = condition
+      ? CONDITION_META[condition]
+      : { label: "날씨 정보 없음", icon: "" };
+    const message = condition ? WEATHER_MESSAGE[condition] : "날씨를 불러오지 못했어요";
     const tempStr = temp != null ? `${temp}°C` : "";
     const forecastMessage = forecastAlert
       ? `${forecastAlert.hoursAhead}시간 뒤 ${FORECAST_CHANGE_LABEL[forecastAlert.condition]} 예정이에요`
@@ -94,7 +95,8 @@ export function HomeLocationCard({ regionLat, regionLng }: Props) {
                 <>
                   <p className="text-[19px] font-extrabold text-text-primary tracking-[-0.02em] leading-tight">
                     {label}
-                    {tempStr ? ` ${tempStr}` : ""} {icon}
+                    {tempStr ? ` ${tempStr}` : ""}
+                    {icon ? ` ${icon}` : ""}
                   </p>
                   <p className="text-[12px] text-text-secondary mt-1">{message}</p>
                   {forecastMessage && (

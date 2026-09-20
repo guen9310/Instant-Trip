@@ -26,7 +26,13 @@ export default defineConfig({
     setupFiles: ['./tests/setup.ts'],
     globals: true,
     // 실제 외부 API(TourAPI, Kakao)를 호출하는 수동 진단 테스트 — pnpm test:diagnostic으로 별도 실행
-    exclude: [...configDefaults.exclude, 'tests/unit/pipeline-diagnostic.test.ts'],
+    // .claude/worktrees는 에이전트 작업용 git worktree(다른 브랜치의 전체 사본)라 같이 수집하면
+    // 다른 시점의 테스트가 섞여 실패한다 — 현재 체크아웃의 테스트만 돌린다.
+    exclude: [
+      ...configDefaults.exclude,
+      'tests/unit/pipeline-diagnostic.test.ts',
+      '**/.claude/**',
+    ],
     // 기본 pool('threads')은 워커 스레드 간 console 포워딩 RPC와 jsdom 환경 teardown이
     // 경합하면 "Closing rpc while onUserConsoleLog was pending"로 간헐적으로 exit 1이
     // 된다(전부 통과해도 CI만 실패 — vitest의 알려진 워커 스레드 이슈). fire-and-forget

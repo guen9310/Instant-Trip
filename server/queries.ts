@@ -52,9 +52,9 @@ export async function getActiveCourse(
 }
 
 // ─── /course/active/[id] DB fallback ─────────────────────────────────────────
-// 프로필 "이어서"는 DB courses.id를 가리키는데, 진행 화면은 localStorage의
-// pendingCourse만 읽는다. 그 localStorage가 없거나(다른 기기·저장소 초기화) 다른
-// 코스로 덮어써졌을 때, 이 courseId로 이 유저의 활성 코스를 복원할 수 있는지 확인한다.
+// 프로필 "이어서"는 DB courses.id를 가리키는데, 진행 화면은 URL과 일치하는 localStorage의
+// startedCourse를 우선 읽는다. 그 기록이 없거나(다른 기기·저장소 초기화) 다른 코스로
+// 교체됐을 때, 이 courseId로 이 유저의 활성 코스를 복원할 수 있는지 확인한다.
 // userId로 소유자를 검증해 남의 활성 코스를 들여다볼 수 없게 한다.
 export async function getResumableCourse(
   userId: string,

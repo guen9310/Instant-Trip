@@ -15,6 +15,16 @@ export function kmaToWeatherCondition(
   return "clear";
 }
 
+// 화면 표시용 — 조회 실패로 빈 응답({})이 오면 null. kmaToWeatherCondition은 PTY가 없으면
+// "clear"로 보는데, 이는 추천 점수에서 무감점 처리하려는 것이지 사용자에게 "맑음"이라고
+// 말할 근거는 아니다. 강수형태(PTY)도 하늘상태(SKY)도 없으면 날씨를 모르는 것으로 본다.
+export function weatherConditionForDisplay(
+  weather: Record<string, string> | undefined,
+): WeatherCondition | null {
+  if (!weather || (weather.PTY === undefined && weather.SKY === undefined)) return null;
+  return kmaToWeatherCondition(weather);
+}
+
 export type ForecastPoint = {
   fcstDateTime: Date;
   condition: WeatherCondition;
